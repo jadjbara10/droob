@@ -26,7 +26,10 @@
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "دروب يحتاج موقعك لإظهار أقرب محطات الباص واقتراح الخطوط المناسبة",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "دروب يستخدم موقعك في الخلفية لتنبيهك عند اقتراب محطتك",
-        "CFBundleLocalizations": ["ar", "en"],
+        "CFBundleLocalizations": [
+          "ar",
+          "en"
+        ],
         "CFBundleDevelopmentRegion": "ar_JO",
         "LSRequiresIPhoneOS": true
       },
@@ -47,7 +50,9 @@
         "ACCESS_BACKGROUND_LOCATION",
         "INTERNET",
         "VIBRATE",
-        "RECEIVE_BOOT_COMPLETED"
+        "RECEIVE_BOOT_COMPLETED",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
       ],
       "config": {
         "googleMaps": {
@@ -80,7 +85,10 @@
       [
         "expo-localization",
         {
-          "locales": ["ar", "en"]
+          "locales": [
+            "ar",
+            "en"
+          ]
         }
       ],
       "expo-dev-client",
@@ -89,14 +97,17 @@
     "extra": {
       "API_URL": "${API_URL:-http://localhost:3000}",
       "MAPBOX_ACCESS_TOKEN": "${MAPBOX_ACCESS_TOKEN:-pk.test}",
-      "e2e": false
+      "e2e": false,
+      "eas": {
+        "projectId": "c0f99c6c-f68d-41ee-a9fe-cb99fc6f5baf"
+      }
     },
     "updates": {
-      "url": "https://u.expo.dev/droob-jordan",
+      "url": "https://u.expo.dev/c0f99c6c-f68d-41ee-a9fe-cb99fc6f5baf",
       "enabled": true,
       "fallbackToCacheTimeout": 300000,
       "checkAutomatically": "ON_LOAD"
     },
-    "owner": "droob"
+    "owner": "jad_dev"
   }
 }
