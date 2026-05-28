@@ -86,14 +86,6 @@
         }
       ],
       "expo-dev-client",
-      [
-        "expo-build-properties",
-        {
-          "android": {
-            "kotlinVersion": "1.9.24"
-          }
-        }
-      ],
       "expo-updates"
     ],
     "extra": {
