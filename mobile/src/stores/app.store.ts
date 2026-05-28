@@ -5,8 +5,8 @@
 
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-// MMKV stubbed — replace with react-native-mmkv when native build is fixed
-const storage = { getString: (k: string) => null as string | null, set: (_k: string, _v: string) => {}, delete: (_k: string) => {}, clearAll: () => {} };
+import { MMKV } from 'react-native-mmkv';
+const storage = new MMKV({ id: 'droob-app-store' });
 
 const mmkvStorage = {
   getItem: (key: string) => storage.getString(key) ?? null,
