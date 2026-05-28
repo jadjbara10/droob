@@ -5,16 +5,9 @@
 // ============================================================================
 
 import React, { useCallback, useRef, useMemo, useState } from "react";
-import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput,
-  Dimensions, Platform, FlatList,
-} from "react-native";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Dimensions, Platform } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import MapboxGL from "@rnmapbox/maps";
-import Animated, {
-  useSharedValue, useAnimatedStyle, withSpring,
-  FadeIn, SlideInDown,
-} from "react-native-reanimated";
+import Animated, { useSharedValue, useAnimatedStyle, withSpring, FadeIn, SlideInDown } from "react-native-reanimated";
 import { colors, radius, spacing, fontSize, fontWeight, shadows, layout } from "@theme/tokens";
 import type { TransitMode } from "@theme/tokens";
 import type { TransitStop, QuickChip, ServiceAlert } from "@types/transit";
@@ -182,19 +175,12 @@ const SheetContent92: React.FC<{ onFocus: () => void }> = React.memo(({ onFocus 
 const HomeScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const bsRef = useRef<BottomSheetRef>(null);
-  const camRef = useRef<MapboxGL.Camera>(null);
   const [snapIdx, setSnapIdx] = useState(0);
   const [alert, setAlert] = useState<ServiceAlert | null>(null);
-
-  const flyTo = useCallback((lng: number, lat: number, zoom = 14) => {
-    camRef.current?.flyTo([lng, lat], 800);
-    camRef.current?.zoomTo(zoom, 400);
-  }, []);
-
+  const handleChip = useCallback((_c: QuickChip) => {}, []);
+  const handleStop = useCallback((_s: TransitStop) => { bsRef.current?.snapTo(1); }, []);
+  const handleLocation = useCallback(() => {}, []);
   const handleSearchFocus = useCallback(() => { bsRef.current?.snapTo(2); }, []);
-  const handleChip = useCallback((c: QuickChip) => { flyTo(c.lng, c.lat, 15); }, [flyTo]);
-  const handleStop = useCallback((s: TransitStop) => { flyTo(s.lng, s.lat, 16); bsRef.current?.snapTo(1); }, [flyTo]);
-  const handleLocation = useCallback(() => { flyTo(AMAAN_COORDS[0], AMAAN_COORDS[1], 13); }, [flyTo]);
 
   const renderSheet = useCallback(() => {
     switch (snapIdx) {
@@ -206,14 +192,8 @@ const HomeScreen: React.FC = () => {
 
   return (
     <View style={styles.root}>
-      {/* MAP — full screen */}
-      <MapboxGL.MapView
-        style={styles.map}
-        styleURL={MapboxGL.StyleURL.Street}
-        scaleBarEnabled={false} logoEnabled={false} attributionEnabled={false} compassEnabled={false}
-      >
-        <MapboxGL.Camera ref={camRef} centerCoordinate={AMAAN_COORDS} zoomLevel={13} animationDuration={0} />
-      </MapboxGL.MapView>
+      {/* MAP — placeholder (Mapbox removed for now) */}
+      <View style={styles.map} />
 
       {/* SEARCH BAR */}
       <View style={[styles.searchContainer, { top: insets.top + 8 }]}>
