@@ -9,9 +9,7 @@ import {
   Dimensions, Animated, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-// DIAGNOSTIC: Mapbox removed for build verification
-// import Mapbox, { Camera, ShapeSource, CircleLayer, LineLayer, SymbolLayer } from '@rnmapbox/maps';
-import React from 'react';
+import Mapbox, { Camera, ShapeSource, CircleLayer, LineLayer, SymbolLayer } from '@rnmapbox/maps';
 import { useTransitStore } from '../stores/transit.store';
 import { TRANSPORT_MODES, COLORS, AMMAN_CENTER, DEFAULT_ZOOM, LANDMARK_STOPS } from '../config/transport.config';
 import { TransportMode, TransitStop, TransitRoute, TransitVehicle } from '../types/transit.types';
@@ -121,8 +119,7 @@ function VehicleAnnotation({ vehicle }: { vehicle: TransitVehicle }) {
 }
 
 // ─── MAIN SCREEN ───────────────────────────────────────────────────────────
-export default function MapScreen(_props: { navigation: any }) { return React.createElement('div', null, 'Map placeholder'); }
-/* ORIGINAL: export default function MapScreen({ navigation }: { navigation: any }) {
+export default function MapScreen({ navigation }: { navigation: any }) {
   const {
     stops, vehicles, alerts, selectedModes, userLocation,
     fetchNearbyStops, setSelectedModes, setUserLocation, selectStop, updateVehiclePosition,
@@ -398,4 +395,3 @@ const styles = StyleSheet.create({
     borderWidth: 2, borderColor: COLORS.brt,
   },
 });
-*/
