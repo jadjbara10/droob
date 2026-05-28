@@ -4,10 +4,10 @@
 // ============================================================================
 
 import { useCallback, useEffect, useRef } from 'react';
-import { MMKV } from 'react-native-mmkv';
+// MMKV stubbed — replace with react-native-mmkv when native build is fixed
 import { TransitStop, TransitRoute, TransitAlert, Journey } from '../types/transit.types';
 
-const storage = new MMKV({ id: 'droob-offline-cache' });
+const storage = { getString: (_k: string) => null as string | null, set: (_k: string, _v: string) => {}, delete: (_k: string) => {}, clearAll: () => {}, getAllKeys: () => [] as string[] };
 
 const KEYS = {
   STOPS: 'cached_stops',
