@@ -1,0 +1,89 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* RTL Support — built into Tailwind with dir="rtl" on html */
+
+/* Inline Direction overrides for mixed LTR/RTL content */
+.ltr {
+  direction: ltr;
+}
+
+/* Smooth transitions for interactive elements */
+a, button {
+  transition: all 0.15s ease;
+}
+
+/* Touch-friendly: minimum 44px tap targets (WCAG 2.5.5) */
+.tap-target {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Safe area for notched phones */
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Loading skeleton animation */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #e0e0e0 25%, #f0f0f0 50%, #e0e0e0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 0.5rem;
+}
+
+/* Offline indicator */
+.offline-badge {
+  @apply bg-red-500 text-white text-xs px-2 py-0.5 rounded-full flex items-center gap-1;
+}
+
+/* Transport type badges */
+.badge-brt { @apply bg-blue-600 text-white; }
+.badge-servees { @apply bg-orange-500 text-white; }
+.badge-coaster { @apply bg-purple-600 text-white; }
+.badge-public-bus { @apply bg-green-700 text-white; }
+
+/* Map container for Leaflet */
+.map-container {
+  width: 100%;
+  height: 100%;
+  border-radius: 0.75rem;
+}
+
+/* Pull-to-refresh indicator */
+.pull-indicator {
+  @apply flex items-center justify-center py-3 text-sm text-gray-400;
+}
+
+/* Install prompt banner — slides up from bottom */
+.install-banner {
+  @apply fixed bottom-16 left-4 right-4 bg-white rounded-2xl shadow-2xl p-4 z-40
+         border-2 border-droob-primary animate-slide-up;
+}
+
+@keyframes slide-up {
+  from { transform: translateY(100px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.animate-slide-up {
+  animation: slide-up 0.3s ease-out;
+}
+
+/* Scrollbar styling for Webkit */
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 2px;
+}

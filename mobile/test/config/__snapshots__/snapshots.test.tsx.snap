@@ -1,0 +1,184 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Config Snapshots AMMAN_CENTER snapshot 1`] = `
+{
+  "lat": 31.9539,
+  "lng": 35.9106,
+}
+`;
+
+exports[`Config Snapshots COLORS snapshot 1`] = `
+{
+  "accent": "#2E7D32",
+  "background": "#F8FAFC",
+  "border": "#E5E7EB",
+  "brt": "#E60026",
+  "cancelled": "#DC2626",
+  "cityBus": "#0066CC",
+  "delayed": "#EAB308",
+  "intercity": "#6B21A8",
+  "layerOpacity": {
+    "activeTripGlow": "rgba(255, 255, 255, 0.6)",
+    "brtRoute": "rgba(230, 0, 38, 0.9)",
+    "cityBusRoute": "rgba(0, 102, 204, 0.8)",
+    "intercityRoute": "rgba(107, 33, 168, 0.8)",
+    "serveeceCorridor": "rgba(255, 140, 0, 0.15)",
+    "walkingPath": "rgba(107, 114, 128, 0.6)",
+  },
+  "occupancyEmpty": "#16A34A",
+  "occupancyFull": "#DC2626",
+  "occupancyPartial": "#EAB308",
+  "onTime": "#16A34A",
+  "primary": "#1A4F8A",
+  "serveece": "#FF8C00",
+  "surface": "#FFFFFF",
+  "text": "#1F2937",
+  "textSecondary": "#6B7280",
+  "walking": "#6B7280",
+}
+`;
+
+exports[`Config Snapshots DEPARTURE_STATUS snapshot 1`] = `
+{
+  "cancelled": {
+    "color": "#DC2626",
+    "label_ar": "ملغي",
+    "label_en": "Cancelled",
+  },
+  "delayed": {
+    "color": "#EAB308",
+    "label_ar": "تأخير",
+    "label_en": "Delayed",
+  },
+  "on_time": {
+    "color": "#16A34A",
+    "label_ar": "في الموعد",
+    "label_en": "On Time",
+  },
+}
+`;
+
+exports[`Config Snapshots GOVERNORATES snapshot 1`] = `
+[
+  "عمان",
+  "إربد",
+  "الزرقاء",
+  "البلقاء",
+  "مادبا",
+  "الكرك",
+  "الطفيلة",
+  "معان",
+  "العقبة",
+  "جرش",
+  "عجلون",
+  "المفرق",
+]
+`;
+
+exports[`Config Snapshots JORDAN_BOUNDS snapshot 1`] = `
+{
+  "east": 39.5,
+  "north": 33.5,
+  "south": 29,
+  "west": 35,
+}
+`;
+
+exports[`Config Snapshots OCCUPANCY snapshot 1`] = `
+{
+  "empty": {
+    "color": "#16A34A",
+    "icon": "🟢",
+    "label_ar": "فارغ",
+    "label_en": "Empty",
+  },
+  "full": {
+    "color": "#DC2626",
+    "icon": "🔴",
+    "label_ar": "ممتلئ",
+    "label_en": "Full",
+  },
+  "partial": {
+    "color": "#EAB308",
+    "icon": "🟡",
+    "label_ar": "ممتلئ جزئياً",
+    "label_en": "Partially Full",
+  },
+}
+`;
+
+exports[`Config Snapshots TRANSPORT_MODES snapshot 1`] = `
+{
+  "brt": {
+    "color": "#E60026",
+    "departure_logic": "headway",
+    "fare_max_jod": 0.5,
+    "fare_min_jod": 0.5,
+    "icon": "⚡",
+    "is_fixed_schedule": true,
+    "is_frequent_service": true,
+    "label_ar": "باص سريع",
+    "label_en": "BRT",
+    "mode": "brt",
+    "speed_kmh": 35,
+  },
+  "city_bus": {
+    "color": "#0066CC",
+    "departure_logic": "schedule",
+    "fare_max_jod": 0.55,
+    "fare_min_jod": 0.35,
+    "icon": "🚌",
+    "is_fixed_schedule": true,
+    "is_frequent_service": false,
+    "label_ar": "باص مدني",
+    "label_en": "City Bus",
+    "mode": "city_bus",
+    "speed_kmh": 25,
+  },
+  "intercity": {
+    "color": "#6B21A8",
+    "departure_logic": "schedule",
+    "fare_max_jod": 3,
+    "fare_min_jod": 0.75,
+    "icon": "🚌",
+    "is_fixed_schedule": true,
+    "is_frequent_service": false,
+    "label_ar": "بين المدن",
+    "label_en": "Intercity",
+    "mode": "intercity",
+    "speed_kmh": 60,
+  },
+  "serveece": {
+    "color": "#FF8C00",
+    "departure_logic": "on_demand",
+    "fare_max_jod": 0.4,
+    "fare_min_jod": 0.2,
+    "icon": "🚐",
+    "is_fixed_schedule": false,
+    "is_frequent_service": true,
+    "label_ar": "سرفيس",
+    "label_en": "Serveece",
+    "mode": "serveece",
+    "speed_kmh": 30,
+  },
+}
+`;
+
+exports[`Config Snapshots WALKING_MODE snapshot 1`] = `
+{
+  "color": "#6B7280",
+  "icon": "🚶",
+  "label_ar": "مشي",
+  "label_en": "Walking",
+  "mode": "walking",
+  "speed_kmh": 5,
+}
+`;
+
+exports[`Config Snapshots zoom levels snapshot 1`] = `
+{
+  "DEFAULT_ZOOM": 13,
+  "MAX_ZOOM": 18,
+  "MIN_ZOOM": 7,
+}
+`;

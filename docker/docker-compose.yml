@@ -1,0 +1,58 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgis/postgis:16-3.4
+    container_name: droob-postgres
+    environment:
+      POSTGRES_DB: droob
+      POSTGRES_USER: droob
+      POSTGRES_PASSWORD: droob_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init/01-extensions.sql:/docker-entrypoint-initdb.d/01-extensions.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U droob"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: droob-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ../
+      dockerfile: docker/backend.Dockerfile
+    container_name: droob-backend
+    ports:
+      - "8080:8080"
+    environment:
+      POSTGRES_URL: postgresql://droob:droob_dev@postgres:5432/droob
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: droob_dev_secret_change_in_production
+      PORT: 8080
+      NODE_ENV: development
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ../backend/src:/app/src:ro
+
+volumes:
+  postgres_data:
+  redis_data:

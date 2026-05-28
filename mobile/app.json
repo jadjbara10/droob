@@ -1,0 +1,97 @@
+{
+  "expo": {
+    "name": "دروب",
+    "slug": "droob",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "droob",
+    "userInterfaceStyle": "automatic",
+    "locales": {
+      "ar": "./assets/locales/ar.json",
+      "en": "./assets/locales/en.json"
+    },
+    "splash": {
+      "image": "./assets/images/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#1A4F8A",
+      "dark": {
+        "backgroundColor": "#0F2B4C"
+      }
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "jo.droob.app",
+      "buildNumber": "1",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "دروب يحتاج موقعك لإظهار أقرب محطات الباص واقتراح الخطوط المناسبة",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "دروب يستخدم موقعك في الخلفية لتنبيهك عند اقتراب محطتك",
+        "CFBundleLocalizations": ["ar", "en"],
+        "CFBundleDevelopmentRegion": "ar_JO",
+        "LSRequiresIPhoneOS": true
+      },
+      "config": {
+        "usesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "backgroundColor": "#1A4F8A"
+      },
+      "package": "jo.droob.app",
+      "versionCode": 1,
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "INTERNET",
+        "VIBRATE",
+        "RECEIVE_BOOT_COMPLETED"
+      ],
+      "config": {
+        "googleMaps": {
+          "apiKey": "${MAPS_API_KEY}"
+        }
+      }
+    },
+    "web": {
+      "favicon": "./assets/images/favicon.png",
+      "bundler": "metro",
+      "locales": {
+        "ar": "./assets/locales/ar.json",
+        "en": "./assets/locales/en.json"
+      }
+    },
+    "plugins": [
+      "@rnmapbox/maps",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "دروب يستخدم موقعك لمساعدتك في التنقل",
+          "locationWhenInUsePermission": "دروب يحتاج موقعك لإظهار أقرب المحطات"
+        }
+      ],
+      [
+        "expo-localization",
+        {
+          "locales": ["ar", "en"]
+        }
+      ],
+      "expo-dev-client",
+      "expo-updates"
+    ],
+    "extra": {
+      "API_URL": "${API_URL:-http://localhost:3000}",
+      "MAPBOX_ACCESS_TOKEN": "${MAPBOX_ACCESS_TOKEN}",
+      "e2e": false
+    },
+    "updates": {
+      "url": "https://u.expo.dev/droob-jordan",
+      "enabled": true,
+      "fallbackToCacheTimeout": 300000,
+      "checkAutomatically": "ON_LOAD"
+    },
+    "owner": "droob"
+  }
+}

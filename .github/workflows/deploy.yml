@@ -1,0 +1,344 @@
+name: 🚀 Deploy — دروب Production & Staging
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # GTFS weekly sync — every Monday 3:00 AM Amman time (UTC+3 = 0:00 UTC)
+    - cron: "0 0 * * 1"
+    # Daily database backup — every day 4:00 AM Amman time (UTC+3 = 1:00 UTC)
+    - cron: "0 1 * * *"
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Deployment target"
+        required: true
+        default: "staging"
+        type: choice
+        options:
+          - staging
+          - production
+      skip_backup:
+        description: "Skip database backup"
+        required: false
+        default: false
+        type: boolean
+
+env:
+  RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+  VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+  EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+
+jobs:
+  # ─── Environment Secrets Validation ──────────────────────────
+  validate-secrets:
+    name: 🔐 Validate Required Secrets
+    runs-on: ubuntu-latest
+    outputs:
+      has_all_secrets: ${{ steps.check.outputs.valid }}
+    steps:
+      - name: Check required secrets
+        id: check
+        run: |
+          MISSING=""
+          REQUIRED_SECRETS=(
+            "RAILWAY_TOKEN"
+            "VERCEL_TOKEN"
+            "EXPO_TOKEN"
+            "DB_PASSWORD"
+            "JWT_SECRET"
+            "AMMAN_MUNICIPALITY_API_KEY"
+            "GAM_GTFS_URL"
+          )
+
+          for secret in "${REQUIRED_SECRETS[@]}"; do
+            if [ -z "${!secret}" ]; then
+              MISSING="$MISSING $secret"
+              echo "::warning::⚠️  Missing secret: $secret"
+            else
+              echo "::notice::✅ Found secret: $secret"
+            fi
+          done
+
+          if [ -n "$MISSING" ]; then
+            echo "valid=false" >> $GITHUB_OUTPUT
+            echo "❌ Missing secrets:$MISSING"
+            if [ "${{ github.event_name }}" = "push" ] && [ "${{ github.ref }}" = "refs/heads/main" ]; then
+              echo "::error::Critical: Cannot deploy to production with missing secrets!"
+              exit 1
+            fi
+          else
+            echo "valid=true" >> $GITHUB_OUTPUT
+            echo "✅ All required secrets present"
+          fi
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          AMMAN_MUNICIPALITY_API_KEY: ${{ secrets.AMMAN_MUNICIPALITY_API_KEY }}
+          GAM_GTFS_URL: ${{ secrets.GAM_GTFS_URL }}
+
+  # ─── Database Backup ─────────────────────────────────────────
+  backup-database:
+    name: 💾 Database Backup
+    runs-on: ubuntu-latest
+    needs: validate-secrets
+    if: |
+      (needs.validate-secrets.outputs.has_all_secrets == 'true') &&
+      (
+        github.event_name == 'schedule' ||
+        (github.event_name == 'workflow_dispatch' && github.event.inputs.skip_backup != 'true')
+      )
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Create backup
+        run: |
+          TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+          BACKUP_FILE="droob_backup_${TIMESTAMP}.sql.gz"
+
+          echo "📦 Creating backup: $BACKUP_FILE"
+          PGPASSWORD="${{ secrets.DB_PASSWORD }}" pg_dump \
+            -h "${{ secrets.DB_HOST }}" \
+            -U droob \
+            -d droob \
+            --no-owner \
+            --no-acl \
+            --format=custom \
+            --compress=9 \
+            -f "$BACKUP_FILE"
+
+          echo "📊 Backup size: $(du -h $BACKUP_FILE | cut -f1)"
+
+      - name: Upload backup as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: database-backup
+          path: droob_backup_*.sql.gz
+          retention-days: 30
+          compression-level: 0
+
+      - name: Upload to cloud storage (optional S3/R2)
+        if: ${{ secrets.BACKUP_S3_BUCKET != '' }}
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.BACKUP_S3_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.BACKUP_S3_SECRET_KEY }}
+          aws-region: ${{ secrets.BACKUP_S3_REGION }}
+      - name: S3 Upload
+        if: ${{ secrets.BACKUP_S3_BUCKET != '' }}
+        run: |
+          aws s3 cp droob_backup_*.sql.gz "s3://${{ secrets.BACKUP_S3_BUCKET }}/backups/" \
+            --storage-class STANDARD_IA
+
+  # ─── Backend Deploy — Railway ────────────────────────────────
+  deploy-backend:
+    name: 🔧 Deploy Backend to Railway
+    runs-on: ubuntu-latest
+    needs: [validate-secrets, backup-database]
+    if: |
+      needs.validate-secrets.outputs.has_all_secrets == 'true' &&
+      (github.event_name != 'schedule' || github.event.schedule == '0 0 * * 1')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: droob/package-lock.json
+
+      - name: Install dependencies
+        working-directory: droob
+        run: npm ci
+
+      - name: Run database migrations
+        working-directory: droob
+        run: npm run db:migrate
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+      - name: Run tests
+        working-directory: droob
+        run: npm -w backend run test
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+
+      - name: Deploy to Railway
+        uses: railwayapp/railway-action@v1
+        with:
+          service: ${{ github.event.inputs.environment == 'production' && 'droob-backend' || 'droob-backend-staging' }}
+          environment: ${{ github.event.inputs.environment || 'staging' }}
+
+  # ─── Dashboard Deploy — Vercel ───────────────────────────────
+  deploy-dashboard:
+    name: 🎨 Deploy Dashboard to Vercel
+    runs-on: ubuntu-latest
+    needs: validate-secrets
+    if: |
+      needs.validate-secrets.outputs.has_all_secrets == 'true' &&
+      github.event_name != 'schedule'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Deploy to Vercel
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          working-directory: droob/dashboard
+          vercel-args: >
+            ${{ github.event.inputs.environment == 'production' && '--prod' || '' }}
+          alias-domains: |
+            ${{ github.event.inputs.environment == 'production' && 'dashboard.droob.app' || 'staging.dashboard.droob.app' }}
+
+  # ─── Mobile EAS Build ────────────────────────────────────────
+  build-mobile:
+    name: 📱 Build Mobile App (EAS)
+    runs-on: ubuntu-latest
+    needs: validate-secrets
+    if: |
+      needs.validate-secrets.outputs.has_all_secrets == 'true' &&
+      github.event_name != 'schedule'
+    strategy:
+      matrix:
+        platform: [android, ios]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: droob/mobile/package-lock.json
+
+      - name: Setup Expo
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        working-directory: droob/mobile
+        run: npm ci
+
+      - name: EAS Build
+        working-directory: droob/mobile
+        run: |
+          eas build \
+            --platform ${{ matrix.platform }} \
+            --profile ${{ github.event.inputs.environment == 'production' && 'production' || 'preview' }} \
+            --non-interactive \
+            --wait \
+            --auto-submit
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-${{ matrix.platform }}-build
+          path: droob/mobile/dist/
+          retention-days: 90
+
+  # ─── GTFS Weekly Sync ────────────────────────────────────────
+  sync-gtfs:
+    name: 🚌 Sync GTFS Data Weekly
+    runs-on: ubuntu-latest
+    needs: validate-secrets
+    if: |
+      needs.validate-secrets.outputs.has_all_secrets == 'true' &&
+      (github.event.schedule == '0 0 * * 1' || github.event_name == 'workflow_dispatch')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: droob/package-lock.json
+
+      - name: Install dependencies
+        working-directory: droob
+        run: npm ci
+
+      - name: Download and process GTFS
+        working-directory: droob
+        run: |
+          curl -L -o /tmp/gtfs.zip "$GAM_GTFS_URL"
+          npm run gtfs:convert -- --input /tmp/gtfs.zip
+        env:
+          GAM_GTFS_URL: ${{ secrets.GAM_GTFS_URL }}
+
+      - name: Run Python data pipeline
+        working-directory: droob
+        run: python scripts/unified_transit_pipeline.py
+
+      - name: Validate data
+        working-directory: droob
+        run: python scripts/validate_unified_data.py
+
+      - name: Seed database
+        working-directory: droob
+        run: npm run data:seed
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
+  # ─── Staging Environment Setup ────────────────────────────────
+  setup-staging:
+    name: 🧪 Setup Staging Environment
+    runs-on: ubuntu-latest
+    needs: validate-secrets
+    if: |
+      needs.validate-secrets.outputs.has_all_secrets == 'true' &&
+      github.event_name == 'pull_request' &&
+      github.base_ref == 'main'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create staging database
+        run: |
+          echo "📦 Setting up staging database..."
+          # Using Railway CLI or direct PostgreSQL connection
+          PGPASSWORD="${{ secrets.STAGING_DB_PASSWORD }}" psql \
+            -h "${{ secrets.STAGING_DB_HOST }}" \
+            -U droob \
+            -d droob_staging \
+            -c "SELECT 1;" || echo "⚠️  Could not connect to staging DB"
+
+      - name: Deploy backend to staging
+        uses: railwayapp/railway-action@v1
+        with:
+          service: droob-backend-staging
+          environment: staging
+
+      - name: Comment PR with preview URLs
+        uses: thollander/actions-comment-pull-request@v2
+        with:
+          message: |
+            ## 🧪 Staging Deployment Ready
+
+            - 🔧 **Backend API:** https://staging-api.droob.app
+            - 🎨 **Dashboard:** https://staging-dashboard.droob.app
+            - 📊 **Health Check:** https://staging-api.droob.app/health
+
+            Preview deployment is live! 🚀
+          comment_tag: staging-deployment

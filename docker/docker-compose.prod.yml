@@ -1,0 +1,223 @@
+# ─── دروب Production Docker Compose ───────────────────────────────
+# Usage: docker compose -f docker/docker-compose.prod.yml up -d
+#
+# Differences from dev compose:
+#   - No bind mounts (uses named volumes only)
+#   - Stricter healthchecks with retries
+#   - Resource limits (CPU/Memory)
+#   - Restart always policy
+#   - PostgreSQL with WAL archiving
+#   - Redis with password auth
+#   - No pgadmin/redis-commander (use separate tools compose)
+# ──────────────────────────────────────────────────────────────────
+
+version: "3.9"
+
+services:
+  # ─── PostgreSQL + PostGIS ───────────────────────────────────
+  postgres:
+    image: postgis/postgis:16-3.4
+    container_name: droob-postgres-prod
+    restart: always
+    environment:
+      POSTGRES_DB: droob
+      POSTGRES_USER: droob
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-droob_password}
+      POSTGRES_INITDB_ARGS: "--data-checksums"
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - postgres_wal:/var/lib/postgresql/wal
+      - ../backend/drizzle/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U droob -d droob"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 2G
+        reservations:
+          cpus: "0.5"
+          memory: 512M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+  # ─── Redis ──────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: droob-redis-prod
+    restart: always
+    command: >
+      redis-server
+      --requirepass ${REDIS_PASSWORD:-droob_redis}
+      --appendonly yes
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+      --save 900 1
+      --save 300 10
+      --save 60 10000
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "--no-auth-warning", "-a", "${REDIS_PASSWORD:-droob_redis}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "3"
+
+  # ─── Backend API Server ─────────────────────────────────────
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+      target: production
+    container_name: droob-backend-prod
+    restart: always
+    ports:
+      - "${BACKEND_PORT:-3000}:3000"
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      HOST: "0.0.0.0"
+      # Database
+      DATABASE_URL: "postgresql://droob:${DB_PASSWORD:-droob_password}@postgres:5432/droob"
+      # Redis
+      REDIS_URL: "redis://:${REDIS_PASSWORD:-droob_redis}@redis:6379"
+      # External APIs
+      GAM_GTFS_URL: "${GAM_GTFS_URL}"
+      OSRM_BASE_URL: "${OSRM_BASE_URL:-http://osrm:5000}"
+      OSM_OVERPASS_URL: "${OSM_OVERPASS_URL:-https://overpass-api.de/api/interpreter}"
+      # Jordan-specific
+      AMMAN_MUNICIPALITY_API_KEY: "${AMMAN_MUNICIPALITY_API_KEY}"
+      JORDAN_TRANSIT_API_URL: "${JORDAN_TRANSIT_API_URL}"
+      # Auth
+      JWT_SECRET: "${JWT_SECRET}"
+      JWT_EXPIRY: "${JWT_EXPIRY:-7d}"
+      # Push Notifications
+      EXPO_ACCESS_TOKEN: "${EXPO_ACCESS_TOKEN}"
+      FCM_SERVER_KEY: "${FCM_SERVER_KEY}"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 1G
+        reservations:
+          cpus: "0.25"
+          memory: 256M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+  # ─── OSRM Routing Engine (Jordan extract) ────────────────────
+  osrm:
+    image: osrm/osrm-backend:latest
+    container_name: droob-osrm-prod
+    restart: always
+    ports:
+      - "${OSRM_PORT:-5000}:5000"
+    environment:
+      OSRM_MODE: "foot"
+    volumes:
+      - osrm_data:/data
+    command: >
+      sh -c "
+      if [ ! -f /data/jordan.osrm ]; then
+        echo '⚠️  OSRM data not found — download jordan.osrm first';
+        echo '   Run: wget -O /data/jordan.osm.pbf https://download.geofabrik.de/asia/jordan-latest.osm.pbf';
+        echo '   Then: osrm-extract -p /opt/foot.lua /data/jordan.osm.pbf';
+        echo '   Then: osrm-partition /data/jordan.osrm';
+        echo '   Then: osrm-customize /data/jordan.osrm';
+        sleep infinity;
+      else
+        osrm-routed --algorithm mld /data/jordan.osrm;
+      fi
+      "
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:5000/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 4G
+        reservations:
+          cpus: "1"
+          memory: 2G
+    profiles:
+      - routing
+
+  # ─── Nginx Reverse Proxy (optional) ──────────────────────────
+  nginx:
+    image: nginx:alpine
+    container_name: droob-nginx-prod
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - nginx_cache:/var/cache/nginx
+    depends_on:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "nginx -t && curl -sf http://localhost/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+    profiles:
+      - gateway
+
+# ─── Volumes ────────────────────────────────────────────────────
+volumes:
+  postgres_data:
+    name: droob_postgres_data
+  postgres_wal:
+    name: droob_postgres_wal
+  redis_data:
+    name: droob_redis_data
+  osrm_data:
+    name: droob_osrm_data
+  nginx_cache:
+    name: droob_nginx_cache

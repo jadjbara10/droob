@@ -1,0 +1,37 @@
+{
+  "name": "droob",
+  "version": "1.0.0",
+  "private": true,
+  "description": "دروب — Jordan Transit Navigation App Monorepo",
+  "workspaces": [
+    "backend",
+    "dashboard",
+    "scripts"
+  ],
+  "scripts": {
+    "dev:backend": "npm -w backend run dev",
+    "dev:dashboard": "npm -w dashboard run dev",
+    "build:backend": "npm -w backend run build",
+    "build:dashboard": "npm -w dashboard run build",
+    "lint": "npm -w backend run lint && npm -w dashboard run lint",
+    "test": "npm -w backend run test && npm -w dashboard run test",
+    "gtfs:convert": "npm -w scripts run convert",
+    "db:migrate": "npm -w backend run db:migrate",
+    "db:seed": "npm -w backend run db:seed",
+    "data:import": "python scripts/unified_transit_pipeline.py",
+    "data:validate": "npm -w scripts run validate",
+    "data:validate-py": "python scripts/validate_unified_data.py",
+    "data:seed": "npm -w backend run db:seed-transit",
+    "docker:up": "docker compose -f docker/docker-compose.yml up -d",
+    "docker:down": "docker compose -f docker/docker-compose.yml down"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "devDependencies": {
+    "jsdom": "^29.1.1"
+  },
+  "dependencies": {
+    "idb": "^8.0.3"
+  }
+}

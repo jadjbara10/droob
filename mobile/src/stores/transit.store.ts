@@ -1,0 +1,220 @@
+// ============================================================================
+// دروب (Droob) — Transit Store (Zustand)
+// Central state: routes, stops, vehicles, journeys, alerts
+// ============================================================================
+
+import { create } from 'zustand';
+import { TransitStop, TransitRoute, TransitVehicle, TransitAlert, Journey, Departure, TransportMode } from '../types/transit.types';
+import { stopsApi, routesApi, vehiclesApi, alertsApi, tripPlannerApi, departuresApi } from '../services/api-client';
+
+interface TransitState {
+  // ── Data ─────────────────────────────────────────────────────────────
+  stops: TransitStop[];
+  routes: TransitRoute[];
+  vehicles: TransitVehicle[];
+  alerts: TransitAlert[];
+  departures: Departure[];
+  journeys: Journey[];
+
+  // ── UI State ─────────────────────────────────────────────────────────
+  selectedStop: TransitStop | null;
+  selectedRoute: TransitRoute | null;
+  selectedModes: TransportMode[];
+  userLocation: { lat: number; lng: number } | null;
+  isLoading: boolean;
+  error: string | null;
+  searchQuery: string;
+  filterMode: TransportMode | null;
+
+  // ── Favorites ────────────────────────────────────────────────────────
+  favoriteStops: string[];
+  favoriteRoutes: string[];
+
+  // ── Actions ─────────────────────────────────────────────────────────
+  setUserLocation: (loc: { lat: number; lng: number }) => void;
+  setSelectedModes: (modes: TransportMode[]) => void;
+
+  // Stops
+  fetchNearbyStops: (lat: number, lng: number) => Promise<void>;
+  selectStop: (stop: TransitStop | null) => void;
+  clearSelectedStop: () => void;
+  searchStops: (query: string) => Promise<TransitStop[]>;
+
+  // Routes
+  fetchRoutes: (params?: { mode?: string }) => Promise<void>;
+  selectRoute: (route: TransitRoute | null) => void;
+  clearSelectedRoute: () => void;
+
+  // Search
+  setSearchQuery: (query: string) => void;
+  clearSearch: () => void;
+
+  // Filter
+  setFilterMode: (mode: TransportMode) => void;
+  clearFilter: () => void;
+
+  // Loading / Error
+  setLoading: (loading: boolean) => void;
+  setError: (msg: string) => void;
+  clearError: () => void;
+
+  // Trip Planner
+  planJourney: (fromLat: number, fromLng: number, toLat: number, toLng: number, params?: Record<string, unknown>) => Promise<Journey[]>;
+  setJourneys: (journeys: Journey[]) => void;
+  clearJourneys: () => void;
+
+  // Departures
+  fetchDepartures: (stopId: string) => Promise<void>;
+  updateDepartures: (departures: Departure[]) => void;
+
+  // Vehicles
+  fetchVehicles: (routeId?: string) => Promise<void>;
+  updateVehicles: (vehicles: TransitVehicle[]) => void;
+  updateVehiclePosition: (vehicle: TransitVehicle) => void;
+
+  // Alerts
+  fetchAlerts: () => Promise<void>;
+
+  // Favorites
+  toggleFavoriteStop: (stopId: string) => void;
+  toggleFavoriteRoute: (routeId: string) => void;
+}
+
+export const useTransitStore = create<TransitState>((set, get) => ({
+  stops: [],
+  routes: [],
+  vehicles: [],
+  alerts: [],
+  departures: [],
+  journeys: [],
+  selectedStop: null,
+  selectedRoute: null,
+  selectedModes: ['city_bus', 'brt', 'serveece', 'intercity'],
+  userLocation: null,
+  isLoading: false,
+  error: null,
+  searchQuery: '',
+  filterMode: null,
+  favoriteStops: [],
+  favoriteRoutes: [],
+
+  setUserLocation: (loc) => set({ userLocation: loc }),
+
+  setSelectedModes: (modes) => set({ selectedModes: modes }),
+
+  fetchNearbyStops: async (lat, lng) => {
+    set({ isLoading: true, error: null });
+    try {
+      const data = await stopsApi.nearby(lat, lng) as { data: TransitStop[] };
+      set({ stops: data.data, isLoading: false });
+    } catch (e) {
+      set({ error: (e as Error).message, isLoading: false });
+    }
+  },
+
+  selectStop: (stop) => set({ selectedStop: stop }),
+  clearSelectedStop: () => set({ selectedStop: null }),
+
+  searchStops: async (query) => {
+    const data = await stopsApi.list({ q: query }) as { data: TransitStop[] };
+    return data.data;
+  },
+
+  fetchRoutes: async (params) => {
+    set({ isLoading: true });
+    try {
+      const data = await routesApi.list(params || {}) as { data: TransitRoute[] };
+      set({ routes: data.data, isLoading: false });
+    } catch (e) {
+      set({ error: (e as Error).message, isLoading: false });
+    }
+  },
+
+  selectRoute: (route) => set({ selectedRoute: route }),
+  clearSelectedRoute: () => set({ selectedRoute: null }),
+
+  setSearchQuery: (query) => set({ searchQuery: query }),
+  clearSearch: () => set({ searchQuery: '' }),
+
+  setFilterMode: (mode) => {
+    set((s) => ({
+      filterMode: s.filterMode === mode ? null : mode,
+    }));
+  },
+  clearFilter: () => set({ filterMode: null }),
+
+  setLoading: (loading) => set({ isLoading: loading }),
+  setError: (msg) => set({ error: msg }),
+  clearError: () => set({ error: null }),
+
+  planJourney: async (fromLat, fromLng, toLat, toLng, params) => {
+    set({ isLoading: true });
+    try {
+      const data = await tripPlannerApi.plan({
+        fromLat, fromLng, toLat, toLng,
+        ...params,
+      }) as { data: Journey[] };
+      set({ journeys: data.data, isLoading: false });
+      return data.data;
+    } catch (e) {
+      set({ error: (e as Error).message, isLoading: false });
+      return [];
+    }
+  },
+
+  setJourneys: (journeys) => set({ journeys }),
+  clearJourneys: () => set({ journeys: [] }),
+
+  fetchDepartures: async (stopId) => {
+    try {
+      const data = await departuresApi.getForStop(stopId) as { stop: TransitStop; departures: Departure[]; generatedAt: string };
+      set({ departures: data.departures, selectedStop: data.stop });
+    } catch (e) {
+      set({ error: (e as Error).message });
+    }
+  },
+
+  updateDepartures: (departures) => set({ departures }),
+
+  fetchVehicles: async (routeId) => {
+    try {
+      const data = await vehiclesApi.list(routeId ? { routeId } : undefined) as { data: TransitVehicle[] };
+      set({ vehicles: data.data });
+    } catch (e) {
+      set({ error: (e as Error).message });
+    }
+  },
+
+  updateVehicles: (vehicles) => set({ vehicles }),
+
+  updateVehiclePosition: (vehicle) => {
+    set((s) => ({
+      vehicles: s.vehicles.map((v) => (v.id === vehicle.id ? vehicle : v)),
+    }));
+  },
+
+  fetchAlerts: async () => {
+    try {
+      const data = await alertsApi.list({ isActive: true }) as { data: TransitAlert[] };
+      set({ alerts: data.data });
+    } catch (e) {
+      set({ error: (e as Error).message });
+    }
+  },
+
+  toggleFavoriteStop: (stopId) => {
+    set((s) => ({
+      favoriteStops: s.favoriteStops.includes(stopId)
+        ? s.favoriteStops.filter((id) => id !== stopId)
+        : [...s.favoriteStops, stopId],
+    }));
+  },
+
+  toggleFavoriteRoute: (routeId) => {
+    set((s) => ({
+      favoriteRoutes: s.favoriteRoutes.includes(routeId)
+        ? s.favoriteRoutes.filter((id) => id !== routeId)
+        : [...s.favoriteRoutes, routeId],
+    }));
+  },
+}));

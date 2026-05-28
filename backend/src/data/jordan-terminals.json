@@ -1,0 +1,335 @@
+[
+  {
+    "governorate_ar": "اربد",
+    "name_ar": "مجمع الشيخ خليل",
+    "code": "TM-IR-001",
+    "lat": 32.5567,
+    "lng": 35.8433,
+    "is_terminal": true,
+    "is_landmark": true
+  },
+  {
+    "governorate_ar": "اربد",
+    "name_ar": "المجمع الشمالي",
+    "code": "TM-IR-002",
+    "lat": 32.5667,
+    "lng": 35.8417,
+    "is_terminal": true,
+    "is_landmark": true
+  },
+  {
+    "governorate_ar": "اربد",
+    "name_ar": "مجمع خلف التل",
+    "code": "TM-IR-003",
+    "lat": 32.55,
+    "lng": 35.8583,
+    "is_terminal": true,
+    "is_landmark": true
+  },
+  {
+    "governorate_ar": "اربد",
+    "name_ar": "مجمع بشرى وسال",
+    "code": "TM-IR-004",
+    "lat": 32.5333,
+    "lng": 35.85,
+    "is_terminal": true,
+    "is_landmark": true
+  },
+  {
+    "governorate_ar": "اربد",
+    "name_ar": "مجمع الأغوار الجديد",
+    "code": "TM-IR-005",
+    "lat": 32.55,
+    "lng": 35.6167,
+    "is_terminal": true,
+    "is_landmark": true
+  },
+  {
+    "governorate_ar": "اربد",
+    "name_ar": "مجمع عمان الجديد -مجمع الجنوبي-",
+    "code": "TM-IR-006",
+    "lat": 32.54,
+    "lng": 35.8567,
+    "is_terminal": true,
+    "is_landmark": true
+  },
+  {
+    "governorate_ar": "اربد",
+    "name_ar": "مجمع الأغوار القديم",
+    "code": "TM-IR-007",
+    "lat": 32.5467,
+    "lng": 35.6167,
+    "is_terminal": true,
+    "is_landmark": true
+  },
+  {
+    "governorate_ar": "البلقاء",
+    "name_ar": "مجمع دير علا",
+    "code": "TM-BA-008",
+    "lat": 32.0667,
+    "lng": 35.6,
+    "is_terminal": true,
+    "is_landmark": true
+  },
+  {
+    "governorate_ar": "البلقاء",
+    "name_ar": "مجمع البقعة",
+    "code": "TM-BA-009",
+    "lat": 32.0667,
+    "lng": 35.85,
+    "is_terminal": true,
+    "is_landmark": true
+  },
+  {
+    "governorate_ar": "البلقاء",
+    "name_ar": "مجمع السلط الداخلي",
+    "code": "TM-BA-010",
+    "lat": 32.0378,
+    "lng": 35.7289,
+    "is_terminal": true,
+    "is_landmark": true
+  },
+  {
+    "governorate_ar": "البلقاء",
+    "name_ar": "مجمع السلط الخارجي",
+    "code": "TM-BA-011",
+    "lat": 32.0333,
+    "lng": 35.7333,
+    "is_terminal": true,
+    "is_landmark": true
+  },
+  {
+    "governorate_ar": "الزرقاء",
+    "name_ar": "مجمع الملك عبدالله",
+    "code": "TM-ZA-012",
+    "lat": 32.085,
+    "lng": 36.0967,
+    "is_terminal": true,
+    "is_landmark": true
+  },
+  {
+    "governorate_ar": "الزرقاء",
+    "name_ar": "مجمع الأمير راشد",
+    "code": "TM-ZA-013",
+    "lat": 32.0783,
+    "lng": 36.1083,
+    "is_terminal": true,
+    "is_landmark": true
+  },
+  {
+    "governorate_ar": "الطفيلة",
+    "name_ar": "مجمع الطفيلة الخارجي",
+    "code": "TM-TA-014",
+    "lat": 30.8389,
+    "lng": 35.6056,
+    "is_terminal": true,
+    "is_landmark": true
+  },
+  {
+    "governorate_ar": "الطفيلة",
+    "name_ar": "مجمع الطفيلة الداخلي",
+    "code": "TM-TA-015",
+    "lat": 30.835,
+    "lng": 35.6,
+    "is_terminal": true,
+    "is_landmark": true
+  },
+  {
+    "governorate_ar": "الطفيلة",
+    "name_ar": "مجمع العقبة",
+    "code": "TM-TA-016",
+    "lat": 29.5317,
+    "lng": 35.0061,
+    "is_terminal": true,
+    "is_landmark": true
+  },
+  {
+    "governorate_ar": "الكرك",
+    "name_ar": "مجمع غور المزرعة",
+    "code": "TM-KA-017",
+    "lat": 31.2833,
+    "lng": 35.5167,
+    "is_terminal": true,
+    "is_landmark": true
+  },
+  {
+    "governorate_ar": "الكرك",
+    "name_ar": "مجمع غور الصافي",
+    "code": "TM-KA-018",
+    "lat": 31.0367,
+    "lng": 35.4656,
+    "is_terminal": true,
+    "is_landmark": true
+  },
+  {
+    "governorate_ar": "الكرك",
+    "name_ar": "مجمع وادي إطوي",
+    "code": "TM-KA-019",
+    "lat": 31.1833,
+    "lng": 35.75,
+    "is_terminal": true,
+    "is_landmark": true
+  },
+  {
+    "governorate_ar": "الكرك",
+    "name_ar": "مجمع الكرك الجديد",
+    "code": "TM-KA-020",
+    "lat": 31.18,
+    "lng": 35.705,
+    "is_terminal": true,
+    "is_landmark": true
+  },
+  {
+    "governorate_ar": "المفرق",
+    "name_ar": "المجمع الغربي",
+    "code": "TM-MF-021",
+    "lat": 32.3467,
+    "lng": 36.1967,
+    "is_terminal": true,
+    "is_landmark": true
+  },
+  {
+    "governorate_ar": "المفرق",
+    "name_ar": "مجمع جامعة آل البيت",
+    "code": "TM-MF-022",
+    "lat": 32.3667,
+    "lng": 36.2333,
+    "is_terminal": true,
+    "is_landmark": true
+  },
+  {
+    "governorate_ar": "المفرق",
+    "name_ar": "المجمع الشرقي",
+    "code": "TM-MF-023",
+    "lat": 32.35,
+    "lng": 36.21,
+    "is_terminal": true,
+    "is_landmark": true
+  },
+  {
+    "governorate_ar": "جرش",
+    "name_ar": "مجمع جرش الجديد",
+    "code": "TM-JE-024",
+    "lat": 32.2717,
+    "lng": 35.8994,
+    "is_terminal": true,
+    "is_landmark": true
+  },
+  {
+    "governorate_ar": "عجلون",
+    "name_ar": "مجمع عجلون",
+    "code": "TM-AJ-025",
+    "lat": 32.3325,
+    "lng": 35.7517,
+    "is_terminal": true,
+    "is_landmark": true
+  },
+  {
+    "governorate_ar": "مادبا",
+    "name_ar": "مجمع الشمال-مأدبا",
+    "code": "TM-MD-026",
+    "lat": 31.72,
+    "lng": 35.7933,
+    "is_terminal": true,
+    "is_landmark": true
+  },
+  {
+    "governorate_ar": "مادبا",
+    "name_ar": "مجمع الجنوب-مأدبا",
+    "code": "TM-MD-027",
+    "lat": 31.71,
+    "lng": 35.795,
+    "is_terminal": true,
+    "is_landmark": true
+  },
+  {
+    "governorate_ar": "معان",
+    "name_ar": "مجمع جامعة الحسين بن طلال",
+    "code": "TM-MN-028",
+    "lat": 30.1967,
+    "lng": 35.7375,
+    "is_terminal": true,
+    "is_landmark": true
+  },
+  {
+    "governorate_ar": "معان",
+    "name_ar": "مجمع وادي موسى",
+    "code": "TM-MN-029",
+    "lat": 30.3222,
+    "lng": 35.4517,
+    "is_terminal": true,
+    "is_landmark": true
+  },
+  {
+    "governorate_ar": "معان",
+    "name_ar": "مجمع معان الجديد",
+    "code": "TM-MN-030",
+    "lat": 30.195,
+    "lng": 35.73,
+    "is_terminal": true,
+    "is_landmark": true
+  },
+  {
+    "governorate_ar": "العاصمة",
+    "name_ar": "مجمع رأس العين",
+    "code": "TM-AM-031",
+    "lat": 31.9533,
+    "lng": 35.9333,
+    "is_terminal": true,
+    "is_landmark": true
+  },
+  {
+    "governorate_ar": "العاصمة",
+    "name_ar": "مجمع المهاجرين",
+    "code": "TM-AM-032",
+    "lat": 31.9583,
+    "lng": 35.9333,
+    "is_terminal": true,
+    "is_landmark": true
+  },
+  {
+    "governorate_ar": "العاصمة",
+    "name_ar": "مجمع سحاب",
+    "code": "TM-AM-033",
+    "lat": 31.8667,
+    "lng": 36,
+    "is_terminal": true,
+    "is_landmark": true
+  },
+  {
+    "governorate_ar": "العاصمة",
+    "name_ar": "مجمع صويلح",
+    "code": "TM-AM-034",
+    "lat": 32.0333,
+    "lng": 35.8333,
+    "is_terminal": true,
+    "is_landmark": true
+  },
+  {
+    "governorate_ar": "العاصمة",
+    "name_ar": "مجمع الشمال - عمان",
+    "code": "TM-AM-035",
+    "lat": 32.0167,
+    "lng": 35.9167,
+    "is_terminal": true,
+    "is_landmark": true
+  },
+  {
+    "governorate_ar": "العاصمة",
+    "name_ar": "مجمع رغدان - المحطة",
+    "code": "TM-AM-036",
+    "lat": 31.9539,
+    "lng": 35.9153,
+    "is_terminal": true,
+    "is_landmark": true
+  },
+  {
+    "governorate_ar": "العاصمة",
+    "name_ar": "مجمع الجنوب الجديد - عمان",
+    "code": "TM-AM-037",
+    "lat": 31.9167,
+    "lng": 35.92,
+    "is_terminal": true,
+    "is_landmark": true
+  }
+]

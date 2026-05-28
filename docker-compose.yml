@@ -1,0 +1,172 @@
+# ═══════════════════════════════════════════════════════
+# دروب Droob — Docker Compose
+# Full local development stack
+# ═══════════════════════════════════════════════════════
+# Start all services:
+#   docker compose up -d
+#
+# Stop all services:
+#   docker compose down
+#
+# View logs:
+#   docker compose logs -f
+# ═══════════════════════════════════════════════════════
+
+services:
+  # ──── PostgreSQL 16 + PostGIS 3.4 ────
+  postgres:
+    image: postgis/postgis:16-3.4
+    container_name: droob-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: droob
+      POSTGRES_USER: droob
+      POSTGRES_PASSWORD: droob_password
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --locale=en_US.UTF-8"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/drizzle/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U droob -d droob"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - droob-network
+
+  # ──── Redis 7 ────
+  redis:
+    image: redis:7-alpine
+    container_name: droob-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - droob-network
+
+  # ──── Redis Commander (Web UI for Redis) ────
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: droob-redis-ui
+    restart: unless-stopped
+    environment:
+      REDIS_HOSTS: local:redis:6379
+    ports:
+      - "8081:8081"
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - droob-network
+    profiles:
+      - tools
+
+  # ──── Backend API (Fastify + Socket.io) ────
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: droob-backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      HOST: 0.0.0.0
+      LOG_LEVEL: debug
+      DATABASE_URL: postgresql://droob:droob_password@postgres:5432/droob
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: droob-jordan-dev-secret-change-in-production
+      CORS_ORIGIN: "*"
+      RATE_LIMIT_MAX: "500"
+      GAM_GTFS_URL: https://gtfs.gam.gov.jo/feed.zip
+      OSRM_BASE_URL: http://osrm:5000
+      DEFAULT_LANGUAGE: ar
+      TIMEZONE: Asia/Amman
+      CURRENCY: JOD
+      FRIDAY_PRAYER_GAP_START: "11:30"
+      FRIDAY_PRAYER_GAP_END: "13:30"
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend/src:/app/src:ro
+    networks:
+      - droob-network
+    profiles:
+      - backend
+
+  # ──── OSRM Routing Engine (Jordan OSM map) ────
+  # Note: Requires jordan.osm.pbf file in ./osrm/data/
+  # Download from: https://download.geofabrik.de/asia/jordan.html
+  osrm:
+    image: osrm/osrm-backend:latest
+    container_name: droob-osrm
+    restart: unless-stopped
+    command: >
+      sh -c "
+        if [ ! -f /data/jordan.osrm ]; then
+          echo 'Missing /data/jordan.osrm — place Jordan OSM extract here';
+          exit 1;
+        fi;
+        osrm-routed --algorithm mld /data/jordan.osrm
+      "
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./osrm/data:/data
+    networks:
+      - droob-network
+    profiles:
+      - routing
+
+  # ──── PgAdmin (PostgreSQL Web UI) ────
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: droob-pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@droob.jo
+      PGADMIN_DEFAULT_PASSWORD: admin123
+      PGADMIN_CONFIG_WTF_CSRF_ENABLED: "False"
+    ports:
+      - "8080:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - droob-network
+    profiles:
+      - tools
+
+volumes:
+  postgres_data:
+    driver: local
+    name: droob-postgres-data
+  redis_data:
+    driver: local
+    name: droob-redis-data
+  pgadmin_data:
+    driver: local
+    name: droob-pgadmin-data
+
+networks:
+  droob-network:
+    driver: bridge
+    name: droob-network

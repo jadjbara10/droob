@@ -1,0 +1,188 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`TransportIcon matches snapshot for BRT with badge 1`] = `
+<View
+  style={
+    [
+      {
+        "alignItems": "center",
+        "justifyContent": "center",
+      },
+      {
+        "borderRadius": 20,
+        "height": 40,
+        "width": 40,
+      },
+    ]
+  }
+  testID="transport-icon"
+>
+  <View
+    style={
+      [
+        {
+          "alignItems": "center",
+          "justifyContent": "center",
+          "position": "relative",
+        },
+        {
+          "backgroundColor": "#E60026",
+          "borderRadius": 20,
+          "height": 40,
+          "width": 40,
+        },
+      ]
+    }
+  >
+    <Text
+      style={
+        [
+          {
+            "textAlign": "center",
+          },
+          {
+            "fontSize": 16,
+          },
+        ]
+      }
+    >
+      ⚡
+    </Text>
+    <View
+      style={
+        {
+          "alignItems": "center",
+          "backgroundColor": "#FFFFFF",
+          "borderColor": "#E5E7EB",
+          "borderRadius": 8,
+          "borderWidth": 1,
+          "bottom": -4,
+          "minWidth": 24,
+          "paddingHorizontal": 4,
+          "paddingVertical": 1,
+          "position": "absolute",
+          "right": -8,
+        }
+      }
+    >
+      <Text
+        numberOfLines={1}
+        style={
+          {
+            "color": "#1F2937",
+            "fontSize": 9,
+            "fontWeight": "700",
+            "textAlign": "center",
+          }
+        }
+      >
+        B1
+      </Text>
+    </View>
+  </View>
+</View>
+`;
+
+exports[`TransportIcon matches snapshot for serveece without badge 1`] = `
+<View
+  style={
+    [
+      {
+        "alignItems": "center",
+        "justifyContent": "center",
+      },
+      {
+        "borderRadius": 28,
+        "height": 56,
+        "width": 56,
+      },
+    ]
+  }
+  testID="transport-icon"
+>
+  <View
+    style={
+      [
+        {
+          "alignItems": "center",
+          "justifyContent": "center",
+          "position": "relative",
+        },
+        {
+          "backgroundColor": "#FF8C00",
+          "borderRadius": 28,
+          "height": 56,
+          "width": 56,
+        },
+      ]
+    }
+  >
+    <Text
+      style={
+        [
+          {
+            "textAlign": "center",
+          },
+          {
+            "fontSize": 22,
+          },
+        ]
+      }
+    >
+      🚐
+    </Text>
+  </View>
+</View>
+`;
+
+exports[`TransportIcon matches snapshot for walking mode 1`] = `
+<View
+  style={
+    [
+      {
+        "alignItems": "center",
+        "justifyContent": "center",
+      },
+      {
+        "borderRadius": 16,
+        "height": 32,
+        "width": 32,
+      },
+    ]
+  }
+  testID="transport-icon"
+>
+  <View
+    style={
+      [
+        {
+          "alignItems": "center",
+          "justifyContent": "center",
+          "position": "relative",
+        },
+        {
+          "backgroundColor": "#6B7280",
+          "borderRadius": 16,
+          "height": 32,
+          "width": 32,
+        },
+      ]
+    }
+  >
+    <Text
+      style={
+        [
+          {
+            "textAlign": "center",
+          },
+          {
+            "fontSize": 12,
+          },
+        ]
+      }
+    >
+      🚶
+    </Text>
+  </View>
+</View>
+`;

@@ -1,0 +1,17 @@
+{
+  "source": "https://ammangis.jo/BRT/",
+  "serviceUrl": "https://ammangis.jo/arcgis/rest/services/BRT_SERVICE/MapServer/1",
+  "layer": "مسار الباص سريع التردد - مرحلة التشغيل التجريبي",
+  "totalRoutes": 7,
+  "extractedAt": "2025-05-25T16:41:00+03:00",
+  "spatialReference": {"wkid": 4326},
+  "routes": [
+    {"id":1,"number":"99","name":"محطة صويلح - محطة متحف الاردن","direction":"اياب","company":"BRT","type":"حافله","fare":600,"offPeakFreq":8,"peakFreq":3,"start":"محطة متحف الاردن","end":"محطة صويلح","length":16665.14,"status":"معتمد"},
+    {"id":2,"number":"100","name":"محطة صويلح - مجمع المحطه","direction":"اياب","company":"BRT","type":"حافله","fare":600,"offPeakFreq":8,"peakFreq":2,"start":"مجمع المحطة","end":"محطة صويلح","length":16700.21,"status":"معتمد"},
+    {"id":3,"number":"98","name":"محطة صويلح - محطة طارق","direction":"اياب","company":"BRT","type":"حافله","fare":600,"offPeakFreq":20,"peakFreq":6,"start":"محطة طارق","end":"محطة صويلح","length":12362.48,"status":"معتمد"},
+    {"id":4,"number":"99","name":"محطة صويلح - محطة متحف الاردن","direction":"ذهاب","company":"BRT","type":"حافله","fare":600,"offPeakFreq":8,"peakFreq":3,"start":"محطة صويلح","end":"محطة متحف الاردن","length":16649.16,"status":"معتمد"},
+    {"id":5,"number":"98","name":"محطة صويلح - محطة طارق","direction":"ذهاب","company":"BRT","type":"حافله","fare":600,"offPeakFreq":20,"peakFreq":6,"start":"محطة صويلح","end":"محطة طارق","length":12067.21,"status":"معتمد"},
+    {"id":6,"number":"106","name":"مجمع رغدان - صويلح","direction":"اياب","company":"BRT","type":"حافله","fare":600,"offPeakFreq":30,"peakFreq":15,"start":"صويلح","end":"مجمع رغدان","length":18944.85,"status":"معتمد"},
+    {"id":7,"number":"102","name":"الزرقاء - المدينة الرياضية","direction":"ذهاب","company":"BRT","type":"حافله","fare":700,"offPeakFreq":8,"peakFreq":4,"start":"الزرقاء","end":"المدينة الرياضية","length":23624.38,"status":"معتمد"}
+  ]
+}

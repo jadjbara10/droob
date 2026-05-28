@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#1a7a3c">
+  <meta name="description" content="دروب — نظام النقل الذكي في الأردن. ابحث عن خطوط الباص، احجز تذاكر، وتعرف على المواعيد.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="دروب">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
+  <title>دروب — النقل الذكي في الأردن</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <!-- App Shell -->
+  <div id="app">
+    <!-- Header -->
+    <header id="header">
+      <div class="logo">
+        <span class="logo-icon">🚌</span>
+        <h1>دروب</h1>
+      </div>
+      <nav id="nav">
+        <button class="nav-btn active" data-page="home">🏠 الرئيسية</button>
+        <button class="nav-btn" data-page="search">🔍 بحث</button>
+        <button class="nav-btn" data-page="routes">🚏 خطوط</button>
+        <button class="nav-btn" data-page="tickets">🎫 تذاكر</button>
+        <button class="nav-btn" data-page="nearby">📍 قريب مني</button>
+      </nav>
+      <div id="status-bar">
+        <span id="online-status" class="status-online">● متصل</span>
+        <span id="last-updated"></span>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main id="main-content">
+      <!-- Home Page -->
+      <section id="page-home" class="page active">
+        <div class="hero">
+          <h2>مرحباً بك في دروب 🚌</h2>
+          <p>نظام النقل الذكي في المملكة الأردنية الهاشمية</p>
+          <div class="quick-search">
+            <input type="text" id="quick-search-input" placeholder="ابحث عن خط، محطة، أو وجهة..." autocomplete="off">
+            <button id="quick-search-btn">🔍 بحث</button>
+          </div>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon">🚏</div>
+            <div class="stat-num" id="stat-stops">--</div>
+            <div class="stat-label">محطة</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">🚌</div>
+            <div class="stat-num" id="stat-active-routes">--</div>
+            <div class="stat-label">خط نشط</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">🏢</div>
+            <div class="stat-num" id="stat-governorates">12</div>
+            <div class="stat-label">محافظة</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">📱</div>
+            <div class="stat-num" id="stat-users">--</div>
+            <div class="stat-label">مستخدم</div>
+          </div>
+        </div>
+
+        <div class="section">
+          <h3>🚨 تنبيهات هامة</h3>
+          <div id="alerts-container">
+            <div class="alert info">لا توجد تنبيهات حالياً</div>
+          </div>
+        </div>
+
+        <div class="section">
+          <h3>⭐ أكثر الخطوط استخداماً</h3>
+          <div id="popular-routes" class="route-list"></div>
+        </div>
+      </section>
+
+      <!-- Search Page -->
+      <section id="page-search" class="page">
+        <div class="search-form">
+          <div class="form-group">
+            <label>من</label>
+            <input type="text" id="search-from" placeholder="نقطة الانطلاق..." autocomplete="off">
+          </div>
+          <div class="form-group">
+            <label>إلى</label>
+            <input type="text" id="search-to" placeholder="الوجهة..." autocomplete="off">
+          </div>
+          <button id="search-btn" class="btn-primary">🔍 ابحث عن مسار</button>
+        </div>
+        <div id="search-results"></div>
+      </section>
+
+      <!-- Routes Page -->
+      <section id="page-routes" class="page">
+        <div class="filter-bar">
+          <select id="filter-governorate">
+            <option value="">كل المحافظات</option>
+          </select>
+          <select id="filter-type">
+            <option value="">كل الأنواع</option>
+            <option value="brt">🚎 BRT</option>
+            <option value="service">🚐 سرفيس</option>
+            <option value="coaster">🚌 كوستر</option>
+            <option value="bus">🚍 باص عام</option>
+          </select>
+        </div>
+        <div id="routes-list" class="route-list-full"></div>
+      </section>
+
+      <!-- Tickets Page -->
+      <section id="page-tickets" class="page">
+        <div class="tabs">
+          <button class="tab-btn active" data-tab="buy">🛒 شراء تذكرة</button>
+          <button class="tab-btn" data-tab="my">🎫 تذاكري</button>
+          <button class="tab-btn" data-tab="wallet">💰 المحفظة</button>
+        </div>
+
+        <div id="tab-buy" class="tab-content active">
+          <div class="ticket-options">
+            <div class="ticket-card" data-type="single">
+              <div class="ticket-price">0.50 <small>دينار</small></div>
+              <div class="ticket-label">تذكرة فردية</div>
+              <div class="ticket-desc">صالحة لرحلة واحدة</div>
+            </div>
+            <div class="ticket-card" data-type="daily">
+              <div class="ticket-price">2.00 <small>دينار</small></div>
+              <div class="ticket-label">تذكرة يومية</div>
+              <div class="ticket-desc">رحلات غير محدودة لمدة 24 ساعة</div>
+            </div>
+            <div class="ticket-card" data-type="weekly">
+              <div class="ticket-price">10.00 <small>دينار</small></div>
+              <div class="ticket-label">تذكرة أسبوعية</div>
+              <div class="ticket-desc">رحلات غير محدودة لمدة 7 أيام</div>
+            </div>
+            <div class="ticket-card" data-type="monthly">
+              <div class="ticket-price">35.00 <small>دينار</small></div>
+              <div class="ticket-label">تذكرة شهرية</div>
+              <div class="ticket-desc">رحلات غير محدودة لمدة 30 يوم</div>
+            </div>
+          </div>
+          <button id="buy-ticket-btn" class="btn-primary" disabled>💳 ادفع الآن</button>
+        </div>
+
+        <div id="tab-my" class="tab-content">
+          <div id="my-tickets-list">
+            <p>سجل الدخول لعرض تذاكرك</p>
+          </div>
+        </div>
+
+        <div id="tab-wallet" class="tab-content">
+          <div class="wallet-balance">
+            <div class="balance-amount">0.00 <small>دينار</small></div>
+            <div class="balance-label">رصيد المحفظة</div>
+          </div>
+          <button class="btn-secondary">➕ شحن رصيد</button>
+        </div>
+      </section>
+
+      <!-- Nearby Page -->
+      <section id="page-nearby" class="page">
+        <div id="nearby-status">📍 جاري تحديد موقعك...</div>
+        <button id="refresh-location" class="btn-secondary">🔄 تحديث الموقع</button>
+        <div id="nearby-stops" class="stop-list"></div>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+      <p>© 2026 دروب — نظام النقل الذكي | <a href="#" id="install-app">📲 تثبيت التطبيق</a></p>
+    </footer>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toast-container"></div>
+
+  <!-- Scripts -->
+  <script src="/db.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>

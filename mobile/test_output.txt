@@ -1,0 +1,788 @@
+FAIL test/components/components.test.tsx
+  ظù Test suite failed to run
+
+    TypeError: Cannot read properties of undefined (reading 'S')
+
+      3 | // ============================================================================
+      4 | import React from 'react';
+    > 5 | import { render, fireEvent, screen, within } from '@testing-library/react-native';
+        | ^
+      6 | import { TransportIcon } from '@components/TransportIcon';
+      7 | import { JourneyCard } from '@components/JourneyCard';
+      8 | import type { TransitJourney } from '@types/transit.types';
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15448:58
+      at Object.<anonymous> (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:17456:5)
+      at Object.<anonymous> (node_modules/react-test-renderer/index.js:6:20)
+      at Object.require (node_modules/@testing-library/react-native/src/act.ts:3:1)
+      at Object.require (node_modules/@testing-library/react-native/src/pure.ts:1:1)
+      at Object.require (node_modules/@testing-library/react-native/src/index.ts:1:1)
+      at Object.require (test/components/components.test.tsx:5:1)
+
+FAIL test/services/api.test.ts
+  ظù API Service ظ║ fetchRoutes ظ║ calls GET /routes
+
+    TypeError: api.fetchRoutes is not a function
+
+      26 |       (apiClient.get as jest.Mock).mockResolvedValueOnce({ data: { data: mockRoutes } });
+      27 |
+    > 28 |       const result = await api.fetchRoutes();
+         |                                ^
+      29 |       expect(apiClient.get).toHaveBeenCalledWith('/routes');
+      30 |       expect(result).toEqual(mockRoutes);
+      31 |     });
+
+      at Object.fetchRoutes (test/services/api.test.ts:28:32)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at Object.<anonymous> (node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+
+  ظù API Service ظ║ fetchRoutes ظ║ accepts query parameters
+
+    TypeError: api.fetchRoutes is not a function
+
+      35 |       (apiClient.get as jest.Mock).mockResolvedValueOnce({ data: { data: mockRoutes } });
+      36 |
+    > 37 |       await api.fetchRoutes({ governorate: '╪╣┘à╪د┘', mode: 'brt' });
+         |                 ^
+      38 |       expect(apiClient.get).toHaveBeenCalledWith('/routes', {
+      39 |         params: { governorate: '╪╣┘à╪د┘', mode: 'brt' },
+      40 |       });
+
+      at Object.fetchRoutes (test/services/api.test.ts:37:17)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at Object.<anonymous> (node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+
+  ظù API Service ظ║ fetchRoutes ظ║ handles empty response
+
+    TypeError: api.fetchRoutes is not a function
+
+      43 |     it('handles empty response', async () => {
+      44 |       (apiClient.get as jest.Mock).mockResolvedValueOnce({ data: { data: [] } });
+    > 45 |       const result = await api.fetchRoutes();
+         |                                ^
+      46 |       expect(result).toEqual([]);
+      47 |     });
+      48 |
+
+      at Object.fetchRoutes (test/services/api.test.ts:45:32)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at Object.<anonymous> (node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+
+  ظù API Service ظ║ fetchRoutes ظ║ handles API error
+
+    TypeError: api.fetchRoutes is not a function
+
+      49 |     it('handles API error', async () => {
+      50 |       (apiClient.get as jest.Mock).mockRejectedValueOnce(new Error('Network Error'));
+    > 51 |       await expect(api.fetchRoutes()).rejects.toThrow('Network Error');
+         |                        ^
+      52 |     });
+      53 |   });
+      54 |
+
+      at Object.fetchRoutes (test/services/api.test.ts:51:24)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at Object.<anonymous> (node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+
+  ظù API Service ظ║ fetchRouteById ظ║ calls GET /routes/:id
+
+    TypeError: api.fetchRouteById is not a function
+
+      59 |       (apiClient.get as jest.Mock).mockResolvedValueOnce({ data: { data: mockRoute } });
+      60 |
+    > 61 |       const result = await api.fetchRouteById('r1');
+         |                                ^
+      62 |       expect(apiClient.get).toHaveBeenCalledWith('/routes/r1');
+      63 |       expect(result).toEqual(mockRoute);
+      64 |     });
+
+      at Object.fetchRouteById (test/services/api.test.ts:61:32)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at Object.<anonymous> (node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+
+  ظù API Service ظ║ fetchStops ظ║ calls GET /stops
+
+    TypeError: api.fetchStops is not a function
+
+      71 |       (apiClient.get as jest.Mock).mockResolvedValueOnce({ data: { data: mockStops } });
+      72 |
+    > 73 |       const result = await api.fetchStops();
+         |                                ^
+      74 |       expect(apiClient.get).toHaveBeenCalledWith('/stops');
+      75 |       expect(result).toEqual(mockStops);
+      76 |     });
+
+      at Object.fetchStops (test/services/api.test.ts:73:32)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at Object.<anonymous> (node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+
+  ظù API Service ظ║ fetchStops ظ║ accepts bounds parameter for nearby stops
+
+    TypeError: api.fetchStops is not a function
+
+      80 |       (apiClient.get as jest.Mock).mockResolvedValueOnce({ data: { data: [] } });
+      81 |
+    > 82 |       await api.fetchStops({ bounds });
+         |                 ^
+      83 |       expect(apiClient.get).toHaveBeenCalledWith('/stops', { params: { bounds } });
+      84 |     });
+      85 |   });
+
+      at Object.fetchStops (test/services/api.test.ts:82:17)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at Object.<anonymous> (node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+
+  ظù API Service ظ║ fetchStopById ظ║ calls GET /stops/:id
+
+    TypeError: api.fetchStopById is not a function
+
+      91 |       (apiClient.get as jest.Mock).mockResolvedValueOnce({ data: { data: mockStop } });
+      92 |
+    > 93 |       const result = await api.fetchStopById('s1');
+         |                                ^
+      94 |       expect(apiClient.get).toHaveBeenCalledWith('/stops/s1');
+      95 |       expect(result).toEqual(mockStop);
+      96 |     });
+
+      at Object.fetchStopById (test/services/api.test.ts:93:32)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at Object.<anonymous> (node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+
+  ظù API Service ظ║ fetchDepartures ظ║ calls GET /stops/:id/departures
+
+    TypeError: api.fetchDepartures is not a function
+
+      103 |       (apiClient.get as jest.Mock).mockResolvedValueOnce({ data: { data: mockDepartures } });
+      104 |
+    > 105 |       const result = await api.fetchDepartures('s1');
+          |                                ^
+      106 |       expect(apiClient.get).toHaveBeenCalledWith('/stops/s1/departures');
+      107 |       expect(result).toEqual(mockDepartures);
+      108 |     });
+
+      at Object.fetchDepartures (test/services/api.test.ts:105:32)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at Object.<anonymous> (node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+
+  ظù API Service ظ║ fetchVehicles ظ║ calls GET /vehicles
+
+    TypeError: api.fetchVehicles is not a function
+
+      115 |       (apiClient.get as jest.Mock).mockResolvedValueOnce({ data: { data: mockVehicles } });
+      116 |
+    > 117 |       const result = await api.fetchVehicles();
+          |                                ^
+      118 |       expect(apiClient.get).toHaveBeenCalledWith('/vehicles');
+      119 |       expect(result).toEqual(mockVehicles);
+      120 |     });
+
+      at Object.fetchVehicles (test/services/api.test.ts:117:32)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at Object.<anonymous> (node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+
+  ظù API Service ظ║ fetchVehicles ظ║ filters by route
+
+    TypeError: api.fetchVehicles is not a function
+
+      123 |       (apiClient.get as jest.Mock).mockResolvedValueOnce({ data: { data: [] } });
+      124 |
+    > 125 |       await api.fetchVehicles({ routeId: 'r1' });
+          |                 ^
+      126 |       expect(apiClient.get).toHaveBeenCalledWith('/vehicles', { params: { routeId: 'r1' } });
+      127 |     });
+      128 |   });
+
+      at Object.fetchVehicles (test/services/api.test.ts:125:17)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at Object.<anonymous> (node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+
+  ظù API Service ظ║ planJourney ظ║ calls POST /journey/plan
+
+    TypeError: api.planJourney is not a function
+
+      134 |       (apiClient.post as jest.Mock).mockResolvedValueOnce({ data: { data: mockJourneys } });
+      135 |
+    > 136 |       const result = await api.planJourney({
+          |                                ^
+      137 |         fromLat: 31.95, fromLng: 35.91,
+      138 |         toLat: 31.96, toLng: 35.93,
+      139 |         departureTime: '08:00',
+
+      at Object.planJourney (test/services/api.test.ts:136:32)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at Object.<anonymous> (node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+
+  ظù API Service ظ║ planJourney ظ║ handles multi-leg journey response
+
+    TypeError: api.planJourney is not a function
+
+      161 |       (apiClient.post as jest.Mock).mockResolvedValueOnce({ data: { data: mockJourneys } });
+      162 |
+    > 163 |       const result = await api.planJourney({
+          |                                ^
+      164 |         fromLat: 31.95, fromLng: 35.91,
+      165 |         toLat: 31.97, toLng: 35.95,
+      166 |       });
+
+      at Object.planJourney (test/services/api.test.ts:163:32)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at Object.<anonymous> (node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+
+  ظù API Service ظ║ searchStops ظ║ calls GET /stops/search
+
+    TypeError: api.searchStops is not a function
+
+      177 |       (apiClient.get as jest.Mock).mockResolvedValueOnce({ data: { data: [] } });
+      178 |
+    > 179 |       await api.searchStops('┘à╪ص╪╖╪ر');
+          |                 ^
+      180 |       expect(apiClient.get).toHaveBeenCalledWith('/stops/search', { params: { q: '┘à╪ص╪╖╪ر' } });
+      181 |     });
+      182 |   });
+
+      at Object.searchStops (test/services/api.test.ts:179:17)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at Object.<anonymous> (node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+
+  ظù API Service ظ║ searchRoutes ظ║ calls GET /routes/search
+
+    TypeError: api.searchRoutes is not a function
+
+      187 |       (apiClient.get as jest.Mock).mockResolvedValueOnce({ data: { data: [] } });
+      188 |
+    > 189 |       await api.searchRoutes('╪ذ╪د╪╡ ╪╣┘à╪د┘');
+          |                 ^
+      190 |       expect(apiClient.get).toHaveBeenCalledWith('/routes/search', { params: { q: '╪ذ╪د╪╡ ╪╣┘à╪د┘' } });
+      191 |     });
+      192 |   });
+
+      at Object.searchRoutes (test/services/api.test.ts:189:17)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at Object.<anonymous> (node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+
+  ظù API Service ظ║ fetchAlerts ظ║ calls GET /alerts
+
+    TypeError: api.fetchAlerts is not a function
+
+      198 |       (apiClient.get as jest.Mock).mockResolvedValueOnce({ data: { data: mockAlerts } });
+      199 |
+    > 200 |       const result = await api.fetchAlerts();
+          |                                ^
+      201 |       expect(apiClient.get).toHaveBeenCalledWith('/alerts');
+      202 |       expect(result).toEqual(mockAlerts);
+      203 |     });
+
+      at Object.fetchAlerts (test/services/api.test.ts:200:32)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at Object.<anonymous> (node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+
+  ظù API Service ظ║ login ظ║ calls POST /auth/login
+
+    TypeError: api.login is not a function
+
+      210 |       (apiClient.post as jest.Mock).mockResolvedValueOnce({ data: mockResponse });
+      211 |
+    > 212 |       const result = await api.login('test@example.com', 'password123');
+          |                                ^
+      213 |       expect(apiClient.post).toHaveBeenCalledWith('/auth/login', {
+      214 |         email: 'test@example.com',
+      215 |         password: 'password123',
+
+      at Object.login (test/services/api.test.ts:212:32)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at Object.<anonymous> (node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+
+  ظù API Service ظ║ register ظ║ calls POST /auth/register
+
+    TypeError: api.register is not a function
+
+      223 |       (apiClient.post as jest.Mock).mockResolvedValueOnce({ data: { success: true } });
+      224 |
+    > 225 |       await api.register('test@example.com', 'password123', 'Test User');
+          |                 ^
+      226 |       expect(apiClient.post).toHaveBeenCalledWith('/auth/register', {
+      227 |         email: 'test@example.com',
+      228 |         password: 'password123',
+
+      at Object.register (test/services/api.test.ts:225:17)
+      at asyncGeneratorStep (node_modules/@babel/runtime/helpers/asyncToGenerator.js:3:17)
+      at _next (node_modules/@babel/runtime/helpers/asyncToGenerator.js:17:9)
+      at node_modules/@babel/runtime/helpers/asyncToGenerator.js:22:7
+      at Object.<anonymous> (node_modules/@babel/runtime/helpers/asyncToGenerator.js:14:12)
+
+FAIL test/types/transit.types.test.ts
+  ظù Type Shapes ظ¤ Compile-time + runtime validation ظ║ PlanRequest has origin/destination coordinates
+
+    expect(received).toBeGreaterThan(expected)
+
+    Expected: > 31.98
+    Received:   31.95
+
+      267 |       toLng: 35.88,
+      268 |     };
+    > 269 |     expect(req.fromLat).toBeGreaterThan(req.toLat); // going south
+          |                         ^
+      270 |     expect(req.fromLng).toBeGreaterThan(req.toLng); // going west
+      271 |   });
+      272 |
+
+      at Object.toBeGreaterThan (test/types/transit.types.test.ts:269:25)
+
+PASS test/config/transport.config.test.ts
+FAIL test/stores/transit.store.test.ts
+  ظù useTransitStore ظ║ clearSelectedStop resets selectedStop to null
+
+    TypeError: _transit.useTransitStore.getState(...).clearSelectedStop is not a function
+
+      75 |     });
+      76 |
+    > 77 |     useTransitStore.getState().clearSelectedStop();
+         |                                ^
+      78 |     expect(useTransitStore.getState().selectedStop).toBeNull();
+      79 |   });
+      80 |
+
+      at Object.clearSelectedStop (test/stores/transit.store.test.ts:77:32)
+
+  ظù useTransitStore ظ║ clearSelectedRoute resets selectedRoute to null
+
+    TypeError: _transit.useTransitStore.getState(...).clearSelectedRoute is not a function
+
+      112 |     });
+      113 |
+    > 114 |     useTransitStore.getState().clearSelectedRoute();
+          |                                ^
+      115 |     expect(useTransitStore.getState().selectedRoute).toBeNull();
+      116 |   });
+      117 |
+
+      at Object.clearSelectedRoute (test/stores/transit.store.test.ts:114:32)
+
+  ظù useTransitStore ظ║ setSearchQuery updates search query
+
+    TypeError: _transit.useTransitStore.getState(...).setSearchQuery is not a function
+
+      118 |   // ظ¤ظ¤ظ¤ Search ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤
+      119 |   it('setSearchQuery updates search query', () => {
+    > 120 |     useTransitStore.getState().setSearchQuery('╪ذ╪د╪╡');
+          |                                ^
+      121 |     expect(useTransitStore.getState().searchQuery).toBe('╪ذ╪د╪╡');
+      122 |   });
+      123 |
+
+      at Object.setSearchQuery (test/stores/transit.store.test.ts:120:32)
+
+  ظù useTransitStore ظ║ clearSearch resets search query
+
+    TypeError: _transit.useTransitStore.getState(...).clearSearch is not a function
+
+      124 |   it('clearSearch resets search query', () => {
+      125 |     useTransitStore.setState({ searchQuery: 'test' });
+    > 126 |     useTransitStore.getState().clearSearch();
+          |                                ^
+      127 |     expect(useTransitStore.getState().searchQuery).toBe('');
+      128 |   });
+      129 |
+
+      at Object.clearSearch (test/stores/transit.store.test.ts:126:32)
+
+  ظù useTransitStore ظ║ setFilterMode sets transport mode filter
+
+    TypeError: _transit.useTransitStore.getState(...).setFilterMode is not a function
+
+      130 |   // ظ¤ظ¤ظ¤ Filter ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤
+      131 |   it('setFilterMode sets transport mode filter', () => {
+    > 132 |     useTransitStore.getState().setFilterMode('brt');
+          |                                ^
+      133 |     expect(useTransitStore.getState().filterMode).toBe('brt');
+      134 |   });
+      135 |
+
+      at Object.setFilterMode (test/stores/transit.store.test.ts:132:32)
+
+  ظù useTransitStore ظ║ clearFilter resets mode filter to null
+
+    TypeError: _transit.useTransitStore.getState(...).clearFilter is not a function
+
+      136 |   it('clearFilter resets mode filter to null', () => {
+      137 |     useTransitStore.setState({ filterMode: 'city_bus' });
+    > 138 |     useTransitStore.getState().clearFilter();
+          |                                ^
+      139 |     expect(useTransitStore.getState().filterMode).toBeNull();
+      140 |   });
+      141 |
+
+      at Object.clearFilter (test/stores/transit.store.test.ts:138:32)
+
+  ظù useTransitStore ظ║ setFilterMode toggles filter when same mode selected
+
+    TypeError: _transit.useTransitStore.getState(...).setFilterMode is not a function
+
+      142 |   it('setFilterMode toggles filter when same mode selected', () => {
+      143 |     useTransitStore.setState({ filterMode: 'brt' });
+    > 144 |     useTransitStore.getState().setFilterMode('brt');
+          |                                ^
+      145 |     expect(useTransitStore.getState().filterMode).toBeNull();
+      146 |   });
+      147 |
+
+      at Object.setFilterMode (test/stores/transit.store.test.ts:144:32)
+
+  ظù useTransitStore ظ║ setLoading updates loading state
+
+    TypeError: _transit.useTransitStore.getState(...).setLoading is not a function
+
+      148 |   // ظ¤ظ¤ظ¤ Loading State ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤
+      149 |   it('setLoading updates loading state', () => {
+    > 150 |     useTransitStore.getState().setLoading(true);
+          |                                ^
+      151 |     expect(useTransitStore.getState().isLoading).toBe(true);
+      152 |
+      153 |     useTransitStore.getState().setLoading(false);
+
+      at Object.setLoading (test/stores/transit.store.test.ts:150:32)
+
+  ظù useTransitStore ظ║ setError sets error message
+
+    TypeError: _transit.useTransitStore.getState(...).setError is not a function
+
+      157 |   // ظ¤ظ¤ظ¤ Error State ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤
+      158 |   it('setError sets error message', () => {
+    > 159 |     useTransitStore.getState().setError('Network error');
+          |                                ^
+      160 |     expect(useTransitStore.getState().error).toBe('Network error');
+      161 |   });
+      162 |
+
+      at Object.setError (test/stores/transit.store.test.ts:159:32)
+
+  ظù useTransitStore ظ║ clearError resets error to null
+
+    TypeError: _transit.useTransitStore.getState(...).clearError is not a function
+
+      163 |   it('clearError resets error to null', () => {
+      164 |     useTransitStore.setState({ error: 'Some error' });
+    > 165 |     useTransitStore.getState().clearError();
+          |                                ^
+      166 |     expect(useTransitStore.getState().error).toBeNull();
+      167 |   });
+      168 |
+
+      at Object.clearError (test/stores/transit.store.test.ts:165:32)
+
+  ظù useTransitStore ظ║ updateVehicles replaces vehicle list
+
+    TypeError: _transit.useTransitStore.getState(...).updateVehicles is not a function
+
+      184 |     ];
+      185 |
+    > 186 |     useTransitStore.getState().updateVehicles(vehicles);
+          |                                ^
+      187 |     expect(useTransitStore.getState().vehicles).toHaveLength(2);
+      188 |   });
+      189 |
+
+      at Object.updateVehicles (test/stores/transit.store.test.ts:186:32)
+
+  ظù useTransitStore ظ║ updateDepartures replaces departure list
+
+    TypeError: _transit.useTransitStore.getState(...).updateDepartures is not a function
+
+      202 |     ];
+      203 |
+    > 204 |     useTransitStore.getState().updateDepartures(departures);
+          |                                ^
+      205 |     expect(useTransitStore.getState().departures).toHaveLength(1);
+      206 |   });
+      207 |
+
+      at Object.updateDepartures (test/stores/transit.store.test.ts:204:32)
+
+  ظù useTransitStore ظ║ toggleFavorite add/removes stop from favorites
+
+    TypeError: _transit.useTransitStore.getState(...).toggleFavoriteStop is not a function
+
+      208 |   // ظ¤ظ¤ظ¤ Favorites ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤
+      209 |   it('toggleFavorite add/removes stop from favorites', () => {
+    > 210 |     useTransitStore.getState().toggleFavoriteStop('s1');
+          |                                ^
+      211 |     expect(useTransitStore.getState().favoriteStops).toContain('s1');
+      212 |
+      213 |     useTransitStore.getState().toggleFavoriteStop('s1');
+
+      at Object.toggleFavoriteStop (test/stores/transit.store.test.ts:210:32)
+
+  ظù useTransitStore ظ║ toggleFavoriteRoute add/removes route from favorites
+
+    TypeError: _transit.useTransitStore.getState(...).toggleFavoriteRoute is not a function
+
+      216 |
+      217 |   it('toggleFavoriteRoute add/removes route from favorites', () => {
+    > 218 |     useTransitStore.getState().toggleFavoriteRoute('r1');
+          |                                ^
+      219 |     expect(useTransitStore.getState().favoriteRoutes).toContain('r1');
+      220 |
+      221 |     useTransitStore.getState().toggleFavoriteRoute('r1');
+
+      at Object.toggleFavoriteRoute (test/stores/transit.store.test.ts:218:32)
+
+  ظù useTransitStore ظ║ setJourneys replaces journey list
+
+    TypeError: _transit.useTransitStore.getState(...).setJourneys is not a function
+
+      245 |     ];
+      246 |
+    > 247 |     useTransitStore.getState().setJourneys(journeys);
+          |                                ^
+      248 |     expect(useTransitStore.getState().journeys).toHaveLength(1);
+      249 |   });
+      250 |
+
+      at Object.setJourneys (test/stores/transit.store.test.ts:247:32)
+
+  ظù useTransitStore ظ║ clearJourneys resets journey list
+
+    TypeError: _transit.useTransitStore.getState(...).clearJourneys is not a function
+
+      262 |     });
+      263 |
+    > 264 |     useTransitStore.getState().clearJourneys();
+          |                                ^
+      265 |     expect(useTransitStore.getState().journeys).toHaveLength(0);
+      266 |   });
+      267 | });
+
+      at Object.clearJourneys (test/stores/transit.store.test.ts:264:32)
+
+FAIL test/hooks/useWebSocket.test.ts
+  ظù Test suite failed to run
+
+    Cannot find module '@testing-library/react-hooks' from 'test/hooks/useWebSocket.test.ts'
+
+      2 | // ╪»╪▒┘ê╪ذ (Droob) ظ¤ useWebSocket Hook Tests
+      3 | // ============================================================================
+    > 4 | import { renderHook, act } from '@testing-library/react-hooks';
+        | ^
+      5 | import { useWebSocket } from '@hooks/useWebSocket';
+      6 |
+      7 | // Mock the WebSocket service
+
+      at Resolver._throwModNotFoundError (node_modules/jest-resolve/build/resolver.js:427:11)
+      at Object.require (test/hooks/useWebSocket.test.ts:4:1)
+
+FAIL test/stores/app.store.test.ts
+  ظù useAppStore ظ║ setOnboarded sets onboarding flag
+
+    TypeError: _app.useAppStore.getState(...).setOnboarded is not a function
+
+      31 |   // ظ¤ظ¤ظ¤ Onboarding ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤
+      32 |   it('setOnboarded sets onboarding flag', () => {
+    > 33 |     useAppStore.getState().setOnboarded(true);
+         |                            ^
+      34 |     expect(useAppStore.getState().isOnboarded).toBe(true);
+      35 |   });
+      36 |
+
+      at Object.setOnboarded (test/stores/app.store.test.ts:33:28)
+
+  ظù useAppStore ظ║ setAuthenticated sets auth flag
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: false
+    Received: true
+
+      41 |
+      42 |     useAppStore.getState().setAuthenticated(false);
+    > 43 |     expect(useAppStore.getState().isAuthenticated).toBe(false);
+         |                                                    ^
+      44 |   });
+      45 |
+      46 |   // ظ¤ظ¤ظ¤ Language ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤
+
+      at Object.toBe (test/stores/app.store.test.ts:43:52)
+
+  ظù useAppStore ظ║ setLanguage updates language
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "en"
+    Received: "ar"
+
+      47 |   it('setLanguage updates language', () => {
+      48 |     useAppStore.getState().setLanguage('en');
+    > 49 |     expect(useAppStore.getState().language).toBe('en');
+         |                                             ^
+      50 |
+      51 |     useAppStore.getState().setLanguage('ar');
+      52 |     expect(useAppStore.getState().language).toBe('ar');
+
+      at Object.toBe (test/stores/app.store.test.ts:49:45)
+
+  ظù useAppStore ظ║ setLanguage only accepts ar or en
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "en"
+    Received: "ar"
+
+      58 |
+      59 |     useAppStore.getState().setLanguage('en');
+    > 60 |     expect(useAppStore.getState().language).toBe('en');
+         |                                             ^
+      61 |   });
+      62 |
+      63 |   // ظ¤ظ¤ظ¤ Theme ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤
+
+      at Object.toBe (test/stores/app.store.test.ts:60:45)
+
+  ظù useAppStore ظ║ setTheme updates theme
+
+    TypeError: _app.useAppStore.getState(...).setTheme is not a function
+
+      63 |   // ظ¤ظ¤ظ¤ Theme ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤ظ¤
+      64 |   it('setTheme updates theme', () => {
+    > 65 |     useAppStore.getState().setTheme('light');
+         |                            ^
+      66 |     expect(useAppStore.getState().theme).toBe('light');
+      67 |
+      68 |     useAppStore.getState().setTheme('dark');
+
+      at Object.setTheme (test/stores/app.store.test.ts:65:28)
+
+  ظù useAppStore ظ║ toggleNotifications flips notification setting
+
+    TypeError: _app.useAppStore.getState(...).toggleNotifications is not a function
+
+      85 |   it('toggleNotifications flips notification setting', () => {
+      86 |     expect(useAppStore.getState().notificationsEnabled).toBe(true);
+    > 87 |     useAppStore.getState().toggleNotifications();
+         |                            ^
+      88 |     expect(useAppStore.getState().notificationsEnabled).toBe(false);
+      89 |     useAppStore.getState().toggleNotifications();
+      90 |     expect(useAppStore.getState().notificationsEnabled).toBe(true);
+
+      at Object.toggleNotifications (test/stores/app.store.test.ts:87:28)
+
+  ظù useAppStore ظ║ setLastSyncTimestamp updates sync time
+
+    TypeError: _app.useAppStore.getState(...).setLastSyncTimestamp is not a function
+
+      94 |   it('setLastSyncTimestamp updates sync time', () => {
+      95 |     const now = Date.now();
+    > 96 |     useAppStore.getState().setLastSyncTimestamp(now);
+         |                            ^
+      97 |     expect(useAppStore.getState().lastSyncTimestamp).toBe(now);
+      98 |   });
+      99 |
+
+      at Object.setLastSyncTimestamp (test/stores/app.store.test.ts:96:28)
+
+  ظù useAppStore ظ║ resetState returns to defaults
+
+    TypeError: _app.useAppStore.getState(...).resetState is not a function
+
+      111 |     });
+      112 |
+    > 113 |     useAppStore.getState().resetState();
+          |                            ^
+      114 |
+      115 |     const state = useAppStore.getState();
+      116 |     expect(state.isOnboarded).toBe(false);
+
+      at Object.resetState (test/stores/app.store.test.ts:113:28)
+
+FAIL test/components/TransportIcon.test.tsx
+  ظù Test suite failed to run
+
+    TypeError: Cannot read properties of undefined (reading 'S')
+
+      3 | // ============================================================================
+      4 | import React from 'react';
+    > 5 | import { render } from '@testing-library/react-native';
+        | ^
+      6 | import TransportIcon from '@components/TransportIcon';
+      7 | import { TRANSPORT_MODES, WALKING_MODE, COLORS } from '@config/transport.config';
+      8 | import type { TransportMode } from '@types/transit.types';
+
+      at node_modules/react-test-renderer/cjs/react-test-renderer.development.js:15448:58
+      at Object.<anonymous> (node_modules/react-test-renderer/cjs/react-test-renderer.development.js:17456:5)
+      at Object.<anonymous> (node_modules/react-test-renderer/index.js:6:20)
+      at Object.require (node_modules/@testing-library/react-native/src/act.ts:3:1)
+      at Object.require (node_modules/@testing-library/react-native/src/pure.ts:1:1)
+      at Object.require (node_modules/@testing-library/react-native/src/index.ts:1:1)
+      at Object.require (test/components/TransportIcon.test.tsx:5:1)
+
+FAIL test/hooks/useOfflineStorage.test.ts
+  ظù Test suite failed to run
+
+    Cannot find module '@react-native-async-storage/async-storage' from 'test/hooks/useOfflineStorage.test.ts'
+
+       6 |
+       7 | // Mock AsyncStorage
+    >  8 | jest.mock('@react-native-async-storage/async-storage', () => ({
+         |                                                        ^
+       9 |   getItem: jest.fn(),
+      10 |   setItem: jest.fn(),
+      11 |   removeItem: jest.fn(),
+
+      at Resolver._throwModNotFoundError (node_modules/jest-resolve/build/resolver.js:427:11)
+      at Object.<anonymous> (test/hooks/useOfflineStorage.test.ts:8:56)
+
+FAIL test/hooks/useNetworkStatus.test.ts
+  ظù Test suite failed to run
+
+    Cannot find module '@testing-library/react-hooks' from 'test/hooks/useNetworkStatus.test.ts'
+
+      2 | // ╪»╪▒┘ê╪ذ (Droob) ظ¤ useNetworkStatus Hook Tests
+      3 | // ============================================================================
+    > 4 | import { renderHook, act } from '@testing-library/react-hooks';
+        | ^
+      5 | import { useNetworkStatus } from '@hooks/useNetworkStatus';
+      6 |
+      7 | // Simulate NetInfo changes
+
+      at Resolver._throwModNotFoundError (node_modules/jest-resolve/build/resolver.js:427:11)
+      at Object.require (test/hooks/useNetworkStatus.test.ts:4:1)
+
+PASS test/config/snapshots.test.tsx
+
+Test Suites: 9 failed, 2 passed, 11 total
+Tests:       43 failed, 60 passed, 103 total
+Snapshots:   9 passed, 9 total
+Time:        3.342 s
+Ran all test suites.

@@ -1,0 +1,42 @@
+{
+  "name": "دروب — دربك أسهل",
+  "short_name": "دروب",
+  "description": "تطبيق النقل العام في الأردن — مسارات الباص السريع، السرفيس، الكوستر، والباصات العامة",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1B5E20",
+  "theme_color": "#1B5E20",
+  "orientation": "portrait-primary",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "dir": "rtl",
+  "lang": "ar",
+  "categories": ["travel", "navigation", "maps"],
+  "screenshots": [
+    {
+      "src": "/screenshots/home.png",
+      "sizes": "390x844",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "الشاشة الرئيسية — خريطة المحطات"
+    },
+    {
+      "src": "/screenshots/search.png",
+      "sizes": "390x844",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "البحث عن المحطات والمسارات"
+    }
+  ],
+  "related_applications": [
+    {
+      "platform": "play",
+      "url": "https://play.google.com/store/apps/details?id=app.droob.passenger",
+      "id": "app.droob.passenger"
+    }
+  ],
+  "prefer_related_applications": false
+}
