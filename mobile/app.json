@@ -66,12 +66,6 @@
     },
     "plugins": [
       [
-        "@rnmapbox/maps",
-        {
-          "RNMapboxMapsImpl": "maplibre"
-        }
-      ],
-      [
         "expo-location",
         {
           "locationAlwaysAndWhenInUsePermission": "دروب يستخدم موقعك لمساعدتك في التنقل",
