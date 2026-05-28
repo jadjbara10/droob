@@ -7,7 +7,7 @@
       "android": { "buildType": "apk" },
       "ios": { "simulator": true },
       "cache": { "disabled": true },
-      "env": { "APP_ENV": "development" }
+      "env": { "APP_ENV": "development", "ORG_GRADLE_PROJECT_MAPS_API_KEY": "AIzaSyDummyValueForBuild", "MAPBOX_ACCESS_TOKEN": "pk.dummy" }
     },
     "preview": {
       "distribution": "internal",
