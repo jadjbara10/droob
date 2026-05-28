@@ -10,7 +10,8 @@ import {
   Dimensions, Platform, FlatList,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import MapboxGL from "@rnmapbox/maps";
+// DIAGNOSTIC: Mapbox removed for build verification
+// import MapboxGL from "@rnmapbox/maps";
 import Animated, {
   useSharedValue, useAnimatedStyle, withSpring,
   FadeIn, SlideInDown,
@@ -182,7 +183,7 @@ const SheetContent92: React.FC<{ onFocus: () => void }> = React.memo(({ onFocus 
 const HomeScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const bsRef = useRef<BottomSheetRef>(null);
-  const camRef = useRef<MapboxGL.Camera>(null);
+  const camRef = useRef<View>(null);
   const [snapIdx, setSnapIdx] = useState(0);
   const [alert, setAlert] = useState<ServiceAlert | null>(null);
 
@@ -206,14 +207,8 @@ const HomeScreen: React.FC = () => {
 
   return (
     <View style={styles.root}>
-      {/* MAP — full screen */}
-      <MapboxGL.MapView
-        style={styles.map}
-        styleURL={MapboxGL.StyleURL.Street}
-        scaleBarEnabled={false} logoEnabled={false} attributionEnabled={false} compassEnabled={false}
-      >
-        <MapboxGL.Camera ref={camRef} centerCoordinate={AMAAN_COORDS} zoomLevel={13} animationDuration={0} />
-      </MapboxGL.MapView>
+      {/* MAP — full screen (placeholder for diagnostic build) */}
+      <View style={styles.map} />
 
       {/* SEARCH BAR */}
       <View style={[styles.searchContainer, { top: insets.top + 8 }]}>

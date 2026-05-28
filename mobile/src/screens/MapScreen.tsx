@@ -9,7 +9,9 @@ import {
   Dimensions, Animated, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Mapbox, { Camera, ShapeSource, CircleLayer, LineLayer, SymbolLayer } from '@rnmapbox/maps';
+// DIAGNOSTIC: Mapbox removed for build verification
+// import Mapbox, { Camera, ShapeSource, CircleLayer, LineLayer, SymbolLayer } from '@rnmapbox/maps';
+import React from 'react';
 import { useTransitStore } from '../stores/transit.store';
 import { TRANSPORT_MODES, COLORS, AMMAN_CENTER, DEFAULT_ZOOM, LANDMARK_STOPS } from '../config/transport.config';
 import { TransportMode, TransitStop, TransitRoute, TransitVehicle } from '../types/transit.types';
