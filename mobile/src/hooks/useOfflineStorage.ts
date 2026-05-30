@@ -4,9 +4,16 @@
 // ============================================================================
 
 import { useCallback, useEffect, useRef } from 'react';
-import { MMKV } from 'react-native-mmkv';
+// Expo Go stub — replace with react-native-mmkv for production builds
 import { TransitStop, TransitRoute, TransitAlert, Journey } from '../types/transit.types';
-const storage = new MMKV({ id: 'droob-offline-cache' });
+const storage = {
+  getString: (_k: string) => null as string | null,
+  set: (_k: string, _v: string) => {},
+  delete: (_k: string) => {},
+  clearAll: () => {},
+  getAllKeys: () => [] as string[],
+  getNumber: (_k: string) => null as number | null,
+};
 
 const KEYS = {
   STOPS: 'cached_stops',
@@ -46,7 +53,7 @@ export function useOfflineStorage() {
   // ── Stops ─────────────────────────────────────────────────────────────
   const cacheStops = useCallback((stops: TransitStop[]) => {
     writeJSON(KEYS.STOPS, stops);
-    storage.set(KEYS.LAST_FETCH, Date.now());
+    storage.set(KEYS.LAST_FETCH, String(Date.now()));
   }, []);
 
   const getCachedStops = useCallback((): TransitStop[] => {

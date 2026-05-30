@@ -173,7 +173,7 @@ export async function routesRoutes(app: FastifyInstance) {
       };
       if (body.pathGeojson) insertValues.path_geojson = body.pathGeojson;
 
-      const [newRoute] = await db.insert(routes).values(insertValues).returning();
+      const [newRoute] = await db.insert(routes).values(insertValues as any).returning();
 
       await cacheDel("routes:*");
       return reply.status(201).send(toCamelCase(newRoute));

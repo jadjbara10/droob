@@ -10,7 +10,7 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import { colors, radius, fontSize, fontWeight } from "@theme/tokens";
-import type { OccupancyLevel } from "@types/transit";
+import type { OccupancyLevel } from "@/types/transit";
 
 // ─── Props ──────────────────────────────────────────────────────────────────
 

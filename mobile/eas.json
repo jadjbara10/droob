@@ -15,7 +15,11 @@
       "ios": { "simulator": false },
       "channel": "preview",
       "cache": { "disabled": true },
-      "env": { "APP_ENV": "staging" }
+      "env": {
+        "APP_ENV": "staging",
+        "ORG_GRADLE_PROJECT_MAPS_API_KEY": "AIzaSyDummyValueForBuild",
+        "MAPBOX_ACCESS_TOKEN": "pk.test"
+      }
     },
     "production": {
       "distribution": "store",
@@ -24,7 +28,11 @@
       "channel": "production",
       "autoIncrement": true,
       "cache": { "disabled": true },
-      "env": { "APP_ENV": "production" }
+      "env": {
+        "APP_ENV": "production",
+        "ORG_GRADLE_PROJECT_MAPS_API_KEY": "AIzaSyDummyValueForBuild",
+        "MAPBOX_ACCESS_TOKEN": "pk.test"
+      }
     }
   },
   "submit": {

@@ -41,7 +41,7 @@ export default function DepartureCard({ departure, onBellPress, onSelect }: Depa
     >
       {/* ─── Icon Column ─────────────────────────────────────────────── */}
       <View style={styles.iconCol}>
-        <TransportIcon mode={mode} routeCode={departure.code} size="sm" />
+        <TransportIcon mode={mode} code={departure.code} size={32} />
       </View>
 
       {/* ─── Info Column ──────────────────────────────────────────────── */}

@@ -20,6 +20,10 @@ export function getAuthToken(): string | null {
   return authToken;
 }
 
+export function clearAuthToken() {
+  authToken = null;
+}
+
 // ─── Base HTTP Client ─────────────────────────────────────────────────────
 interface FetchOptions extends Omit<RequestInit, 'body'> {
   body?: unknown;

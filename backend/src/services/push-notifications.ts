@@ -11,9 +11,11 @@
  */
 
 import { db } from "../db/index.js";
-import { deviceTokens, pushNotifications } from "../../drizzle/schema.js";
+// TODO: Add deviceTokens, pushNotifications tables to schema
+// import { deviceTokens, pushNotifications } from "../../drizzle/schema.js";
+const deviceTokens: any = null, pushNotifications: any = null;
 import { eq, and, sql } from "drizzle-orm";
-import { Queue, Worker, QueueScheduler } from "bullmq";
+import { Queue, Worker } from "bullmq";
 import { redis } from "../redis/index.js";
 
 // ─── Types ────────────────────────────────────────────────────

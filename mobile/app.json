@@ -4,6 +4,7 @@
     "slug": "droob",
     "version": "1.0.0",
     "orientation": "portrait",
+    "newArchEnabled": true,
     "icon": "./assets/images/icon.png",
     "scheme": "droob",
     "userInterfaceStyle": "automatic",
@@ -28,6 +29,8 @@
         "NSLocationAlwaysAndWhenInUseUsageDescription": "دروب يستخدم موقعك في الخلفية لتنبيهك عند اقتراب محطتك",
         "CFBundleLocalizations": [
           "ar",
+          "en",
+          "ar",
           "en"
         ],
         "CFBundleDevelopmentRegion": "ar_JO",
@@ -50,9 +53,7 @@
         "ACCESS_BACKGROUND_LOCATION",
         "INTERNET",
         "VIBRATE",
-        "RECEIVE_BOOT_COMPLETED",
-        "android.permission.ACCESS_COARSE_LOCATION",
-        "android.permission.ACCESS_FINE_LOCATION"
+        "RECEIVE_BOOT_COMPLETED"
       ],
       "config": {}
     },
@@ -81,23 +82,16 @@
           ]
         }
       ],
-      "expo-dev-client",
-      "expo-updates"
+      "expo-font"
     ],
     "extra": {
       "API_URL": "${API_URL:-http://localhost:3000}",
       "MAPBOX_ACCESS_TOKEN": "${MAPBOX_ACCESS_TOKEN:-pk.test}",
       "e2e": false,
       "eas": {
-        "projectId": "c0f99c6c-f68d-41ee-a9fe-cb99fc6f5baf"
+        "projectId": "2f69db9b-a864-4627-96ef-8c7cbc4c18b2"
       }
     },
-    "updates": {
-      "url": "https://u.expo.dev/c0f99c6c-f68d-41ee-a9fe-cb99fc6f5baf",
-      "enabled": true,
-      "fallbackToCacheTimeout": 300000,
-      "checkAutomatically": "ON_LOAD"
-    },
-    "owner": "jad_dev"
+    "owner": "jad.dev"
   }
 }

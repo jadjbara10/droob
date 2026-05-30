@@ -11,7 +11,7 @@ import Animated, { useSharedValue, useAnimatedStyle, withSpring, FadeIn, SlideIn
 import LeafletMap, { type LeafletMapRef } from "@components/LeafletMap";
 import { colors, radius, spacing, fontSize, fontWeight, shadows, layout } from "@theme/tokens";
 import type { TransitMode } from "@theme/tokens";
-import type { TransitStop, QuickChip, ServiceAlert } from "@types/transit";
+import type { TransitStop, QuickChip, ServiceAlert } from "@/types/transit";
 import { BottomSheet, type BottomSheetRef } from "@components/BottomSheet";
 import { TransitBadge } from "@components/TransitBadge";
 import { CountdownTimer } from "@components/CountdownTimer";

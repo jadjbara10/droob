@@ -66,7 +66,7 @@ const MOCK_SAVED_STOPS: SavedStop[] = [
 function getTypeConfig(type: SavedRoute['type']) {
   switch (type) {
     case 'city': return { color: COLORS.cityBus, label: 'باص مدني', icon: 'bus' as const };
-    case 'brt': return { color: COLORS.brt, label: 'باص سريع', icon: 'bus-articulated' as const };
+    case 'brt': return { color: COLORS.brt, label: 'باص سريع', icon: 'bus-clock' as const };
     case 'serveece': return { color: COLORS.serveece, label: 'سرفيس', icon: 'bus-side' as const };
     case 'intercity': return { color: COLORS.intercity, label: 'بين مدني', icon: 'bus-multiple' as const };
   }
@@ -111,7 +111,7 @@ export default function SavedRoutesScreen() {
       <TouchableOpacity
         style={styles.routeCard}
         activeOpacity={0.7}
-        onPress={() => navigation.navigate('JourneyDetail' as never, { journeyId: item.id } as never)}
+        onPress={() => (navigation as any).navigate('JourneyDetail', { journeyId: item.id })}
       >
         {/* Type stripe */}
         <View style={[styles.typeStripe, { backgroundColor: tc.color }]} />
@@ -160,7 +160,7 @@ export default function SavedRoutesScreen() {
     <TouchableOpacity
       style={styles.stopCard}
       activeOpacity={0.7}
-      onPress={() => navigation.navigate('StopDetail' as never, { stopId: item.id, stopName: item.name } as never)}
+      onPress={() => (navigation as any).navigate('StopDetail', { stopId: item.id, stopName: item.name })}
     >
       <View style={styles.stopIcon}>
         <MaterialCommunityIcons name="bus-stop-covered" size={20} color={COLORS.primary} />

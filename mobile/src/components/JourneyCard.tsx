@@ -7,7 +7,7 @@ import React, { useCallback } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, type ViewStyle } from "react-native";
 import Animated, { useSharedValue, useAnimatedStyle, withSpring } from "react-native-reanimated";
 import { colors, transitColorMap, radius, spacing, fontSize, fontWeight, shadows } from "@theme/tokens";
-import type { Journey } from "@types/transit";
+import type { Journey } from "@/types/transit";
 import { TransitBadge } from "./TransitBadge";
 import { JourneyTimeline } from "./JourneyTimeline";
 

@@ -119,7 +119,7 @@ export async function stopsRoutes(app: FastifyInstance) {
       LIMIT 30
     `);
 
-    return reply.send(Array.isArray(result) ? result : (result.rows ?? []));
+    return reply.send(Array.isArray(result) ? result : ((result as any).rows ?? []));
   });
 
   // GET /api/v1/stops — List with optional proximity filter
@@ -156,7 +156,7 @@ export async function stopsRoutes(app: FastifyInstance) {
           OFFSET ${query.offset}
         `);
 
-        const rows = Array.isArray(result) ? result : (result.rows ?? []);
+        const rows = Array.isArray(result) ? result : ((result as any).rows ?? []);
         await cacheSet(cacheKey, rows, 300);
         return reply.send(rows);
       }

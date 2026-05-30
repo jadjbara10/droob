@@ -184,69 +184,70 @@ export default function FleetManagementPage() {
   const inactiveCount = vehicles.filter((v) => v.status === "inactive").length;
   const oosCount = vehicles.filter((v) => v.status === "out_of_service").length;
 
-  // Table columns
+  // Table columns (React Table v8 uses CellContext)
+  type CellProps = { row: { original: Vehicle } };
   const columns = [
     {
       header: "المعرف",
-      accessor: "id" as keyof Vehicle,
+      accessorKey: "id" as keyof Vehicle,
       sortable: true,
-      cell: (v: Vehicle) => <span className="text-xs font-mono text-text-tertiary">{v.id}</span>,
+      cell: ({ row }: CellProps) => <span className="text-xs font-mono text-text-tertiary">{row.original.id}</span>,
     },
     {
       header: "الخط",
-      accessor: "lineCode" as keyof Vehicle,
+      accessorKey: "lineCode" as keyof Vehicle,
       sortable: true,
-      cell: (v: Vehicle) => (
+      cell: ({ row }: CellProps) => (
         <div className="flex items-center gap-2 min-w-0">
           <span className="text-xs font-bold px-1.5 py-0.5 rounded bg-surface-2 text-text-primary">
-            {v.lineCode}
+            {row.original.lineCode}
           </span>
-          <span className="text-sm text-text-primary font-medium truncate">{v.lineNameAr}</span>
+          <span className="text-sm text-text-primary font-medium truncate">{row.original.lineNameAr}</span>
         </div>
       ),
     },
     {
       header: "السائق",
-      accessor: "driverNameAr" as keyof Vehicle,
+      accessorKey: "driverNameAr" as keyof Vehicle,
       sortable: true,
-      cell: (v: Vehicle) => <span className="text-sm text-text-primary">{v.driverNameAr}</span>,
+      cell: ({ row }: CellProps) => <span className="text-sm text-text-primary">{row.original.driverNameAr}</span>,
     },
     {
       header: "السرعة",
-      accessor: "speed" as keyof Vehicle,
+      accessorKey: "speed" as keyof Vehicle,
       sortable: true,
-      cell: (v: Vehicle) => <SpeedGauge speed={v.speed} />,
+      cell: ({ row }: CellProps) => <SpeedGauge speed={row.original.speed} />,
     },
     {
       header: "الحالة",
-      accessor: "status" as keyof Vehicle,
+      accessorKey: "status" as keyof Vehicle,
       sortable: true,
-      cell: (v: Vehicle) => <StatusBadge status={v.status} size="sm" />,
+      cell: ({ row }: CellProps) => <StatusBadge status={row.original.status} size="sm" />,
     },
     {
       header: "الازدحام",
-      accessor: "occupancy" as keyof Vehicle,
+      accessorKey: "occupancy" as keyof Vehicle,
       sortable: true,
-      cell: (v: Vehicle) => <OccupancyMini level={v.occupancy} />,
+      cell: ({ row }: CellProps) => <OccupancyMini level={row.original.occupancy} />,
     },
     {
       header: "آخر تحديث",
-      accessor: "lastUpdate" as keyof Vehicle,
+      accessorKey: "lastUpdate" as keyof Vehicle,
       sortable: true,
-      cell: (v: Vehicle) => (
-        <span className="text-xs text-text-tertiary tabular-nums">{v.lastUpdate}</span>
+      cell: ({ row }: CellProps) => (
+        <span className="text-xs text-text-tertiary tabular-nums">{row.original.lastUpdate}</span>
       ),
     },
     {
       header: "إجراءات",
-      accessor: "id" as keyof Vehicle,
+      accessorKey: "id" as keyof Vehicle,
       sortable: false,
-      cell: (v: Vehicle) => (
+      cell: ({ row }: CellProps) => (
         <div className="flex items-center gap-1">
           <button
             onClick={(e) => {
               e.stopPropagation();
-              setSelectedVehicleId(v.id === selectedVehicleId ? null : v.id);
+              setSelectedVehicleId(row.original.id === selectedVehicleId ? null : row.original.id);
             }}
             className="p-1.5 rounded-input hover:bg-brand-blue/10 transition-colors text-text-secondary hover:text-brand-blue"
             title="تحديد على الخريطة"
@@ -342,16 +343,9 @@ export default function FleetManagementPage() {
             <DataTable
               columns={columns}
               data={filteredVehicles}
-              rowKey={(v) => v.id}
-              selectedRowKey={selectedVehicleId}
-              onRowClick={(v) => setSelectedVehicleId(v.id === selectedVehicleId ? null : v.id)}
-              emptyState={
-                <div className="flex flex-col items-center justify-center py-20 gap-4">
-                  <EmptyFleetIcon />
-                  <p className="text-text-secondary font-medium">لا توجد مركبات مطابقة</p>
-                  <p className="text-xs text-text-tertiary">جرب تغيير معايير البحث أو الفلاتر</p>
-                </div>
-              }
+              enableRowSelection={true}
+              onRowSelectionChange={(rows) => setSelectedVehicleId(rows.length === 1 ? rows[0].id : null)}
+              emptyMessage="لا توجد مركبات مطابقة"
             />
           </div>
 

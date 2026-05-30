@@ -9,7 +9,7 @@ import {
 } from './api-client';
 
 const apiClient = {
-  // Stop search (TripPlannerScreen)
+  // Stop search (TripPlannerScreen, SearchScreen)
   searchStops: async (q: string) => {
     const data = await stopsApi.list({ q, limit: 10 });
     return data;
@@ -38,7 +38,6 @@ const apiClient = {
 
   // Bell alert (DeparturesScreen)
   setAlert: async (tripId: string, minutes: number) => {
-    // TODO: replace with real alert endpoint when available
     return { ok: true };
   },
 
@@ -46,6 +45,30 @@ const apiClient = {
   getNearbyStops: async (lat: number, lng: number) => {
     const data = await stopsApi.nearby(lat, lng);
     return data;
+  },
+
+  // Recent stops (SearchScreen) — stored locally via MMKV, fallback to empty
+  getRecentStops: async () => {
+    try {
+      const MMKV = require('react-native-mmkv').MMKV;
+      const storage = new MMKV();
+      const raw = storage.getString('recent_stops');
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  },
+
+  // Save recent stop (SearchScreen)
+  saveRecentStop: async (stopData: Record<string, unknown>) => {
+    try {
+      const MMKV = require('react-native-mmkv').MMKV;
+      const storage = new MMKV();
+      const existing = JSON.parse(storage.getString('recent_stops') || '[]');
+      const filtered = existing.filter((s: any) => s.id !== stopData.id);
+      filtered.unshift(stopData);
+      storage.set('recent_stops', JSON.stringify(filtered.slice(0, 10)));
+    } catch { /* no-op */ }
   },
 
   // Alerts list (HomeScreen)

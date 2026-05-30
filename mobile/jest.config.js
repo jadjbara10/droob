@@ -10,6 +10,9 @@ module.exports = {
     '^.+\\.(js|jsx|ts|tsx)$': 'babel-jest',
   },
   moduleNameMapper: {
+    '^react-native/Libraries/Animated/NativeAnimatedHelper$': '<rootDir>/test/__mocks__/empty.ts',
+    '^react-native/Libraries/EventEmitter/NativeEventEmitter$': '<rootDir>/test/__mocks__/native-event-emitter.ts',
+    '^@rnmapbox/maps$': '<rootDir>/test/__mocks__/rnmapbox.ts',
     '^@/(.*)$': '<rootDir>/src/$1',
     '^@components/(.*)$': '<rootDir>/src/components/$1',
     '^@screens/(.*)$': '<rootDir>/src/screens/$1',

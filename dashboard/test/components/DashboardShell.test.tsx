@@ -4,7 +4,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { createElement, ReactNode } from "react";
-import { DashboardShell } from "@/components/DashboardShell";
+import DashboardShell from "@/components/DashboardShell";
 
 // Configurable pathname for mocking usePathname
 let mockPathname = "/";
@@ -46,7 +46,7 @@ describe("DashboardShell", () => {
   describe("loading state", () => {
     it("renders LoadingSpinner when loading is true", () => {
       mockUseAuth.mockReturnValue({ user: null, loading: true });
-      render(createElement(DashboardShell, { items: navItems, children: createElement("div", null, "content") }));
+      render(createElement(DashboardShell, { children: createElement("div", null, "content") }));
       expect(screen.getByTestId("spinner")).toBeInTheDocument();
       expect(screen.queryByText("content")).not.toBeInTheDocument();
     });
@@ -59,7 +59,7 @@ describe("DashboardShell", () => {
     });
 
     it("renders children without sidebar for /login", () => {
-      render(createElement(DashboardShell, { items: navItems, children: createElement("div", null, "صفحة الدخول") }));
+      render(createElement(DashboardShell, { children: createElement("div", null, "صفحة الدخول") }));
       // Sidebar should not be present
       expect(screen.queryByTestId("sidebar")).not.toBeInTheDocument();
       expect(screen.getByText("صفحة الدخول")).toBeInTheDocument();
@@ -69,17 +69,17 @@ describe("DashboardShell", () => {
   describe("protected paths — with sidebar", () => {
     beforeEach(() => {
       mockPathname = "/routes";
-      mockUseAuth.mockReturnValue({ user: { id: "u1", email: "a@b.com", name_ar: "مدير", role: "admin" }, loading: false });
+      mockUseAuth.mockReturnValue({ user: { id: "u1", email: "a@b.com", name_ar: "مدير", role: "admin" } as any, loading: false });
     });
 
     it("renders sidebar and main content", () => {
-      render(createElement(DashboardShell, { items: navItems, children: createElement("div", null, "الصفحة المحمية") }));
+      render(createElement(DashboardShell, { children: createElement("div", null, "الصفحة المحمية") }));
       expect(screen.getByTestId("sidebar")).toBeInTheDocument();
       expect(screen.getByText("الصفحة المحمية")).toBeInTheDocument();
     });
 
     it("does not render spinner when loaded", () => {
-      render(createElement(DashboardShell, { items: navItems, children: createElement("div", null, "content") }));
+      render(createElement(DashboardShell, { children: createElement("div", null, "content") }));
       expect(screen.queryByTestId("spinner")).not.toBeInTheDocument();
     });
   });

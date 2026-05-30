@@ -301,7 +301,7 @@ const styles = StyleSheet.create({
   },
   lineName: {
     fontFamily: "IBM Plex Sans Arabic",
-    fontSize: fontSize[12],
+    fontSize: fontSize[13],
     color: colors.text_secondary,
   },
   platform: {

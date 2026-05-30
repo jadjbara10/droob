@@ -1,0 +1,6 @@
+{
+  "CFBundleDisplayName": "Droob",
+  "CFBundleName": "Droob",
+  "NSLocationWhenInUseUsageDescription": "Droob needs your location to show nearby bus stops",
+  "NSLocationAlwaysAndWhenInUseUsageDescription": "Droob uses your location to alert you when your stop is near"
+}

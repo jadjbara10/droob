@@ -73,8 +73,8 @@ export default function SearchScreen() {
     queryKey: ['stops', 'search', debouncedQuery],
     queryFn: async () => {
       if (debouncedQuery.length < 2) return [];
-      const res = await apiClient.searchStops(debouncedQuery);
-      return res.data ?? res;
+      const res: any = await apiClient.searchStops(debouncedQuery);
+      return (res.data ?? res) as Stop[];
     },
     enabled: debouncedQuery.length >= 2,
     staleTime: 30_000,
@@ -86,7 +86,11 @@ export default function SearchScreen() {
   // Select a stop
   const handleSelectStop = useCallback(async (stop: Stop) => {
     // Save to recents
-    try { await apiClient.saveRecentStop(stop._id || stop.id || '0'); } catch { /* no-op */ }
+    try {
+      const updated = [stop, ...recentStops.filter(s => s.id !== stop.id)].slice(0, 10);
+      setRecentStops(updated);
+      await apiClient.saveRecentStop(stop as unknown as Record<string, unknown>);
+    } catch { /* no-op */ }
     Keyboard.dismiss();
     // Navigate back with the selected stop
     navigation.goBack();
@@ -107,14 +111,24 @@ export default function SearchScreen() {
   // Handle quick tile press
   const handleQuickTile = useCallback((tile: typeof QUICK_TILES[0]) => {
     const stop: Stop = {
-      _id: '',
-      id: '',
+      id: `quick_${tile.name_en.replace(/\s+/g, '_')}`,
+      code: '',
       name_ar: tile.name_ar,
       name_en: tile.name_en,
-      location: { type: 'Point', coordinates: [tile.lng, tile.lat] },
-      modes: ['city_bus'],
-      amenities: [],
-      active: true,
+      lat: tile.lat,
+      lng: tile.lng,
+      governorate: 'عمان',
+      city: 'عمان',
+      isTerminal: false,
+      hasShelter: true,
+      hasLighting: true,
+      hasAccessibility: true,
+      hasTicketMachine: false,
+      hasAc: false,
+      photoUrl: null,
+      parentStationId: null,
+      createdAt: '',
+      updatedAt: '',
     };
     handleSelectStop(stop);
   }, [handleSelectStop]);
@@ -132,13 +146,9 @@ export default function SearchScreen() {
         <Text style={styles.resultEn} numberOfLines={1}>
           {item.name_en}
         </Text>
-        {item.modes && item.modes.length > 0 && (
+        {item.isTerminal && (
           <View style={styles.modeRow}>
-            {item.modes.slice(0, 3).map((m, i) => (
-              <Text key={i} style={styles.modeTag}>
-                {TRANSPORT_MODES[m]?.label_ar || m}
-              </Text>
-            ))}
+            <Text style={styles.modeTag}>محطة رئيسية</Text>
           </View>
         )}
       </View>
@@ -194,7 +204,7 @@ export default function SearchScreen() {
         <FlatList
           data={results}
           renderItem={renderStopItem}
-          keyExtractor={(item) => item._id || item.id || String(item.location?.coordinates?.join(','))}
+          keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
           keyboardShouldPersistTaps="handled"
           ItemSeparatorComponent={() => <View style={styles.separator} />}

@@ -1,0 +1,6 @@
+{
+  "CFBundleDisplayName": "دروب",
+  "CFBundleName": "دروب",
+  "NSLocationWhenInUseUsageDescription": "دروب يحتاج موقعك لإظهار أقرب محطات الباص",
+  "NSLocationAlwaysAndWhenInUseUsageDescription": "دروب يستخدم موقعك للتنبيه عند اقتراب محطتك"
+}

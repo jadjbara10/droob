@@ -100,7 +100,7 @@ export default function RouteDetailScreen() {
     return (
       <View style={styles.vehicleCard}>
         <View style={styles.vehicleHeader}>
-          <MaterialCommunityIcons name="bus-articulated" size={22} color={MOCK_ROUTE.color} />
+          <MaterialCommunityIcons name="bus-clock" size={22} color={MOCK_ROUTE.color} />
           <View style={styles.vehicleInfo}>
             <Text style={styles.vehiclePlate}>{item.plate}</Text>
             <Text style={styles.vehicleSpeed}>{item.speed} كم/س</Text>
@@ -119,7 +119,7 @@ export default function RouteDetailScreen() {
         {/* Route Header */}
         <View style={[styles.routeBanner, { backgroundColor: MOCK_ROUTE.color + '15' }]}>
           <View style={[styles.routeBadge, { backgroundColor: MOCK_ROUTE.color }]}>
-            <MaterialCommunityIcons name="bus-articulated" size={24} color="#FFF" />
+            <MaterialCommunityIcons name="bus-clock" size={24} color="#FFF" />
           </View>
           <View style={styles.routeInfo}>
             <Text style={styles.routeName}>{MOCK_ROUTE.name}</Text>

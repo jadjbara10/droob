@@ -18,7 +18,6 @@ const sql = postgres(process.env.DATABASE_URL, { max: 1 });
 const db = drizzle(sql, { schema });
 
 // ─── Helpers ───
-const UUID_NAMESPACE = "droob-jordan-seed";
 function stableUUID(seed: string): string {
   // Simple deterministic UUID from seed string
   let hash = 0;

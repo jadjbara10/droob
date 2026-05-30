@@ -11,14 +11,14 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRoute } from '@react-navigation/native';
-import { COLORS, MODE_CONFIG } from '../config/transport.config';
+import { COLORS, TRANSPORT_MODES } from '../config/transport.config';
 import { useTransitStore } from '../stores/transit.store';
 import { Journey, JourneyLeg } from '../types/transit.types';
 
 function getLegIcon(mode: JourneyLeg['mode']): keyof typeof MaterialCommunityIcons.glyphMap {
   switch (mode) {
     case 'walking': return 'walk';
-    case 'brt': return 'bus-articulated';
+    case 'brt': return 'bus-clock';
     case 'city_bus': return 'bus';
     case 'serveece': return 'bus-multiple';
     case 'intercity': return 'bus-double-decker';
@@ -27,7 +27,7 @@ function getLegIcon(mode: JourneyLeg['mode']): keyof typeof MaterialCommunityIco
 }
 
 function getLegColor(mode: JourneyLeg['mode']): string {
-  const cfg = MODE_CONFIG[mode];
+  const cfg = TRANSPORT_MODES[mode as keyof typeof TRANSPORT_MODES];
   if (cfg?.color) return cfg.color;
   if (mode === 'walking') return COLORS.walking;
   return COLORS.textSecondary;

@@ -5,8 +5,8 @@
 
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { MMKV } from 'react-native-mmkv';
-const storage = new MMKV({ id: 'droob-app-store' });
+// Expo Go stub — replace with react-native-mmkv for production builds
+const storage = { getString: (k: string) => null as string | null, set: (_k: string, _v: string) => {}, delete: (_k: string) => {}, clearAll: () => {} };
 
 const mmkvStorage = {
   getItem: (key: string) => storage.getString(key) ?? null,

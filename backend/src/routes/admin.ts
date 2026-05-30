@@ -1,7 +1,6 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
 import { db } from "../db/index.js";
-import { stops } from "../../drizzle/schema.js";
-import { sql, isNull } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 
 export async function adminRoutes(app: FastifyInstance) {
   /**
@@ -28,7 +27,7 @@ export async function adminRoutes(app: FastifyInstance) {
       }
 
       // Update all NULL geom stops: compute geography from lat/lng
-      const result = await db.execute(
+      await db.execute(
         sql`UPDATE stops 
             SET geom = ST_SetSRID(ST_MakePoint(lng, lat), 4326)::geography::text,
                 geo_lat = lat,

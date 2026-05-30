@@ -58,7 +58,7 @@ export const LeafletMap = forwardRef<LeafletMapRef, Props>(({ style, centerLat=3
       style={[styles.map, style]}
       source={{ html }}
       scrollEnabled={false}
-      zoomEnabled={false}
+      setBuiltInZoomControls={false}
       javaScriptEnabled={true}
       domStorageEnabled={true}
       geolocationEnabled={false}

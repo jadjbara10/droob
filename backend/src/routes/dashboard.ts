@@ -1,7 +1,7 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
 import { db } from "../db/index.js";
 import { routes, stops, vehicles, alerts, users, trips } from "../../drizzle/schema.js";
-import { count, eq, sql, gte, and } from "drizzle-orm";
+import { count, eq, sql } from "drizzle-orm";
 
 export async function dashboardRoutes(app: FastifyInstance) {
   /**
@@ -10,17 +10,17 @@ export async function dashboardRoutes(app: FastifyInstance) {
    */
   app.get("/kpis", async (_request: FastifyRequest, reply: FastifyReply) => {
     try {
-      const [totalRoutes] = await db.select({ count: count() }).from(routes);
-      const [totalStops] = await db.select({ count: count() }).from(stops);
+      const [_totalRoutes] = await db.select({ count: count() }).from(routes);
+      const [_totalStops] = await db.select({ count: count() }).from(stops);
       const [totalVehicles] = await db.select({ count: count() }).from(vehicles);
-      const [activeAlerts] = await db
+      const [_activeAlerts] = await db
         .select({ count: count() })
         .from(alerts)
         .where(eq(alerts.is_active, true));
       const [totalUsers] = await db.select({ count: count() }).from(users);
 
       // Active routes count
-      const [activeRoutes] = await db
+      const [_activeRoutes] = await db
         .select({ count: count() })
         .from(routes)
         .where(eq(routes.is_active, true));

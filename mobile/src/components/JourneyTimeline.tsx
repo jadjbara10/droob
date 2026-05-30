@@ -6,7 +6,7 @@ import React from "react";
 import { View, Text, StyleSheet, type ViewStyle } from "react-native";
 import { colors, transitColorMap, radius, spacing, fontSize, fontWeight } from "@theme/tokens";
 import type { TransitMode } from "@theme/tokens";
-import type { RouteLeg } from "@types/transit";
+import type { RouteLeg } from "@/types/transit";
 import { TransitBadge } from "./TransitBadge";
 
 export interface JourneyTimelineProps {

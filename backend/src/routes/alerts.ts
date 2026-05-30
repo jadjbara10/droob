@@ -36,7 +36,7 @@ export async function alertsRoutes(app: FastifyInstance) {
       const cached = await cacheGet(cacheKey);
       if (cached) return reply.send(cached);
 
-      const now = new Date().toISOString();
+      const now = new Date();
       const conditions = [eq(alerts.is_active, query.active)];
 
       if (query.severity) conditions.push(eq(alerts.severity, query.severity));

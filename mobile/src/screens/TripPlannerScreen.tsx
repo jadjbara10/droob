@@ -4,16 +4,17 @@
 // Production-quality RTL, native animations, full token integration
 // ============================================================================
 
-import React, { useState, useCallback } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, FlatList } from "react-native";
+import React, { useState, useCallback, useEffect } from "react";
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, FlatList, ActivityIndicator } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, { FadeInDown, Layout } from "react-native-reanimated";
 import { colors, radius, spacing, fontSize, fontWeight, shadows } from "@theme/tokens";
 import type { TransitMode } from "@theme/tokens";
-import type { Journey } from "@types/transit";
+import type { Journey, JourneyLeg } from "@/types/transit.types";
 import { BottomSheet, type BottomSheetRef } from "@components/BottomSheet";
 import { TransitBadge } from "@components/TransitBadge";
 import { CountdownTimer } from "@components/CountdownTimer";
+import { useTransitStore } from "@stores/transit.store";
 
 const MODES: { key: TransitMode; icon: string; label: string }[] = [
   { key:"city_bus", icon:"🚌", label:"باص" },
@@ -23,25 +24,37 @@ const MODES: { key: TransitMode; icon: string; label: string }[] = [
 ];
 const MODE_COLORS: Record<string,string> = { city_bus:colors.bus_city, brt:colors.bus_brt, serveece:colors.serveece, intercity:colors.intercity };
 
+const MOCK_STOP = (id: string, nameAr: string, nameEn: string, code: string, lat: number, lng: number) => ({
+  id, code, name_ar: nameAr, name_en: nameEn, lat, lng,
+  governorate: "عمان" as const, city: "عمان", isTerminal: false,
+  hasShelter: true, hasLighting: true, hasAccessibility: true, hasTicketMachine: false, hasAc: false,
+  photoUrl: null, parentStationId: null, createdAt: "", updatedAt: ""
+});
+
 const MOCK_JOURNEYS: Journey[] = [{
-  id:"j1", legs:[
-    { mode:"walking" as any, routeId:null, routeCode:null, routeNameAr:null, routeNameEn:null, routeColor:null,
-      fromStop:{ id:"u",nameAr:"موقعك",nameEn:"You",code:"",lat:31.95,lng:35.93,modes:[],isLandmark:false,isAccessible:false },
-      toStop:{ id:"g1",nameAr:"محطة الجاردنز",nameEn:"Gardens",code:"G01",lat:31.975,lng:35.885,modes:["brt"],isLandmark:true,isAccessible:true },
-      departureTime:"09:00", arrivalTime:"09:04", duration_min:4, distance_km:0.3, polyline:[], fare_jod:0, headway_min:null, vehicleOccupancy:null,
-      instructionsAr:"امش 4 دقائق إلى محطة الجاردنز", instructionsEn:"Walk 4 min to Gardens" },
-    { mode:"brt" as any, routeId:"brt1", routeCode:"BRT1", routeNameAr:"الباص السريع 1", routeNameEn:"BRT Line 1", routeColor:colors.bus_brt,
-      fromStop:{ id:"g1",nameAr:"محطة الجاردنز",nameEn:"Gardens",code:"G01",lat:31.975,lng:35.885,modes:["brt"],isLandmark:true,isAccessible:true },
-      toStop:{ id:"d1",nameAr:"دوار الداخلية",nameEn:"Dakhiliya",code:"D05",lat:31.96,lng:35.91,modes:["brt"],isLandmark:true,isAccessible:true },
-      departureTime:"09:08", arrivalTime:"09:20", duration_min:12, distance_km:4.2, polyline:[], fare_jod:0.55, headway_min:10, vehicleOccupancy:"partial",
-      instructionsAr:"اركب BRT1 من محطة الجاردنز", instructionsEn:"Board BRT1 at Gardens" },
-    { mode:"walking" as any, routeId:null, routeCode:null, routeNameAr:null, routeNameEn:null, routeColor:null,
-      fromStop:{ id:"d1",nameAr:"دوار الداخلية",nameEn:"Dakhiliya",code:"D05",lat:31.96,lng:35.91,modes:["brt"],isLandmark:true,isAccessible:true },
-      toStop:{ id:"dest",nameAr:"العبدلي",nameEn:"Abdali",code:"",lat:31.962,lng:35.908,modes:[],isLandmark:false,isAccessible:false },
-      departureTime:"09:20", arrivalTime:"09:25", duration_min:5, distance_km:0.4, polyline:[], fare_jod:0, headway_min:null, vehicleOccupancy:null,
-      instructionsAr:"امش 5 دقائق إلى العبدلي", instructionsEn:"Walk 5 min to Abdali" },
-  ], totalDurationMinutes:25, walkingMinutes:9, transfers:0, fareAmount:0.55, fareCurrency:"JOD",
-  departureTime:"09:00", arrivalTime:"09:25", modes:["brt"] },
+  id:"j1", fromName_ar:"موقعك", toName_ar:"العبدلي", fromName_en:"You", toName_en:"Abdali",
+  fromLat:31.95, fromLng:35.93, toLat:31.962, toLng:35.908,
+  departureTime:"09:00", arrivalTime:"09:25", duration_min:25,
+  totalFare_jod:0.55, walkingDistance_km:0.7, legs:[
+    { mode:"walking" as any, routeId:null, routeCode:null, routeName_ar:null, routeName_en:null, routeColor:null,
+      fromStop: MOCK_STOP("u","موقعك","You","",31.95,35.93),
+      toStop: MOCK_STOP("g1","محطة الجاردنز","Gardens","G01",31.975,35.885),
+      departureTime:"09:00", arrivalTime:"09:04", duration_min:4, distance_km:0.3,
+      polyline:[], fare_jod:0, headway_min:null, vehicleOccupancy:null,
+      instructions_ar:"امش 4 دقائق إلى محطة الجاردنز", instructions_en:"Walk 4 min to Gardens" },
+    { mode:"brt" as any, routeId:"brt1", routeCode:"BRT1", routeName_ar:"الباص السريع 1", routeName_en:"BRT Line 1", routeColor:colors.bus_brt,
+      fromStop: MOCK_STOP("g1","محطة الجاردنز","Gardens","G01",31.975,35.885),
+      toStop: MOCK_STOP("d1","دوار الداخلية","Dakhiliya","D05",31.96,35.91),
+      departureTime:"09:08", arrivalTime:"09:20", duration_min:12, distance_km:4.2,
+      polyline:[], fare_jod:0.55, headway_min:10, vehicleOccupancy:"partial",
+      instructions_ar:"اركب BRT1 من محطة الجاردنز", instructions_en:"Board BRT1 at Gardens" },
+    { mode:"walking" as any, routeId:null, routeCode:null, routeName_ar:null, routeName_en:null, routeColor:null,
+      fromStop: MOCK_STOP("d1","دوار الداخلية","Dakhiliya","D05",31.96,35.91),
+      toStop: MOCK_STOP("dest","العبدلي","Abdali","",31.962,35.908),
+      departureTime:"09:20", arrivalTime:"09:25", duration_min:5, distance_km:0.4,
+      polyline:[], fare_jod:0, headway_min:null, vehicleOccupancy:null,
+      instructions_ar:"امش 5 دقائق إلى العبدلي", instructions_en:"Walk 5 min to Abdali" },
+  ] },
 ];
 
 /** Location Fields */
@@ -101,13 +114,13 @@ const JourneyCard: React.FC<{ journey:Journey; sel:boolean; onPress:()=>void }> 
     <TouchableOpacity style={[st.jCard,sel&&st.jCardSel]} onPress={onPress} activeOpacity={0.7}>
       <View style={st.jHead}>
         <View style={st.jModes}>{ms.map(m=><TransitBadge key={m} mode={m as TransitMode} size="sm"/>)}</View>
-        <View style={st.jMeta}><Text style={st.jDur}>{journey.totalDurationMinutes} دق</Text>{journey.fareAmount!=null&&<Text style={st.jFare}>{journey.fareAmount} د.أ</Text>}</View>
+        <View style={st.jMeta}><Text style={st.jDur}>{journey.duration_min} دق</Text>{journey.totalFare_jod!=null&&<Text style={st.jFare}>{journey.totalFare_jod} د.أ</Text>}</View>
       </View>
       <View style={st.jLegs}>
         {journey.legs.map((leg,i)=>(
           <View key={i} style={st.jLeg}>
             <View style={st.jLegDot} />{i<journey.legs.length-1&&<View style={st.jLegLine} />}
-            <Text style={st.jLegT} numberOfLines={2}>{leg.instructionsAr}</Text>
+            <Text style={st.jLegT} numberOfLines={2}>{leg.instructions_ar}</Text>
           </View>
         ))}
       </View>
@@ -128,8 +141,33 @@ const TripPlannerScreen: React.FC = () => {
   const [modes,setModes]=useState<TransitMode[]>(["city_bus","brt","serveece","intercity"]);
   const [sel,setSel]=useState<string|null>(null);
   const [showSearch,setShowSearch]=useState(false);
-  const [st,setST]=useState<"from"|"to">("from");
-  const [journeys]=useState(MOCK_JOURNEYS);
+  const [searchType,setSearchType]=useState<"from"|"to">("from");
+  const [isSearching, setIsSearching] = useState(false);
+
+  // Use store journeys + mock fallback
+  const storeJourneys = useTransitStore(s => s.journeys);
+  const planJourney = useTransitStore(s => s.planJourney);
+  const storeLoading = useTransitStore(s => s.isLoading);
+  const journeys: Journey[] = storeJourneys.length > 0 ? storeJourneys : MOCK_JOURNEYS;
+
+  // Auto-plan when both locations are set
+  const handleSearch = useCallback(async () => {
+    if (!from || !to) return;
+    setIsSearching(true);
+    // Use default Amman coordinates for demo — in production, geocode from/to
+    try {
+      await planJourney(31.95, 35.93, 31.962, 35.908, {
+        preferredModes: modes.join(','),
+        timeType: tm === 'arrive' ? 'arrive' : 'depart',
+      });
+    } catch { /* keep mock data on error */ }
+    setIsSearching(false);
+  }, [from, to, modes, tm, planJourney]);
+
+  // Trigger search when both fields are filled
+  useEffect(() => {
+    if (from && to) { handleSearch(); }
+  }, [from, to]);
 
   const swap = useCallback(()=>{ setFrom(p=>{const n=to;setTo(p);return n}); },[to]);
   const toggleM = useCallback((m:TransitMode)=>{ setModes(p=>p.includes(m)?p.filter(x=>x!==m):[...p,m]); },[]);
@@ -138,20 +176,27 @@ const TripPlannerScreen: React.FC = () => {
     <View style={[st.root,{paddingTop:insets.top+8}]}>
       <Text style={st.title}>مخطط الرحلة</Text>
       <LocationFields from={from} to={to} onSwap={swap}
-        onFrom={()=>{setST("from");setShowSearch(true);}} onTo={()=>{setST("to");setShowSearch(true);}} />
+        onFrom={()=>{setSearchType("from");setShowSearch(true);}} onTo={()=>{setSearchType("to");setShowSearch(true);}} />
       <TimeSelector active={tm} onChange={setTm} />
       <ModeFilters sel={modes} onToggle={toggleM} />
-      <FlatList
-        data={journeys} keyExtractor={j=>j.id}
-        contentContainerStyle={st.list}
-        ListHeaderComponent={<Text style={st.resCount}>{journeys.length} نتيجة</Text>}
-        renderItem={({item})=>(
-          <Animated.View entering={FadeInDown.duration(300)} layout={Layout.springify()}>
-            <JourneyCard journey={item} sel={sel===item.id} onPress={()=>setSel(item.id)}/>
-          </Animated.View>
-        )}
-        ListEmptyComponent={<Text style={st.empty}>لا توجد نتائج. جرب وقتاً مختلفاً.</Text>}
-      />
+      {(storeLoading || isSearching) ? (
+        <View style={st.loadingBox}>
+          <ActivityIndicator size="large" color={colors.brand_blue} />
+          <Text style={st.loadingText}>جاري البحث عن أفضل الرحلات...</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={journeys} keyExtractor={j=>j.id}
+          contentContainerStyle={st.list}
+          ListHeaderComponent={<Text style={st.resCount}>{journeys.length} نتيجة</Text>}
+          renderItem={({item})=>(
+            <Animated.View entering={FadeInDown.duration(300)} layout={Layout.springify()}>
+              <JourneyCard journey={item} sel={sel===item.id} onPress={()=>setSel(item.id)}/>
+            </Animated.View>
+          )}
+          ListEmptyComponent={<Text style={st.empty}>لا توجد نتائج. جرب وقتاً مختلفاً.</Text>}
+        />
+      )}
       {showSearch && (
         <BottomSheet snapPoints={[0.92]} initialIndex={0} showBackdrop onSnapChange={(i)=>{if(i>0)setShowSearch(false);}}>
           <View style={st.sd}>
@@ -159,7 +204,7 @@ const TripPlannerScreen: React.FC = () => {
             <TouchableOpacity style={st.ulBtn}><Text style={st.ulIcon}>📍</Text><Text style={st.ulT}>استخدم موقعي الحالي</Text></TouchableOpacity>
             <Text style={st.sdTitle}>آخر عمليات البحث</Text>
             {["محطة الجاردنز","دوار الداخلية","مجمع الشمال"].map((s,i)=>(
-              <TouchableOpacity key={i} style={st.sr} onPress={()=>{if(st==="from")setFrom(s);else setTo(s);setShowSearch(false);}}>
+              <TouchableOpacity key={i} style={st.sr} onPress={()=>{if(searchType==="from")setFrom(s);else setTo(s);setShowSearch(false);}}>
                 <Text style={st.srT}>{s}</Text>
               </TouchableOpacity>
             ))}
@@ -225,6 +270,9 @@ const st = StyleSheet.create({
   sdTitle:{fontFamily:"IBM Plex Sans Arabic",fontSize:fontSize[14],fontWeight:fontWeight.semiBold,color:colors.text_secondary,marginTop:16,marginBottom:8},
   sr:{paddingVertical:12,borderBottomWidth:1,borderBottomColor:colors.border},
   srT:{fontFamily:"IBM Plex Sans Arabic",fontSize:fontSize[15],color:colors.text_primary,textAlign:"right"},
+  // Loading
+  loadingBox: { flex:1, justifyContent:"center", alignItems:"center", padding:40 },
+  loadingText: { fontFamily:"IBM Plex Sans Arabic", fontSize:fontSize[14], color:colors.text_secondary, marginTop:12 },
 });
 
 export default TripPlannerScreen;

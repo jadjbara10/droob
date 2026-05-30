@@ -8,7 +8,7 @@ import React from "react";
 import { View, Text, StyleSheet, type ViewStyle } from "react-native";
 import Animated, { useAnimatedStyle, withTiming, withSequence, withDelay } from "react-native-reanimated";
 import { colors, fontSize, fontWeight, spacing } from "@theme/tokens";
-import type { OccupancyLevel } from "@types/transit";
+import type { OccupancyLevel } from "@/types/transit";
 
 export interface OccupancyIndicatorProps {
   level: OccupancyLevel;

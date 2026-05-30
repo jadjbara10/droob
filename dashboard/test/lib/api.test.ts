@@ -315,7 +315,7 @@ describe("API Functions", () => {
           body: JSON.stringify({ email: "admin@droob.jo", password: "pass" }),
         })
       );
-      expect(result.access_token).toBe("access-123");
+      expect(result.accessToken).toBe("access-123");
       expect(localStorage.getItem("droob_access_token")).toBe("access-123");
       expect(localStorage.getItem("droob_refresh_token")).toBe("refresh-456");
     });
@@ -358,7 +358,7 @@ describe("API Functions", () => {
       mockFetch.mockResolvedValueOnce(createJsonResponse(newTokens));
 
       const result = await refreshTokens();
-      expect(result.access_token).toBe("new-access");
+      expect(result.accessToken).toBe("new-access");
       expect(localStorage.getItem("droob_access_token")).toBe("new-access");
       expect(localStorage.getItem("droob_refresh_token")).toBe("new-refresh");
     });

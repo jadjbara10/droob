@@ -4,7 +4,7 @@
 import React from "react";
 import { View, Text, StyleSheet, type ViewStyle } from "react-native";
 import { colors, radius, fontSize, fontWeight } from "@theme/tokens";
-import type { DepartureStatus } from "@types/transit";
+import type { DepartureStatus } from "@/types/transit";
 
 export interface StatusPillProps { status: DepartureStatus; showDot?: boolean; size?: "sm" | "md"; style?: ViewStyle; }
 
