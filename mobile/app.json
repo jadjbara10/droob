@@ -53,7 +53,9 @@
         "ACCESS_BACKGROUND_LOCATION",
         "INTERNET",
         "VIBRATE",
-        "RECEIVE_BOOT_COMPLETED"
+        "RECEIVE_BOOT_COMPLETED",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
       ],
       "config": {}
     },
@@ -90,12 +92,9 @@
       "MAPBOX_ACCESS_TOKEN": "${MAPBOX_ACCESS_TOKEN:-pk.test}",
       "e2e": false,
       "eas": {
-        "projectId": "c0f99c6c-f68d-41ee-a9fe-cb99fc6f5baf"
+        "projectId": "2f69db9b-a864-4627-96ef-8c7cbc4c18b2"
       }
     },
-    "owner": "jad_dev",
-    "updates": {
-      "url": "https://u.expo.dev/c0f99c6c-f68d-41ee-a9fe-cb99fc6f5baf"
-    }
+    "owner": "jad.dev"
   }
 }
