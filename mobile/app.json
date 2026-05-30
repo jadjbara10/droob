@@ -4,7 +4,7 @@
     "slug": "droob",
     "version": "1.0.0",
     "orientation": "portrait",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "icon": "./assets/images/icon.png",
     "scheme": "droob",
     "userInterfaceStyle": "automatic",
