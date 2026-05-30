@@ -89,9 +89,12 @@
       "MAPBOX_ACCESS_TOKEN": "${MAPBOX_ACCESS_TOKEN:-pk.test}",
       "e2e": false,
       "eas": {
-        "projectId": "2f69db9b-a864-4627-96ef-8c7cbc4c18b2"
+        "projectId": "c0f99c6c-f68d-41ee-a9fe-cb99fc6f5baf"
       }
     },
-    "owner": "jad.dev"
+    "owner": "jad_dev",
+    "updates": {
+      "url": "https://u.expo.dev/c0f99c6c-f68d-41ee-a9fe-cb99fc6f5baf"
+    }
   }
 }
