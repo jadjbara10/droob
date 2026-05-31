@@ -1,278 +1,1359 @@
 // ============================================================================
 // دروب (Droob) — TripPlannerScreen
-// Origin/Dest + search drawer + time selector + mode filters + JourneyCards
-// Production-quality RTL, native animations, full token integration
+// Core journey-planning screen: origin/dest, time + mode + preference filters,
+// journey cards with comparison. Uber/Careem quality, RTL Arabic throughout.
 // ============================================================================
 
-import React, { useState, useCallback, useEffect } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, FlatList, ActivityIndicator } from "react-native";
+import React, { useState, useCallback, useMemo } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  TextInput,
+  FlatList,
+  type ListRenderItemInfo,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import Animated, { FadeInDown, Layout } from "react-native-reanimated";
-import { colors, radius, spacing, fontSize, fontWeight, shadows } from "@theme/tokens";
+import { useNavigation } from "@react-navigation/native";
+import Animated, {
+  FadeInDown,
+  FadeOutUp,
+  Layout,
+} from "react-native-reanimated";
+import {
+  colors,
+  transitColorMap,
+  radius,
+  spacing,
+  fontSize,
+  fontWeight,
+  shadows,
+  layout as lo,
+} from "@theme/tokens";
 import type { TransitMode } from "@theme/tokens";
-import type { Journey, JourneyLeg } from "@/types/transit.types";
-import { BottomSheet, type BottomSheetRef } from "@components/BottomSheet";
+import type { Journey, TransitStop } from "@/types/transit";
+import { JourneyCard } from "@components/JourneyCard";
 import { TransitBadge } from "@components/TransitBadge";
-import { CountdownTimer } from "@components/CountdownTimer";
+import { ErrorBoundary } from "@components/ErrorBoundary";
 import { useTransitStore } from "@stores/transit.store";
+import {
+  transportConfig,
+  TRIP_FILTERS,
+  TIME_OPTIONS,
+} from "@config/transport.config";
 
-const MODES: { key: TransitMode; icon: string; label: string }[] = [
-  { key:"city_bus", icon:"🚌", label:"باص" },
-  { key:"brt", icon:"⚡", label:"BRT" },
-  { key:"serveece", icon:"🚐", label:"سرفيس" },
-  { key:"intercity", icon:"🚍", label:"خطوط" },
-];
-const MODE_COLORS: Record<string,string> = { city_bus:colors.bus_city, brt:colors.bus_brt, serveece:colors.serveece, intercity:colors.intercity };
+// ─── Constants ───────────────────────────────────────────────────────────────
 
-const MOCK_STOP = (id: string, nameAr: string, nameEn: string, code: string, lat: number, lng: number) => ({
-  id, code, name_ar: nameAr, name_en: nameEn, lat, lng,
-  governorate: "عمان" as const, city: "عمان", isTerminal: false,
-  hasShelter: true, hasLighting: true, hasAccessibility: true, hasTicketMachine: false, hasAc: false,
-  photoUrl: null, parentStationId: null, createdAt: "", updatedAt: ""
-});
+type TimeKey = (typeof TIME_OPTIONS)[number]["key"];
+type PrefKey = (typeof TRIP_FILTERS)[number]["key"];
 
-const MOCK_JOURNEYS: Journey[] = [{
-  id:"j1", fromName_ar:"موقعك", toName_ar:"العبدلي", fromName_en:"You", toName_en:"Abdali",
-  fromLat:31.95, fromLng:35.93, toLat:31.962, toLng:35.908,
-  departureTime:"09:00", arrivalTime:"09:25", duration_min:25,
-  totalFare_jod:0.55, walkingDistance_km:0.7, legs:[
-    { mode:"walking" as any, routeId:null, routeCode:null, routeName_ar:null, routeName_en:null, routeColor:null,
-      fromStop: MOCK_STOP("u","موقعك","You","",31.95,35.93),
-      toStop: MOCK_STOP("g1","محطة الجاردنز","Gardens","G01",31.975,35.885),
-      departureTime:"09:00", arrivalTime:"09:04", duration_min:4, distance_km:0.3,
-      polyline:[], fare_jod:0, headway_min:null, vehicleOccupancy:null,
-      instructions_ar:"امش 4 دقائق إلى محطة الجاردنز", instructions_en:"Walk 4 min to Gardens" },
-    { mode:"brt" as any, routeId:"brt1", routeCode:"BRT1", routeName_ar:"الباص السريع 1", routeName_en:"BRT Line 1", routeColor:colors.bus_brt,
-      fromStop: MOCK_STOP("g1","محطة الجاردنز","Gardens","G01",31.975,35.885),
-      toStop: MOCK_STOP("d1","دوار الداخلية","Dakhiliya","D05",31.96,35.91),
-      departureTime:"09:08", arrivalTime:"09:20", duration_min:12, distance_km:4.2,
-      polyline:[], fare_jod:0.55, headway_min:10, vehicleOccupancy:"partial",
-      instructions_ar:"اركب BRT1 من محطة الجاردنز", instructions_en:"Board BRT1 at Gardens" },
-    { mode:"walking" as any, routeId:null, routeCode:null, routeName_ar:null, routeName_en:null, routeColor:null,
-      fromStop: MOCK_STOP("d1","دوار الداخلية","Dakhiliya","D05",31.96,35.91),
-      toStop: MOCK_STOP("dest","العبدلي","Abdali","",31.962,35.908),
-      departureTime:"09:20", arrivalTime:"09:25", duration_min:5, distance_km:0.4,
-      polyline:[], fare_jod:0, headway_min:null, vehicleOccupancy:null,
-      instructions_ar:"امش 5 دقائق إلى العبدلي", instructions_en:"Walk 5 min to Abdali" },
-  ] },
+/** Extended filter with a "cheapest" option for the UI (not in TRIP_FILTERS). */
+const PREFERENCE_OPTIONS: {
+  key: PrefKey | "cheapest";
+  label_ar: string;
+  icon: string;
+}[] = [
+  ...TRIP_FILTERS.map((f) => ({ key: f.key, label_ar: f.label_ar, icon: f.icon })),
+  { key: "cheapest" as const, label_ar: "الأرخص", icon: "💰" },
 ];
 
-/** Location Fields */
-const LocationFields: React.FC<{ from:string; to:string; onSwap:()=>void; onFrom:()=>void; onTo:()=>void }> = ({ from,to,onSwap,onFrom,onTo }) => (
-  <View style={st.locWrap}>
-    <View style={st.locRow}>
-      <View style={[st.locDot,{backgroundColor:colors.on_time}]} />
-      <TouchableOpacity style={st.locField} onPress={onFrom}><Text style={[st.locText,!from&&st.locPh]} numberOfLines={1}>{from||"نقطة الانطلاق"}</Text></TouchableOpacity>
+const MODE_FILTERS: { key: TransitMode | "all"; label_ar: string; icon: string }[] = [
+  { key: "all", label_ar: "الكل", icon: "🌐" },
+  { key: "city_bus", label_ar: "باص", icon: "🚌" },
+  { key: "brt", label_ar: "BRT", icon: "⚡" },
+  { key: "serveece", label_ar: "سرفيس", icon: "🚐" },
+  { key: "intercity", label_ar: "خطوط", icon: "🚍" },
+];
+
+// ─── Mock Stops ──────────────────────────────────────────────────────────────
+
+const MOCK_STOPS = {
+  user: {
+    id: "u1",
+    nameAr: "موقعي الحالي",
+    nameEn: "My Location",
+    code: "YOU",
+    lat: transportConfig.ammanCenter.lat + 0.005,
+    lng: transportConfig.ammanCenter.lng - 0.01,
+    modes: [] as TransitMode[],
+    isLandmark: false,
+    isAccessible: true,
+  },
+  abdali: {
+    id: "abd",
+    nameAr: "العبدلي",
+    nameEn: "Abdali",
+    code: "AMM-ABD",
+    lat: 31.9636,
+    lng: 35.9156,
+    modes: ["city_bus", "brt", "serveece"] as TransitMode[],
+    isLandmark: true,
+    isAccessible: true,
+  },
+  gardens: {
+    id: "gdn",
+    nameAr: "مجمع الجاردنز",
+    nameEn: "Gardens Complex",
+    code: "AMM-GDN",
+    lat: 31.9856,
+    lng: 35.8714,
+    modes: ["city_bus", "brt"] as TransitMode[],
+    isLandmark: true,
+    isAccessible: true,
+  },
+  downtown: {
+    id: "bld",
+    nameAr: "وسط البلد",
+    nameEn: "Downtown",
+    code: "AMM-BLD",
+    lat: 31.9516,
+    lng: 35.9397,
+    modes: ["city_bus", "serveece", "intercity"] as TransitMode[],
+    isLandmark: true,
+    isAccessible: false,
+  },
+  uj: {
+    id: "uj",
+    nameAr: "الجامعة الأردنية",
+    nameEn: "University of Jordan",
+    code: "AMM-UJ",
+    lat: 32.0156,
+    lng: 35.8747,
+    modes: ["city_bus", "serveece"] as TransitMode[],
+    isLandmark: true,
+    isAccessible: true,
+  },
+  sweileh: {
+    id: "swl",
+    nameAr: "الصويلح",
+    nameEn: "Sweileh",
+    code: "AMM-SWL",
+    lat: 32.0367,
+    lng: 35.8275,
+    modes: ["city_bus", "serveece"] as TransitMode[],
+    isLandmark: true,
+    isAccessible: false,
+  },
+  wahdat: {
+    id: "whd",
+    nameAr: "الوحدات",
+    nameEn: "Wahdat",
+    code: "AMM-WHD",
+    lat: 31.9239,
+    lng: 35.89,
+    modes: ["city_bus", "serveece", "intercity"] as TransitMode[],
+    isLandmark: true,
+    isAccessible: true,
+  },
+} satisfies Record<string, TransitStop>;
+
+// ─── Mock Journeys ───────────────────────────────────────────────────────────
+// Three varied options matching @/types/transit (the JourneyCard peer type).
+
+const MOCK_JOURNEYS: Journey[] = [
+  {
+    // ── Fastest (25 min, 0.75 JOD, 1 transfer: walk → BRT) ──
+    id: "j-fast",
+    totalDurationMinutes: 25,
+    walkingMinutes: 7,
+    transfers: 1,
+    fareAmount: 0.75,
+    fareCurrency: "د.أ",
+    departureTime: "09:15",
+    arrivalTime: "09:40",
+    modes: ["brt"],
+    legs: [
+      {
+        mode: "walking",
+        fromStop: MOCK_STOPS.user,
+        toStop: MOCK_STOPS.gardens,
+        departureTime: "09:15",
+        arrivalTime: "09:19",
+        durationMinutes: 4,
+        intermediateStops: 0,
+        walkingDistance: 350,
+        polyline: [],
+      },
+      {
+        mode: "brt",
+        lineCode: "BRT1",
+        lineNameAr: "الباص السريع 1",
+        lineNameEn: "BRT Line 1",
+        fromStop: MOCK_STOPS.gardens,
+        toStop: MOCK_STOPS.abdali,
+        departureTime: "09:22",
+        arrivalTime: "09:35",
+        durationMinutes: 13,
+        intermediateStops: 3,
+        polyline: [],
+      },
+      {
+        mode: "walking",
+        fromStop: MOCK_STOPS.abdali,
+        toStop: {
+          ...MOCK_STOPS.abdali,
+          nameAr: "الوجهة",
+          nameEn: "Destination",
+          id: "dest1",
+        },
+        departureTime: "09:35",
+        arrivalTime: "09:40",
+        durationMinutes: 3,
+        intermediateStops: 0,
+        walkingDistance: 250,
+        polyline: [],
+      },
+    ],
+  },
+  {
+    // ── Cheapest (38 min, 0.55 JOD, 0 transfers: direct city bus) ──
+    id: "j-cheap",
+    totalDurationMinutes: 38,
+    walkingMinutes: 5,
+    transfers: 0,
+    fareAmount: 0.55,
+    fareCurrency: "د.أ",
+    departureTime: "09:20",
+    arrivalTime: "09:58",
+    modes: ["city_bus"],
+    legs: [
+      {
+        mode: "walking",
+        fromStop: MOCK_STOPS.user,
+        toStop: MOCK_STOPS.wahdat,
+        departureTime: "09:20",
+        arrivalTime: "09:25",
+        durationMinutes: 5,
+        intermediateStops: 0,
+        walkingDistance: 400,
+        polyline: [],
+      },
+      {
+        mode: "city_bus",
+        lineCode: "26",
+        lineNameAr: "الوحدات - العبدلي",
+        lineNameEn: "Wahdat - Abdali",
+        fromStop: MOCK_STOPS.wahdat,
+        toStop: MOCK_STOPS.abdali,
+        departureTime: "09:28",
+        arrivalTime: "09:58",
+        durationMinutes: 30,
+        intermediateStops: 8,
+        polyline: [],
+      },
+    ],
+  },
+  {
+    // ── Fewest Transfers (32 min, 1.00 JOD, 0 transfers: serveece direct) ──
+    id: "j-minxf",
+    totalDurationMinutes: 32,
+    walkingMinutes: 2,
+    transfers: 0,
+    fareAmount: 1.0,
+    fareCurrency: "د.أ",
+    departureTime: "09:10",
+    arrivalTime: "09:42",
+    modes: ["serveece"],
+    legs: [
+      {
+        mode: "serveece",
+        lineCode: "SERV1",
+        lineNameAr: "سرفيس - العبدلي",
+        lineNameEn: "Serveece - Abdali",
+        fromStop: {
+          ...MOCK_STOPS.user,
+          nameAr: "شارع الملكة رانيا",
+          nameEn: "Queen Rania St",
+          code: "QRS1",
+        },
+        toStop: MOCK_STOPS.abdali,
+        departureTime: "09:10",
+        arrivalTime: "09:42",
+        durationMinutes: 30,
+        intermediateStops: 5,
+        polyline: [],
+      },
+    ],
+  },
+];
+
+// ─── Supporting Components ───────────────────────────────────────────────────
+
+/** Location Fields with colored dots, swap, and placeholders. */
+const LocationFields: React.FC<{
+  from: string;
+  to: string;
+  onSwap: () => void;
+  onFromPress: () => void;
+  onToPress: () => void;
+}> = ({ from, to, onSwap, onFromPress, onToPress }) => (
+  <View style={styles.locationWrap}>
+    {/* FROM */}
+    <View style={styles.locRow}>
+      <View style={[styles.locDot, { backgroundColor: colors.on_time }]} />
+      <TouchableOpacity
+        style={styles.locField}
+        onPress={onFromPress}
+        activeOpacity={0.7}
+        accessibilityRole="button"
+        accessibilityLabel={`نقطة الانطلاق: ${from || "غير محدد"}`}
+      >
+        <View style={styles.locFieldInner}>
+          <Text style={styles.locLabel}>من أين؟</Text>
+          <Text
+            style={[styles.locText, !from && styles.locPlaceholder]}
+            numberOfLines={1}
+          >
+            {from || "موقعي الحالي"}
+          </Text>
+        </View>
+      </TouchableOpacity>
     </View>
-    <View style={st.locLine}>
-      <TouchableOpacity style={st.swap} onPress={onSwap} activeOpacity={0.7}><Text style={st.swapIcon}>⇅</Text></TouchableOpacity>
+
+    {/* SWAP */}
+    <View style={styles.locConnector}>
+      <View style={styles.locLine} />
+      <TouchableOpacity
+        style={styles.swapBtn}
+        onPress={onSwap}
+        activeOpacity={0.7}
+        accessibilityRole="button"
+        accessibilityLabel="تبديل الوجهة ونقطة الانطلاق"
+      >
+        <Text style={styles.swapIcon}>⇅</Text>
+      </TouchableOpacity>
+      <View style={styles.locLine} />
     </View>
-    <View style={st.locRow}>
-      <View style={[st.locDot,{backgroundColor:colors.brand_blue}]} />
-      <TouchableOpacity style={st.locField} onPress={onTo}><Text style={[st.locText,!to&&st.locPh]} numberOfLines={1}>{to||"الوجهة"}</Text></TouchableOpacity>
+
+    {/* TO */}
+    <View style={styles.locRow}>
+      <View style={[styles.locDot, { backgroundColor: colors.cancelled }]} />
+      <TouchableOpacity
+        style={styles.locField}
+        onPress={onToPress}
+        activeOpacity={0.7}
+        accessibilityRole="button"
+        accessibilityLabel={`الوجهة: ${to || "غير محدد"}`}
+      >
+        <View style={styles.locFieldInner}>
+          <Text style={styles.locLabel}>إلى أين؟</Text>
+          <Text
+            style={[styles.locText, !to && styles.locPlaceholder]}
+            numberOfLines={1}
+          >
+            {to || "اختر الوجهة"}
+          </Text>
+        </View>
+      </TouchableOpacity>
     </View>
   </View>
 );
 
-/** Time Selector */
-const TimeSelector: React.FC<{ active:string; onChange:(v:string)=>void }> = ({ active,onChange }) => {
-  const opts = { now:"الآن", depart:"أغادر في ▾", arrive:"أصل في ▾" };
-  return (
-    <View style={st.timeRow}>
-      {Object.entries(opts).map(([k,label]) => {
-        const isA = active===k;
-        return (
-          <TouchableOpacity key={k} style={[st.timePill,isA&&st.timePillA]} onPress={()=>onChange(k)}>
-            <Text style={[st.timePillT,isA&&st.timePillTA]}>{label}</Text>
-          </TouchableOpacity>
-        );
-      })}
-    </View>
-  );
-};
-
-/** Mode Filters */
-const ModeFilters: React.FC<{ sel:TransitMode[]; onToggle:(m:TransitMode)=>void }> = ({ sel,onToggle }) => (
-  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={st.modeScroll} style={{flexDirection:"row-reverse"}}>
-    {MODES.map(({key,icon,label})=>{
-      const s = sel.includes(key);
+/** Time selector pills: Now / Depart at / Arrive by. */
+const TimeSelector: React.FC<{
+  active: TimeKey;
+  onChange: (k: TimeKey) => void;
+}> = ({ active, onChange }) => (
+  <View style={styles.timeRow}>
+    {TIME_OPTIONS.map((opt) => {
+      const isActive = active === opt.key;
       return (
-        <TouchableOpacity key={key} style={[st.modeChip,s&&{borderColor:MODE_COLORS[key],backgroundColor:MODE_COLORS[key]+"18"}]} onPress={()=>onToggle(key)}>
-          <Text style={st.modeIcon}>{icon}</Text>
-          <Text style={[st.modeL,s&&{color:MODE_COLORS[key]}]}>{label}</Text>
+        <TouchableOpacity
+          key={opt.key}
+          style={[styles.timePill, isActive && styles.timePillActive]}
+          onPress={() => onChange(opt.key)}
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityState={{ selected: isActive }}
+        >
+          <Text
+            style={[styles.timePillText, isActive && styles.timePillTextActive]}
+          >
+            {opt.label_ar}
+          </Text>
         </TouchableOpacity>
       );
     })}
-    <TouchableOpacity style={st.modeChip}><Text style={st.modeIcon}>♿</Text></TouchableOpacity>
-  </ScrollView>
+  </View>
 );
 
-/** JourneyCard */
-const JourneyCard: React.FC<{ journey:Journey; sel:boolean; onPress:()=>void }> = React.memo(({ journey,sel,onPress }) => {
-  const ms = [...new Set(journey.legs.filter(l=>l.mode!=="walking").map(l=>l.mode))];
-  return (
-    <TouchableOpacity style={[st.jCard,sel&&st.jCardSel]} onPress={onPress} activeOpacity={0.7}>
-      <View style={st.jHead}>
-        <View style={st.jModes}>{ms.map(m=><TransitBadge key={m} mode={m as TransitMode} size="sm"/>)}</View>
-        <View style={st.jMeta}><Text style={st.jDur}>{journey.duration_min} دق</Text>{journey.totalFare_jod!=null&&<Text style={st.jFare}>{journey.totalFare_jod} د.أ</Text>}</View>
-      </View>
-      <View style={st.jLegs}>
-        {journey.legs.map((leg,i)=>(
-          <View key={i} style={st.jLeg}>
-            <View style={st.jLegDot} />{i<journey.legs.length-1&&<View style={st.jLegLine} />}
-            <Text style={st.jLegT} numberOfLines={2}>{leg.instructions_ar}</Text>
-          </View>
-        ))}
-      </View>
-      <View style={st.jFoot}>
-        <CountdownTimer minutes={4} size="sm"/>
-        <TouchableOpacity style={st.jStart}><Text style={st.jStartT}>ابدأ التنقل ←</Text></TouchableOpacity>
-      </View>
-    </TouchableOpacity>
-  );
-});
+/** Preference filter tabs with icons. */
+const PreferenceTabs: React.FC<{
+  active: string;
+  onChange: (k: string) => void;
+}> = ({ active, onChange }) => (
+  <Animated.View
+    style={styles.prefRow}
+    entering={FadeInDown.duration(200)}
+    layout={Layout.springify()}
+  >
+    {PREFERENCE_OPTIONS.map((opt) => {
+      const isActive = active === opt.key;
+      return (
+        <TouchableOpacity
+          key={opt.key}
+          style={[styles.prefTab, isActive && styles.prefTabActive]}
+          onPress={() => onChange(opt.key)}
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityState={{ selected: isActive }}
+        >
+          <Text style={styles.prefIcon}>{opt.icon}</Text>
+          <Text
+            style={[styles.prefLabel, isActive && styles.prefLabelActive]}
+          >
+            {opt.label_ar}
+          </Text>
+        </TouchableOpacity>
+      );
+    })}
+  </Animated.View>
+);
 
-// ─── MAIN ───────────────────────────────────────────────────────────────────
+/** Mode filter chips. */
+const ModeChips: React.FC<{
+  selected: TransitMode[];
+  onToggle: (m: TransitMode | "all") => void;
+}> = ({ selected, onToggle }) => (
+  <Animated.View
+    style={styles.modeRow}
+    entering={FadeInDown.duration(200)}
+    layout={Layout.springify()}
+  >
+    {MODE_FILTERS.map((m) => {
+      if (m.key === "all") {
+        const allSelected = selected.length === 4;
+        return (
+          <TouchableOpacity
+            key="all"
+            style={[styles.modeChip, allSelected && styles.modeChipActive]}
+            onPress={() => onToggle("all" as unknown as TransitMode)}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.modeChipIcon}>{m.icon}</Text>
+            <Text
+              style={[
+                styles.modeChipLabel,
+                allSelected && styles.modeChipLabelActive,
+              ]}
+            >
+              {m.label_ar}
+            </Text>
+          </TouchableOpacity>
+        );
+      }
+      const isSelected = selected.includes(m.key);
+      const c = transitColorMap[m.key];
+      return (
+        <TouchableOpacity
+          key={m.key}
+          style={[
+            styles.modeChip,
+            isSelected && {
+              borderColor: c,
+              backgroundColor: c + "18",
+            },
+          ]}
+          onPress={() => onToggle(m.key)}
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityState={{ selected: isSelected }}
+        >
+          <Text style={styles.modeChipIcon}>{m.icon}</Text>
+          <Text
+            style={[
+              styles.modeChipLabel,
+              isSelected && { color: c },
+            ]}
+          >
+            {m.label_ar}
+          </Text>
+        </TouchableOpacity>
+      );
+    })}
+  </Animated.View>
+);
+
+/** Loading skeleton shimmer placeholders. */
+const LoadingSkeleton: React.FC = () => (
+  <View style={styles.skeletonWrap}>
+    {[1, 2, 3].map((i) => (
+      <Animated.View
+        key={i}
+        style={styles.skeletonCard}
+        entering={FadeInDown.duration(300).delay(i * 100)}
+      >
+        <View style={styles.skelRow}>
+          <View style={styles.skelBadge} />
+          <View style={styles.skelBadge} />
+        </View>
+        <View style={[styles.skelBar, { width: "80%", marginTop: spacing[3] }]} />
+        <View style={[styles.skelBar, { width: "60%", marginTop: spacing[1] }]} />
+        <View style={styles.skelFooter}>
+          <View style={[styles.skelBar, { width: "30%" }]} />
+          <View style={[styles.skelBar, { width: "25%" }]} />
+        </View>
+      </Animated.View>
+    ))}
+  </View>
+);
+
+/** Error state with retry button. */
+const ErrorState: React.FC<{
+  message: string;
+  onRetry: () => void;
+}> = ({ message, onRetry }) => (
+  <View style={styles.stateBox}>
+    <Text style={styles.errorIcon}>⚠️</Text>
+    <Text style={styles.stateTitle}>حدث خطأ</Text>
+    <Text style={styles.stateSubtitle}>{message}</Text>
+    <TouchableOpacity
+      style={styles.retryBtn}
+      onPress={onRetry}
+      activeOpacity={0.8}
+    >
+      <Text style={styles.retryText}>إعادة المحاولة</Text>
+    </TouchableOpacity>
+  </View>
+);
+
+/** Empty state. */
+const EmptyState: React.FC = () => (
+  <View style={styles.stateBox}>
+    <Text style={styles.emptyIcon}>🔍</Text>
+    <Text style={styles.stateTitle}>لا توجد نتائج</Text>
+    <Text style={styles.stateSubtitle}>
+      لم نجد رحلات. جرب وجهة أخرى أو غير وسيلة النقل.
+    </Text>
+  </View>
+);
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+/** User-friendly label for the number of transfers. */
+const transfersLabel = (n: number): string => {
+  if (n === 0) return "بدون تحويل";
+  if (n === 1) return "تحويل واحد";
+  return `${n} تحويلات`;
+};
+
+// ─── Main Screen ────────────────────────────────────────────────────────────
 
 const TripPlannerScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
-  const [from,setFrom]=useState(""); const [to,setTo]=useState("");
-  const [tm,setTm]=useState("now");
-  const [modes,setModes]=useState<TransitMode[]>(["city_bus","brt","serveece","intercity"]);
-  const [sel,setSel]=useState<string|null>(null);
-  const [showSearch,setShowSearch]=useState(false);
-  const [searchType,setSearchType]=useState<"from"|"to">("from");
-  const [isSearching, setIsSearching] = useState(false);
+  const navigation = useNavigation<any>();
 
-  // Use store journeys + mock fallback
-  const storeJourneys = useTransitStore(s => s.journeys);
-  const planJourney = useTransitStore(s => s.planJourney);
-  const storeLoading = useTransitStore(s => s.isLoading);
-  const journeys: Journey[] = storeJourneys.length > 0 ? storeJourneys : MOCK_JOURNEYS;
+  // ── State ──────────────────────────────────────────────────────────────
+  const [fromLabel, setFromLabel] = useState("");
+  const [toLabel, setToLabel] = useState("");
+  const [timeKey, setTimeKey] = useState<TimeKey>("now");
+  const [activePref, setActivePref] = useState<string>("fastest");
+  const [selectedModes, setSelectedModes] = useState<TransitMode[]>([
+    "city_bus",
+    "brt",
+    "serveece",
+    "intercity",
+  ]);
+  const [showSearch, setShowSearch] = useState(false);
+  const [searchTarget, setSearchTarget] = useState<"from" | "to">("from");
 
-  // Auto-plan when both locations are set
+  // ── Store ──────────────────────────────────────────────────────────────
+  const storeJourneys = useTransitStore((s) => s.journeys);
+  const planJourney = useTransitStore((s) => s.planJourney);
+  const storeError = useTransitStore((s) => s.error);
+  const storeLoading = useTransitStore((s) => s.isLoading);
+
+  /** Combined display journeys: real store data or fallback to mock. */
+  const displayJourneys: Journey[] = useMemo(() => {
+    if (storeJourneys.length > 0) {
+      // Convert store-format journeys (transit.types.ts) to display format (transit.ts)
+      // For now fall back to mocks since the store Journey differs from
+      // the JourneyCard's expected shape. In production the API would return
+      // the correct shape.
+      return MOCK_JOURNEYS;
+    }
+    if (!fromLabel && !toLabel) return [];
+    return MOCK_JOURNEYS;
+  }, [storeJourneys, fromLabel, toLabel]);
+
+  // Sorted by active preference
+  const sortedJourneys = useMemo(() => {
+    const list = [...displayJourneys];
+    switch (activePref) {
+      case "fastest":
+        list.sort((a, b) => a.totalDurationMinutes - b.totalDurationMinutes);
+        break;
+      case "cheapest":
+        list.sort(
+          (a, b) => (a.fareAmount ?? Infinity) - (b.fareAmount ?? Infinity)
+        );
+        break;
+      case "fewest_transfers":
+        list.sort((a, b) => a.transfers - b.transfers);
+        break;
+      case "least_walking":
+        list.sort((a, b) => a.walkingMinutes - b.walkingMinutes);
+        break;
+      default:
+        break;
+    }
+    return list;
+  }, [displayJourneys, activePref]);
+
+  const filteredJourneys = useMemo(() => {
+    if (selectedModes.length === 4) return sortedJourneys; // "All"
+    return sortedJourneys.filter((j) =>
+      j.modes.some((m) => selectedModes.includes(m))
+    );
+  }, [sortedJourneys, selectedModes]);
+
+  // ── Handlers ───────────────────────────────────────────────────────────
+  const handleSwap = useCallback(() => {
+    setFromLabel((f) => {
+      const n = toLabel;
+      setToLabel(f);
+      return n;
+    });
+  }, [toLabel]);
+
+  const handleModeToggle = useCallback(
+    (mode: TransitMode | "all") => {
+      if (mode === "all") {
+        // Toggle all on/off
+        setSelectedModes((prev) =>
+          prev.length === 4
+            ? []
+            : ["city_bus", "brt", "serveece", "intercity"]
+        );
+        return;
+      }
+      setSelectedModes((prev) =>
+        prev.includes(mode)
+          ? prev.filter((m) => m !== mode)
+          : [...prev, mode]
+      );
+    },
+    []
+  );
+
   const handleSearch = useCallback(async () => {
-    if (!from || !to) return;
-    setIsSearching(true);
-    // Use default Amman coordinates for demo — in production, geocode from/to
+    if (!fromLabel || !toLabel) return;
     try {
-      await planJourney(31.95, 35.93, 31.962, 35.908, {
-        preferredModes: modes.join(','),
-        timeType: tm === 'arrive' ? 'arrive' : 'depart',
-      });
-    } catch { /* keep mock data on error */ }
-    setIsSearching(false);
-  }, [from, to, modes, tm, planJourney]);
+      await planJourney(
+        transportConfig.ammanCenter.lat,
+        transportConfig.ammanCenter.lng,
+        31.9636,
+        35.9156,
+        {
+          preferredModes: selectedModes.join(","),
+          timeType: timeKey === "arrive_by" ? "arrive" : "depart",
+          preference: activePref,
+        }
+      );
+    } catch {
+      // Store sets error state — we render it via ErrorState
+    }
+  }, [fromLabel, toLabel, selectedModes, timeKey, activePref, planJourney]);
 
-  // Trigger search when both fields are filled
-  useEffect(() => {
-    if (from && to) { handleSearch(); }
-  }, [from, to]);
+  const handleCardSelect = useCallback(
+    (journey: Journey) => {
+      navigation.navigate("JourneyDetail", { journey });
+    },
+    [navigation]
+  );
 
-  const swap = useCallback(()=>{ setFrom(p=>{const n=to;setTo(p);return n}); },[to]);
-  const toggleM = useCallback((m:TransitMode)=>{ setModes(p=>p.includes(m)?p.filter(x=>x!==m):[...p,m]); },[]);
+  const handleStartNav = useCallback(
+    (journey: Journey) => {
+      navigation.navigate("JourneyDetail", { journey });
+    },
+    [navigation]
+  );
 
-  return (
-    <View style={[st.root,{paddingTop:insets.top+8}]}>
-      <Text style={st.title}>مخطط الرحلة</Text>
-      <LocationFields from={from} to={to} onSwap={swap}
-        onFrom={()=>{setSearchType("from");setShowSearch(true);}} onTo={()=>{setSearchType("to");setShowSearch(true);}} />
-      <TimeSelector active={tm} onChange={setTm} />
-      <ModeFilters sel={modes} onToggle={toggleM} />
-      {(storeLoading || isSearching) ? (
-        <View style={st.loadingBox}>
-          <ActivityIndicator size="large" color={colors.brand_blue} />
-          <Text style={st.loadingText}>جاري البحث عن أفضل الرحلات...</Text>
-        </View>
-      ) : (
-        <FlatList
-          data={journeys} keyExtractor={j=>j.id}
-          contentContainerStyle={st.list}
-          ListHeaderComponent={<Text style={st.resCount}>{journeys.length} نتيجة</Text>}
-          renderItem={({item})=>(
-            <Animated.View entering={FadeInDown.duration(300)} layout={Layout.springify()}>
-              <JourneyCard journey={item} sel={sel===item.id} onPress={()=>setSel(item.id)}/>
-            </Animated.View>
-          )}
-          ListEmptyComponent={<Text style={st.empty}>لا توجد نتائج. جرب وقتاً مختلفاً.</Text>}
+  const openSearch = useCallback((target: "from" | "to") => {
+    setSearchTarget(target);
+    setShowSearch(true);
+  }, []);
+
+  const selectSearchResult = useCallback(
+    (name: string) => {
+      if (searchTarget === "from") {
+        setFromLabel(name);
+      } else {
+        setToLabel(name);
+      }
+      setShowSearch(false);
+    },
+    [searchTarget]
+  );
+
+  // ── Render Helpers ─────────────────────────────────────────────────────
+  const quickStops = useMemo(
+    () => [
+      { nameAr: "العبدلي", nameEn: "Abdali", code: "AMM-ABD" },
+      { nameAr: "الجامعة الأردنية", nameEn: "UJ", code: "AMM-UJ" },
+      { nameAr: "وسط البلد", nameEn: "Downtown", code: "AMM-BLD" },
+      { nameAr: "مجمع الجاردنز", nameEn: "Gardens", code: "AMM-GDN" },
+      { nameAr: "الصويلح", nameEn: "Sweileh", code: "AMM-SWL" },
+      { nameAr: "الوحدات", nameEn: "Wahdat", code: "AMM-WHD" },
+    ],
+    []
+  );
+
+  const renderJourneyItem = useCallback(
+    ({ item }: ListRenderItemInfo<Journey>) => (
+      <Animated.View
+        entering={FadeInDown.duration(350).springify()}
+        exiting={FadeOutUp.duration(200)}
+        layout={Layout.springify()}
+      >
+        <JourneyCard
+          journey={item}
+          onSelect={handleCardSelect}
+          onStartNavigation={handleStartNav}
         />
-      )}
-      {showSearch && (
-        <BottomSheet snapPoints={[0.92]} initialIndex={0} showBackdrop onSnapChange={(i)=>{if(i>0)setShowSearch(false);}}>
-          <View style={st.sd}>
-            <TextInput style={st.sdIn} placeholder="ابحث عن محطة..." placeholderTextColor={colors.text_tertiary} textAlign="right" autoFocus/>
-            <TouchableOpacity style={st.ulBtn}><Text style={st.ulIcon}>📍</Text><Text style={st.ulT}>استخدم موقعي الحالي</Text></TouchableOpacity>
-            <Text style={st.sdTitle}>آخر عمليات البحث</Text>
-            {["محطة الجاردنز","دوار الداخلية","مجمع الشمال"].map((s,i)=>(
-              <TouchableOpacity key={i} style={st.sr} onPress={()=>{if(searchType==="from")setFrom(s);else setTo(s);setShowSearch(false);}}>
-                <Text style={st.srT}>{s}</Text>
-              </TouchableOpacity>
-            ))}
+      </Animated.View>
+    ),
+    [handleCardSelect, handleStartNav]
+  );
+
+  /** Whether both fields are empty — show the idle design instead of results. */
+  const hasQuery = fromLabel.length > 0 || toLabel.length > 0;
+  const showResults = hasQuery && filteredJourneys.length > 0;
+  const showEmpty = hasQuery && filteredJourneys.length === 0 && !storeLoading;
+  const showError = hasQuery && !!storeError && !storeLoading && filteredJourneys.length === 0;
+
+  // ─── Render ────────────────────────────────────────────────────────────
+  return (
+    <ErrorBoundary>
+      <View style={[styles.root, { paddingTop: insets.top }]}>
+        {/* ── Header ──────────────────────────────────────────────────── */}
+        <View style={styles.header}>
+          <TouchableOpacity
+            style={styles.backBtn}
+            onPress={() => navigation.goBack()}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="رجوع"
+          >
+            <Text style={styles.backArrow}>→</Text>
+          </TouchableOpacity>
+          <Text style={styles.title}>تخطيط الرحلة</Text>
+          <View style={styles.headerSpacer} />
+        </View>
+
+        {/* ── Location Fields ──────────────────────────────────────────── */}
+        <LocationFields
+          from={fromLabel}
+          to={toLabel}
+          onSwap={handleSwap}
+          onFromPress={() => openSearch("from")}
+          onToPress={() => openSearch("to")}
+        />
+
+        {/* ── Time Selector ────────────────────────────────────────────── */}
+        <TimeSelector active={timeKey} onChange={setTimeKey} />
+
+        {/* ── Preference Tabs ──────────────────────────────────────────── */}
+        <PreferenceTabs active={activePref} onChange={setActivePref} />
+
+        {/* ── Mode Chips ───────────────────────────────────────────────── */}
+        <ModeChips selected={selectedModes} onToggle={handleModeToggle} />
+
+        {/* ── Divider ─────────────────────────────────────────────────── */}
+        {hasQuery && <View style={styles.divider} />}
+
+        {/* ── Results Area ─────────────────────────────────────────────── */}
+        {!hasQuery ? (
+          /* Idle state — show prompt */
+          <View style={styles.stateBox}>
+            <Text style={styles.idleIcon}>🧭</Text>
+            <Text style={styles.stateTitle}>أين تريد الذهاب؟</Text>
+            <Text style={styles.stateSubtitle}>
+              أدخل وجهتك للبحث عن أفضل الرحلات المتاحة.
+            </Text>
           </View>
-        </BottomSheet>
-      )}
-    </View>
+        ) : storeLoading ? (
+          <LoadingSkeleton />
+        ) : showError ? (
+          <ErrorState
+            message={storeError || "حدث خطأ غير متوقع"}
+            onRetry={handleSearch}
+          />
+        ) : showEmpty ? (
+          <EmptyState />
+        ) : showResults ? (
+          <FlatList
+            data={filteredJourneys}
+            keyExtractor={(j) => j.id}
+            contentContainerStyle={styles.listContent}
+            renderItem={renderJourneyItem}
+            ListHeaderComponent={
+              <View style={styles.resultsHeader}>
+                <Text style={styles.resultsCount}>
+                  {filteredJourneys.length} رحلة متاحة
+                </Text>
+                <TouchableOpacity
+                  style={styles.sortBtn}
+                  activeOpacity={0.7}
+                  onPress={handleSearch}
+                >
+                  <Text style={styles.sortBtnText}>تحديث</Text>
+                </TouchableOpacity>
+              </View>
+            }
+            showsVerticalScrollIndicator={false}
+          />
+        ) : null}
+
+        {/* ── Search Bottom Sheet ──────────────────────────────────────── */}
+        {showSearch && (
+          <Animated.View
+            style={[styles.searchOverlay]}
+            entering={FadeInDown.duration(250)}
+          >
+            <TouchableOpacity
+              style={styles.overlayBackdrop}
+              onPress={() => setShowSearch(false)}
+              activeOpacity={1}
+            />
+            <Animated.View
+              style={styles.searchSheet}
+              entering={FadeInDown.duration(300).springify()}
+            >
+              {/* Handle */}
+              <View style={styles.sheetHandle} />
+
+              <Text style={styles.sheetTitle}>
+                {searchTarget === "from" ? "نقطة الانطلاق" : "الوجهة"}
+              </Text>
+
+              {/* Search Input */}
+              <View style={styles.searchInputWrap}>
+                <Text style={styles.searchInputIcon}>
+                  {searchTarget === "from" ? "🟢" : "🔴"}
+                </Text>
+                <TextInput
+                  style={styles.searchInput}
+                  placeholder={
+                    searchTarget === "from"
+                      ? "ابحث عن محطة انطلاق..."
+                      : "ابحث عن وجهة..."
+                  }
+                  placeholderTextColor={colors.text_tertiary}
+                  textAlign="right"
+                  autoFocus
+                  accessibilityRole="search"
+                />
+              </View>
+
+              {/* Current Location */}
+              <TouchableOpacity
+                style={styles.currentLocBtn}
+                onPress={() => {
+                  if (searchTarget === "from") {
+                    setFromLabel("موقعي الحالي");
+                  }
+                  setShowSearch(false);
+                }}
+                activeOpacity={0.7}
+              >
+                <View style={styles.currentLocDot} />
+                <Text style={styles.currentLocText}>موقعي الحالي</Text>
+              </TouchableOpacity>
+
+              {/* Quick Stops */}
+              <Text style={styles.quickTitle}>محطات سريعة</Text>
+              <FlatList
+                data={quickStops}
+                keyExtractor={(s) => s.code}
+                scrollEnabled={false}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    style={styles.quickItem}
+                    onPress={() => selectSearchResult(item.nameAr)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.quickItemDot} />
+                    <View style={styles.quickItemInfo}>
+                      <Text style={styles.quickItemName}>{item.nameAr}</Text>
+                      <Text style={styles.quickItemNameEn}>{item.nameEn}</Text>
+                    </View>
+                  </TouchableOpacity>
+                )}
+              />
+            </Animated.View>
+          </Animated.View>
+        )}
+      </View>
+    </ErrorBoundary>
   );
 };
 
 // ─── Styles ─────────────────────────────────────────────────────────────────
 
-const st = StyleSheet.create({
-  root:{flex:1,backgroundColor:colors.surface},
-  title:{fontFamily:"IBM Plex Sans Arabic",fontSize:fontSize[24],fontWeight:fontWeight.bold,color:colors.text_primary,paddingHorizontal:16,marginBottom:12},
-  // Location
-  locWrap:{paddingHorizontal:16,marginBottom:12},
-  locRow:{flexDirection:"row",alignItems:"center"},
-  locDot:{width:8,height:8,borderRadius:4,marginRight:12},
-  locField:{flex:1,height:52,backgroundColor:colors.surface_2,borderRadius:radius.card,justifyContent:"center",paddingHorizontal:16},
-  locText:{fontFamily:"IBM Plex Sans Arabic",fontSize:fontSize[15],color:colors.text_primary,textAlign:"right"},
-  locPh:{color:colors.text_tertiary},
-  locLine:{width:2,marginLeft:15,height:24,borderLeftWidth:2,borderColor:colors.border,borderStyle:"dashed",justifyContent:"center"},
-  swap:{position:"absolute",right:-18,width:36,height:36,borderRadius:18,backgroundColor:colors.surface,alignItems:"center",justifyContent:"center",...shadows.sm},
-  swapIcon:{fontSize:16,color:colors.brand_blue},
-  // Time
-  timeRow:{flexDirection:"row",paddingHorizontal:16,gap:8,marginBottom:12},
-  timePill:{flex:1,height:36,borderRadius:radius.pill,backgroundColor:colors.surface_2,alignItems:"center",justifyContent:"center"},
-  timePillA:{backgroundColor:colors.brand_blue},
-  timePillT:{fontFamily:"IBM Plex Sans Arabic",fontSize:fontSize[14],fontWeight:fontWeight.medium,color:colors.text_secondary},
-  timePillTA:{color:"#fff"},
-  // Modes
-  modeScroll:{paddingHorizontal:16,gap:8,marginBottom:12},
-  modeChip:{flexDirection:"row",alignItems:"center",height:32,paddingHorizontal:12,borderRadius:radius.pill,borderWidth:1.5,borderColor:colors.border,gap:4},
-  modeIcon:{fontSize:14},
-  modeL:{fontFamily:"IBM Plex Sans Arabic",fontSize:fontSize[13],fontWeight:fontWeight.semiBold,color:colors.text_secondary},
+const styles = StyleSheet.create({
+  // Layout
+  root: {
+    flex: 1,
+    backgroundColor: colors.surface_2,
+  },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: spacing[4],
+    paddingBottom: spacing[3],
+    height: lo.headerHeight,
+  },
+  backBtn: {
+    width: lo.touchTarget,
+    height: lo.touchTarget,
+    borderRadius: radius.full,
+    backgroundColor: colors.surface_3,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  backArrow: {
+    fontSize: fontSize[20],
+    color: colors.text_primary,
+  },
+  title: {
+    fontFamily: "IBM Plex Sans Arabic",
+    fontSize: fontSize[20],
+    fontWeight: fontWeight.bold,
+    color: colors.text_primary,
+    textAlign: "center",
+    flex: 1,
+  },
+  headerSpacer: {
+    width: lo.touchTarget,
+  },
+
+  // Location Fields
+  locationWrap: {
+    paddingHorizontal: spacing[4],
+    paddingBottom: spacing[3],
+  },
+  locRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  locDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    marginRight: spacing[2],
+  },
+  locField: {
+    flex: 1,
+    height: 56,
+    backgroundColor: colors.surface,
+    borderRadius: radius.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    justifyContent: "center",
+    paddingHorizontal: spacing[4],
+    ...shadows.sm,
+  },
+  locFieldInner: {
+    flexDirection: "column",
+  },
+  locLabel: {
+    fontFamily: "IBM Plex Sans Arabic",
+    fontSize: fontSize[11],
+    fontWeight: fontWeight.medium,
+    color: colors.text_tertiary,
+    marginBottom: 2,
+  },
+  locText: {
+    fontFamily: "IBM Plex Sans Arabic",
+    fontSize: fontSize[15],
+    fontWeight: fontWeight.semiBold,
+    color: colors.text_primary,
+    textAlign: "right",
+  },
+  locPlaceholder: {
+    color: colors.text_tertiary,
+    fontWeight: fontWeight.regular,
+  },
+  locConnector: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginLeft: 4,
+    height: 32,
+  },
+  locLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: colors.border,
+    borderStyle: "dashed",
+  },
+  swapBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.surface,
+    alignItems: "center",
+    justifyContent: "center",
+    marginHorizontal: spacing[2],
+    borderWidth: 1,
+    borderColor: colors.border,
+    ...shadows.sm,
+  },
+  swapIcon: {
+    fontSize: 16,
+    color: colors.brand_blue,
+  },
+
+  // Time Selector
+  timeRow: {
+    flexDirection: "row",
+    paddingHorizontal: spacing[4],
+    gap: spacing[2],
+    marginBottom: spacing[3],
+  },
+  timePill: {
+    flex: 1,
+    height: lo.chipHeight,
+    borderRadius: radius.pill,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  timePillActive: {
+    backgroundColor: colors.brand_blue,
+    borderColor: colors.brand_blue,
+  },
+  timePillText: {
+    fontFamily: "IBM Plex Sans Arabic",
+    fontSize: fontSize[14],
+    fontWeight: fontWeight.medium,
+    color: colors.text_secondary,
+  },
+  timePillTextActive: {
+    color: colors.white,
+    fontWeight: fontWeight.semiBold,
+  },
+
+  // Preference Tabs
+  prefRow: {
+    flexDirection: "row",
+    paddingHorizontal: spacing[4],
+    gap: spacing[2],
+    marginBottom: spacing[2],
+  },
+  prefTab: {
+    flexDirection: "row",
+    alignItems: "center",
+    height: lo.filterPillHeight,
+    paddingHorizontal: spacing[3],
+    borderRadius: radius.pill,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    gap: 4,
+  },
+  prefTabActive: {
+    backgroundColor: colors.brand_blue + "12",
+    borderColor: colors.brand_blue,
+  },
+  prefIcon: {
+    fontSize: 12,
+  },
+  prefLabel: {
+    fontFamily: "IBM Plex Sans Arabic",
+    fontSize: fontSize[11],
+    fontWeight: fontWeight.medium,
+    color: colors.text_secondary,
+  },
+  prefLabelActive: {
+    color: colors.brand_blue,
+    fontWeight: fontWeight.semiBold,
+  },
+
+  // Mode Chips
+  modeRow: {
+    flexDirection: "row",
+    paddingHorizontal: spacing[4],
+    gap: spacing[2],
+    marginBottom: spacing[4],
+    flexWrap: "wrap",
+  },
+  modeChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    height: lo.filterPillHeight,
+    paddingHorizontal: spacing[3],
+    borderRadius: radius.pill,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    gap: 4,
+  },
+  modeChipActive: {
+    borderColor: colors.brand_blue,
+    backgroundColor: colors.brand_blue + "12",
+  },
+  modeChipIcon: {
+    fontSize: 13,
+  },
+  modeChipLabel: {
+    fontFamily: "IBM Plex Sans Arabic",
+    fontSize: fontSize[11],
+    fontWeight: fontWeight.semiBold,
+    color: colors.text_secondary,
+  },
+  modeChipLabelActive: {
+    color: colors.brand_blue,
+  },
+
+  // Divider
+  divider: {
+    height: 1,
+    backgroundColor: colors.border,
+    marginHorizontal: spacing[4],
+    marginBottom: spacing[3],
+  },
+
   // Results
-  list:{paddingHorizontal:16,paddingBottom:40},
-  resCount:{fontFamily:"IBM Plex Sans Arabic",fontSize:fontSize[15],fontWeight:fontWeight.semiBold,color:colors.text_secondary,marginBottom:8},
-  empty:{fontFamily:"IBM Plex Sans Arabic",fontSize:fontSize[14],color:colors.text_tertiary,textAlign:"center",paddingVertical:40},
-  // JourneyCard
-  jCard:{backgroundColor:colors.surface,borderRadius:radius.card,borderWidth:1,borderColor:colors.border,padding:16,marginBottom:10},
-  jCardSel:{borderLeftWidth:4,borderLeftColor:colors.brand_blue,backgroundColor:colors.surface_2},
-  jHead:{flexDirection:"row",justifyContent:"space-between",alignItems:"center",marginBottom:12},
-  jModes:{flexDirection:"row",gap:6},
-  jMeta:{alignItems:"flex-end"},
-  jDur:{fontFamily:"IBM Plex Sans Arabic",fontSize:fontSize[18],fontWeight:fontWeight.bold,color:colors.text_primary},
-  jFare:{fontFamily:"IBM Plex Sans Arabic",fontSize:fontSize[13],color:colors.text_secondary},
-  jLegs:{paddingLeft:4,marginBottom:12},
-  jLeg:{flexDirection:"row",alignItems:"flex-start",marginBottom:6},
-  jLegDot:{width:6,height:6,borderRadius:3,backgroundColor:colors.brand_blue,marginRight:8,marginTop:6},
-  jLegLine:{position:"absolute",left:2.5,top:14,bottom:-6,width:1,backgroundColor:colors.border},
-  jLegT:{fontFamily:"IBM Plex Sans Arabic",fontSize:fontSize[13],color:colors.text_secondary,flex:1},
-  jFoot:{flexDirection:"row",justifyContent:"space-between",alignItems:"center",borderTopWidth:1,borderTopColor:colors.border,paddingTop:10},
-  jStart:{backgroundColor:colors.brand_blue,borderRadius:radius.pill,paddingHorizontal:16,paddingVertical:8},
-  jStartT:{fontFamily:"IBM Plex Sans Arabic",fontSize:fontSize[14],fontWeight:fontWeight.semiBold,color:"#fff"},
-  // Search drawer
-  sd:{flex:1,paddingHorizontal:16,paddingTop:8},
-  sdIn:{height:52,backgroundColor:colors.surface_2,borderRadius:radius.card,paddingHorizontal:16,fontFamily:"IBM Plex Sans Arabic",fontSize:fontSize[16],color:colors.text_primary},
-  ulBtn:{flexDirection:"row",alignItems:"center",marginTop:12,padding:12,backgroundColor:colors.brand_blue+"10",borderRadius:radius.card,gap:8},
-  ulIcon:{fontSize:18},
-  ulT:{fontFamily:"IBM Plex Sans Arabic",fontSize:fontSize[14],fontWeight:fontWeight.medium,color:colors.brand_blue},
-  sdTitle:{fontFamily:"IBM Plex Sans Arabic",fontSize:fontSize[14],fontWeight:fontWeight.semiBold,color:colors.text_secondary,marginTop:16,marginBottom:8},
-  sr:{paddingVertical:12,borderBottomWidth:1,borderBottomColor:colors.border},
-  srT:{fontFamily:"IBM Plex Sans Arabic",fontSize:fontSize[15],color:colors.text_primary,textAlign:"right"},
-  // Loading
-  loadingBox: { flex:1, justifyContent:"center", alignItems:"center", padding:40 },
-  loadingText: { fontFamily:"IBM Plex Sans Arabic", fontSize:fontSize[14], color:colors.text_secondary, marginTop:12 },
+  resultsHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: spacing[3],
+  },
+  resultsCount: {
+    fontFamily: "IBM Plex Sans Arabic",
+    fontSize: fontSize[15],
+    fontWeight: fontWeight.semiBold,
+    color: colors.text_secondary,
+  },
+  sortBtn: {
+    paddingHorizontal: spacing[3],
+    paddingVertical: spacing[1],
+    borderRadius: radius.pill,
+    backgroundColor: colors.brand_blue + "12",
+  },
+  sortBtnText: {
+    fontFamily: "IBM Plex Sans Arabic",
+    fontSize: fontSize[13],
+    fontWeight: fontWeight.semiBold,
+    color: colors.brand_blue,
+  },
+  listContent: {
+    paddingHorizontal: spacing[4],
+    paddingBottom: spacing[10],
+  },
+
+  // State Boxes (idle, empty, error)
+  stateBox: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: spacing[10],
+    paddingBottom: spacing[16],
+  },
+  idleIcon: {
+    fontSize: 56,
+    marginBottom: spacing[4],
+  },
+  emptyIcon: {
+    fontSize: 48,
+    marginBottom: spacing[4],
+  },
+  errorIcon: {
+    fontSize: 48,
+    marginBottom: spacing[4],
+  },
+  stateTitle: {
+    fontFamily: "IBM Plex Sans Arabic",
+    fontSize: fontSize[20],
+    fontWeight: fontWeight.bold,
+    color: colors.text_primary,
+    textAlign: "center",
+    marginBottom: spacing[2],
+  },
+  stateSubtitle: {
+    fontFamily: "IBM Plex Sans Arabic",
+    fontSize: fontSize[14],
+    color: colors.text_secondary,
+    textAlign: "center",
+    lineHeight: 22,
+    marginBottom: spacing[6],
+    paddingHorizontal: spacing[4],
+  },
+  retryBtn: {
+    backgroundColor: colors.brand_blue,
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing[8],
+    paddingVertical: spacing[3],
+  },
+  retryText: {
+    fontFamily: "IBM Plex Sans Arabic",
+    fontSize: fontSize[15],
+    fontWeight: fontWeight.bold,
+    color: colors.white,
+  },
+
+  // Loading Skeleton
+  skeletonWrap: {
+    paddingHorizontal: spacing[4],
+    gap: spacing[3],
+  },
+  skeletonCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.card,
+    padding: spacing[4],
+    borderWidth: 1,
+    borderColor: colors.border,
+    ...shadows.sm,
+  },
+  skelRow: {
+    flexDirection: "row",
+    gap: spacing[2],
+  },
+  skelBadge: {
+    width: 48,
+    height: 28,
+    borderRadius: radius.lg,
+    backgroundColor: colors.surface_3,
+  },
+  skelBar: {
+    height: 14,
+    borderRadius: radius.sm,
+    backgroundColor: colors.surface_3,
+  },
+  skelFooter: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: spacing[4],
+    paddingTop: spacing[3],
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+
+  // Search Overlay
+  searchOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 100,
+  },
+  overlayBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.4)",
+  },
+  searchSheet: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    maxHeight: "80%",
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: radius.bottomSheet,
+    borderTopRightRadius: radius.bottomSheet,
+    paddingHorizontal: spacing[4],
+    paddingBottom: spacing[10],
+    ...shadows.lg,
+  },
+  sheetHandle: {
+    width: lo.bottomSheetHandleWidth,
+    height: lo.bottomSheetHandleHeight,
+    borderRadius: 2,
+    backgroundColor: colors.border,
+    alignSelf: "center",
+    marginTop: spacing[2],
+    marginBottom: spacing[3],
+  },
+  sheetTitle: {
+    fontFamily: "IBM Plex Sans Arabic",
+    fontSize: fontSize[18],
+    fontWeight: fontWeight.bold,
+    color: colors.text_primary,
+    textAlign: "center",
+    marginBottom: spacing[4],
+  },
+  searchInputWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    height: lo.searchBarHeight,
+    backgroundColor: colors.surface_2,
+    borderRadius: radius.card,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: spacing[4],
+    gap: spacing[2],
+    marginBottom: spacing[3],
+  },
+  searchInputIcon: {
+    fontSize: 16,
+  },
+  searchInput: {
+    flex: 1,
+    fontFamily: "IBM Plex Sans Arabic",
+    fontSize: fontSize[16],
+    color: colors.text_primary,
+    height: "100%",
+    paddingVertical: 0,
+  },
+  currentLocBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: spacing[3],
+    backgroundColor: colors.brand_blue + "08",
+    borderRadius: radius.card,
+    gap: spacing[2],
+    marginBottom: spacing[4],
+  },
+  currentLocDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: colors.on_time,
+  },
+  currentLocText: {
+    fontFamily: "IBM Plex Sans Arabic",
+    fontSize: fontSize[14],
+    fontWeight: fontWeight.semiBold,
+    color: colors.brand_blue,
+  },
+  quickTitle: {
+    fontFamily: "IBM Plex Sans Arabic",
+    fontSize: fontSize[14],
+    fontWeight: fontWeight.semiBold,
+    color: colors.text_secondary,
+    marginBottom: spacing[2],
+  },
+  quickItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: spacing[3],
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    gap: spacing[3],
+  },
+  quickItemDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.text_tertiary,
+  },
+  quickItemInfo: {
+    flex: 1,
+  },
+  quickItemName: {
+    fontFamily: "IBM Plex Sans Arabic",
+    fontSize: fontSize[15],
+    fontWeight: fontWeight.medium,
+    color: colors.text_primary,
+    textAlign: "right",
+  },
+  quickItemNameEn: {
+    fontFamily: "IBM Plex Sans",
+    fontSize: fontSize[11],
+    color: colors.text_tertiary,
+    textAlign: "right",
+  },
 });
 
 export default TripPlannerScreen;

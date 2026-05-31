@@ -1,485 +1,169 @@
 // ============================================================================
-// دروب (Droob) — Saved Routes Screen (المحفوظات)
-// Shows user's saved routes, bookmarked stops, and favorites
+// دروب (Droob) — SavedRoutesScreen (المحفوظات)
+// Shows bookmarked routes & stops with store integration
 // ============================================================================
-import React, { useState, useCallback, useMemo } from 'react';
-import {
-  View, Text, FlatList, TouchableOpacity, StyleSheet, RefreshControl,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { COLORS } from '../config/transport.config';
 
-// ─── Types ───────────────────────────────────────────────────────────────────
-interface SavedRoute {
-  id: string;
-  name: string;
-  nameEn: string;
-  type: 'city' | 'brt' | 'serveece' | 'intercity';
-  from: string;
-  to: string;
-  duration: number;   // minutes
-  lastUsed: string;    // ISO date
-  isFavorite: boolean;
-}
+import React, { useCallback, useState } from "react";
+import { View, Text, StyleSheet, FlatList, TouchableOpacity } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useNavigation } from "@react-navigation/native";
+import { ErrorBoundary } from "@components/ErrorBoundary";
+import { TransitBadge } from "@components/TransitBadge";
+import { colors, radius, spacing, fontSize, fontWeight, shadows, layout } from "@theme/tokens";
+import { useTransitStore } from "@stores/transit.store";
+import type { TransitStop, TransitRoute } from "@/types/transit.types";
+import { TRANSPORT_MODES } from "../config/transport.config";
 
-interface SavedStop {
-  id: string;
-  name: string;
-  nameEn: string;
-  routes: string[];   // Route codes serving this stop
-  distance: number;    // meters
-}
+type TabKey = "routes" | "stops";
 
-// ─── Seed data (would come from API / local storage) ─────────────────────────
-const MOCK_SAVED_ROUTES: SavedRoute[] = [
-  {
-    id: 'sr1', name: 'الباص السريع — خط صويلح', nameEn: 'BRT — Sweileh Line',
-    type: 'brt', from: 'العبدلي', to: 'صويلح', duration: 35, lastUsed: '2026-05-24T08:15:00Z',
-    isFavorite: true,
-  },
-  {
-    id: 'sr2', name: 'باص وسط البلد — صويلح', nameEn: 'Downtown — Sweileh Bus',
-    type: 'city', from: 'البلد', to: 'صويلح', duration: 45, lastUsed: '2026-05-23T17:30:00Z',
-    isFavorite: true,
-  },
-  {
-    id: 'sr3', name: 'سرفيس — دوار الداخلية', nameEn: 'Serveece — Interior Circle',
-    type: 'serveece', from: 'العبدلي', to: 'دوار الداخلية', duration: 20, lastUsed: '2026-05-22T12:00:00Z',
-    isFavorite: false,
-  },
-  {
-    id: 'sr4', name: 'بين المدن — إربد', nameEn: 'Inter-city — Irbid',
-    type: 'intercity', from: 'مجمع الوحدات', to: 'إربد', duration: 90, lastUsed: '2026-05-20T06:45:00Z',
-    isFavorite: false,
-  },
+// ─── Mock Data (until persistent storage is wired) ─────────────────────────
+const MOCK_SAVED_ROUTES: Array<TransitRoute & { savedAt: string }> = [
+  { id:"r1", code:"BRT1", name_ar:"الباص السريع 1", name_en:"BRT Line 1", mode:"brt", color:"#E60026", agencyId:"a1", originStopId:"s1", destinationStopId:"s5", originName_ar:"صويلح", destinationName_ar:"وسط البلد", governorate:"عمان", distance_km:14, duration_min:35, fare_jod:0.50, isActive:true, hasFridaySchedule:true, hasRamadanSchedule:false, headway_min:8, vehicleType:"bus", polyline:[], createdAt:"2026-01-01", updatedAt:"2026-05-01", savedAt:"2026-05-29" },
+  { id:"r2", code:"2", name_ar:"خط 2", name_en:"Line 2", mode:"city_bus", color:"#0066CC", agencyId:"a2", originStopId:"s10", destinationStopId:"s15", originName_ar:"الجاردنز", destinationName_ar:"الجامعة", governorate:"عمان", distance_km:8, duration_min:22, fare_jod:0.40, isActive:true, hasFridaySchedule:false, hasRamadanSchedule:false, headway_min:15, vehicleType:"bus", polyline:[], createdAt:"2026-01-01", updatedAt:"2026-05-01", savedAt:"2026-05-28" },
+  { id:"r3", code:"SERV-ABD", name_ar:"سرفيس العبدلي", name_en:"Abdali Serveece", mode:"serveece", color:"#FF8C00", agencyId:"a3", originStopId:"s20", destinationStopId:"s25", originName_ar:"العبدلي", destinationName_ar:"الصويفية", governorate:"عمان", distance_km:6, duration_min:18, fare_jod:0.30, isActive:true, hasFridaySchedule:false, hasRamadanSchedule:true, headway_min:null, vehicleType:"minibus", polyline:[], createdAt:"2026-01-01", updatedAt:"2026-03-01", savedAt:"2026-05-27" },
 ];
 
-const MOCK_SAVED_STOPS: SavedStop[] = [
-  { id: 'ss1', name: 'دوار الداخلية', nameEn: 'Interior Circle', routes: ['BRT1', '2', '5', '23'], distance: 120 },
-  { id: 'ss2', name: 'الجامعة الأردنية', nameEn: 'University of Jordan', routes: ['BRT1', '35'], distance: 350 },
-  { id: 'ss3', name: 'مجمع الجاردنز', nameEn: 'Gardens Complex', routes: ['2', '23', '35'], distance: 200 },
+const MOCK_SAVED_STOPS: Array<TransitStop & { savedAt: string }> = [
+  { id:"ps1", code:"AMM-UJ", name_ar:"الجامعة الأردنية", name_en:"U of Jordan", lat:32.0156, lng:35.8747, governorate:"عمان", city:"عمان", isTerminal:false, hasShelter:true, hasLighting:true, hasAccessibility:true, hasTicketMachine:false, hasAc:false, photoUrl:null, parentStationId:null, createdAt:"2026-01-01", updatedAt:"2026-01-01", savedAt:"2026-05-29" },
+  { id:"ps2", code:"AMM-BLD", name_ar:"وسط البلد", name_en:"Downtown", lat:31.9516, lng:35.9397, governorate:"عمان", city:"عمان", isTerminal:true, hasShelter:true, hasLighting:true, hasAccessibility:true, hasTicketMachine:true, hasAc:false, photoUrl:null, parentStationId:null, createdAt:"2026-01-01", updatedAt:"2026-01-01", savedAt:"2026-05-29" },
 ];
 
-// ─── Route type color & icon helpers ─────────────────────────────────────────
-function getTypeConfig(type: SavedRoute['type']) {
-  switch (type) {
-    case 'city': return { color: COLORS.cityBus, label: 'باص مدني', icon: 'bus' as const };
-    case 'brt': return { color: COLORS.brt, label: 'باص سريع', icon: 'bus-clock' as const };
-    case 'serveece': return { color: COLORS.serveece, label: 'سرفيس', icon: 'bus-side' as const };
-    case 'intercity': return { color: COLORS.intercity, label: 'بين مدني', icon: 'bus-multiple' as const };
-  }
+function formatSavedDate(iso: string): string {
+  try {
+    const diffH = Math.floor((Date.now() - new Date(iso).getTime()) / 3600000);
+    if (diffH < 1) return "الآن";
+    if (diffH < 24) return `قبل ${diffH} ساعة`;
+    if (diffH < 48) return "أمس";
+    return `قبل ${Math.floor(diffH / 24)} يوم`;
+  } catch { return ""; }
 }
 
-function formatLastUsed(iso: string): string {
-  const d = new Date(iso);
-  const now = new Date();
-  const diff = now.getTime() - d.getTime();
-  const hours = Math.floor(diff / 3600000);
-  const days = Math.floor(hours / 24);
-  if (hours < 1) return 'الآن';
-  if (hours < 24) return `قبل ${hours} ساعات`;
-  if (days === 1) return 'أمس';
-  return `قبل ${days} أيام`;
-}
-
-// ─── Main Component ─────────────────────────────────────────────────────────
-export default function SavedRoutesScreen() {
-  const navigation = useNavigation();
-  const [activeTab, setActiveTab] = useState<'routes' | 'stops'>('routes');
-  const [refreshing, setRefreshing] = useState(false);
-  const [savedRoutes, setSavedRoutes] = useState(MOCK_SAVED_ROUTES);
-  const [savedStops, setSavedStops] = useState(MOCK_SAVED_STOPS);
-
-  const onRefresh = useCallback(async () => {
-    setRefreshing(true);
-    await new Promise(r => setTimeout(r, 800));
-    setRefreshing(false);
-  }, []);
-
-  const toggleFavorite = useCallback((id: string) => {
-    setSavedRoutes(prev => prev.map(r =>
-      r.id === id ? { ...r, isFavorite: !r.isFavorite } : r
-    ));
-  }, []);
-
-  // ─── Render route item ─────────────────────────────────────────────────
-  const renderRoute = useCallback(({ item }: { item: SavedRoute }) => {
-    const tc = getTypeConfig(item.type);
-    return (
-      <TouchableOpacity
-        style={styles.routeCard}
-        activeOpacity={0.7}
-        onPress={() => (navigation as any).navigate('JourneyDetail', { journeyId: item.id })}
-      >
-        {/* Type stripe */}
-        <View style={[styles.typeStripe, { backgroundColor: tc.color }]} />
-
-        <View style={styles.routeContent}>
-          {/* Header row */}
-          <View style={styles.routeHeader}>
-            <View style={styles.routeTitleRow}>
-              <MaterialCommunityIcons name={tc.icon} size={18} color={tc.color} />
-              <Text style={[styles.routeTypeLabel, { color: tc.color }]}>{tc.label}</Text>
-            </View>
-            <TouchableOpacity onPress={() => toggleFavorite(item.id)} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-              <MaterialCommunityIcons
-                name={item.isFavorite ? 'star' : 'star-outline'}
-                size={22}
-                color={item.isFavorite ? '#F59E0B' : COLORS.textSecondary}
-              />
-            </TouchableOpacity>
-          </View>
-
-          {/* Route name */}
-          <Text style={styles.routeName} numberOfLines={1}>{item.name}</Text>
-
-          {/* From → To */}
-          <View style={styles.fromToRow}>
-            <Text style={styles.fromToText}>{item.from}</Text>
-            <MaterialCommunityIcons name="arrow-left" size={14} color={COLORS.textSecondary} />
-            <Text style={styles.fromToText}>{item.to}</Text>
-          </View>
-
-          {/* Meta row */}
-          <View style={styles.metaRow}>
-            <View style={styles.metaItem}>
-              <MaterialCommunityIcons name="clock-outline" size={13} color={COLORS.textSecondary} />
-              <Text style={styles.metaText}>{item.duration} دق</Text>
-            </View>
-            <Text style={styles.lastUsedText}>{formatLastUsed(item.lastUsed)}</Text>
-          </View>
+// ─── Route Card ────────────────────────────────────────────────────────────
+const RouteCard = React.memo<{ route: TransitRoute & { savedAt: string }; onPress: (r: TransitRoute) => void }>(
+  ({ route, onPress }) => (
+    <TouchableOpacity style={s.card} onPress={() => onPress(route)} activeOpacity={0.7}>
+      <View style={[s.modeStripe, { backgroundColor: TRANSPORT_MODES[route.mode]?.color || route.color }]} />
+      <View style={s.cardContent}>
+        <View style={s.cardHeader}>
+          <TransitBadge mode={route.mode} code={route.code} size="md" />
+          <Text style={s.date}>{formatSavedDate(route.savedAt)}</Text>
         </View>
-      </TouchableOpacity>
-    );
-  }, [navigation, toggleFavorite]);
-
-  // ─── Render stop item ──────────────────────────────────────────────────
-  const renderStop = useCallback(({ item }: { item: SavedStop }) => (
-    <TouchableOpacity
-      style={styles.stopCard}
-      activeOpacity={0.7}
-      onPress={() => (navigation as any).navigate('StopDetail', { stopId: item.id, stopName: item.name })}
-    >
-      <View style={styles.stopIcon}>
-        <MaterialCommunityIcons name="bus-stop-covered" size={20} color={COLORS.primary} />
-      </View>
-      <View style={styles.stopContent}>
-        <Text style={styles.stopName} numberOfLines={1}>{item.name}</Text>
-        <View style={styles.stopMetaRow}>
-          <View style={styles.stopRoutes}>
-            {item.routes.slice(0, 4).map((code, i) => (
-              <View key={i} style={styles.routeBadge}>
-                <Text style={styles.routeBadgeText}>{code}</Text>
-              </View>
-            ))}
-            {item.routes.length > 4 && (
-              <Text style={styles.moreRoutesText}>+{item.routes.length - 4}</Text>
-            )}
-          </View>
-          <Text style={styles.distanceText}>{item.distance}م</Text>
+        <Text style={s.name}>{route.name_ar}</Text>
+        <View style={s.meta}>
+          <Text style={s.metaText}>{route.originName_ar || "—"} → {route.destinationName_ar || "—"}</Text>
+          <Text style={s.metaText}>{route.duration_min} د · {route.fare_jod.toFixed(3)} د.أ</Text>
         </View>
       </View>
-      <MaterialCommunityIcons name="chevron-left" size={20} color={COLORS.textSecondary} />
     </TouchableOpacity>
-  ), [navigation]);
+  )
+);
 
-  // ─── Empty states ──────────────────────────────────────────────────────
-  const EmptyRoutes = useMemo(() => (
-    <View style={styles.emptyContainer}>
-      <MaterialCommunityIcons name="bookmark-outline" size={64} color={COLORS.textSecondary} />
-      <Text style={styles.emptyTitle}>لا توجد مسارات محفوظة</Text>
-      <Text style={styles.emptySubtitle}>
-        احفظ مساراتك المفضلة للوصول السريع
-      </Text>
-    </View>
-  ), []);
+// ─── Stop Card ─────────────────────────────────────────────────────────────
+const StopCard = React.memo<{ stop: TransitStop & { savedAt: string }; onPress: (s: TransitStop) => void }>(
+  ({ stop, onPress }) => (
+    <TouchableOpacity style={s.card} onPress={() => onPress(stop)} activeOpacity={0.7}>
+      <View style={[s.modeStripe, { backgroundColor: colors.brand_blue }]} />
+      <View style={s.cardContent}>
+        <View style={s.cardHeader}>
+          <Text style={s.name}>{stop.name_ar}</Text>
+          <Text style={s.date}>{formatSavedDate(stop.savedAt)}</Text>
+        </View>
+        <View style={s.meta}>
+          <Text style={s.metaText}>{stop.code} · {stop.governorate}</Text>
+        </View>
+        <View style={s.amenities}>
+          {stop.hasShelter && <Text>🏠</Text>}
+          {stop.hasAccessibility && <Text>♿</Text>}
+          {stop.hasLighting && <Text>💡</Text>}
+          {stop.hasAc && <Text>❄️</Text>}
+        </View>
+      </View>
+    </TouchableOpacity>
+  )
+);
 
-  const EmptyStops = useMemo(() => (
-    <View style={styles.emptyContainer}>
-      <MaterialCommunityIcons name="bus-stop-uncovered" size={64} color={COLORS.textSecondary} />
-      <Text style={styles.emptyTitle}>لا توجد محطات محفوظة</Text>
-      <Text style={styles.emptySubtitle}>
-        احفظ محطاتك المفضلة لمراقبة مواعيد المغادرة
-      </Text>
-    </View>
-  ), []);
+// ─── MAIN SCREEN ───────────────────────────────────────────────────────────
+export default function SavedRoutesScreen() {
+  const insets = useSafeAreaInsets();
+  const navigation = useNavigation<any>();
+  const [activeTab, setActiveTab] = useState<TabKey>("routes");
+  const [savedRoutes] = useState(MOCK_SAVED_ROUTES);
+  const [savedStops] = useState(MOCK_SAVED_STOPS);
 
-  // ─── Main Render ───────────────────────────────────────────────────────
+  const data = activeTab === "routes" ? savedRoutes : savedStops;
+
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>المحفوظات</Text>
-      </View>
+    <ErrorBoundary>
+      <View style={[s.root, { paddingTop: insets.top + 8 }]}>
+        <View style={s.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={s.headerBtn}>
+            <Text style={s.backIcon}>←</Text>
+          </TouchableOpacity>
+          <Text style={s.title}>المحفوظات</Text>
+          <View style={s.headerBtn} />
+        </View>
 
-      {/* Tabs */}
-      <View style={styles.tabRow}>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'routes' && styles.tabActive]}
-          onPress={() => setActiveTab('routes')}
-        >
-          <MaterialCommunityIcons
-            name="routes"
-            size={18}
-            color={activeTab === 'routes' ? COLORS.primary : COLORS.textSecondary}
-          />
-          <Text style={[styles.tabText, activeTab === 'routes' && styles.tabTextActive]}>
-            المسارات
-          </Text>
-          {savedRoutes.length > 0 && (
-            <View style={styles.tabBadge}>
-              <Text style={styles.tabBadgeText}>{savedRoutes.length}</Text>
-            </View>
-          )}
-        </TouchableOpacity>
+        <View style={s.tabs}>
+          {(["routes", "stops"] as TabKey[]).map((k) => (
+            <TouchableOpacity
+              key={k}
+              style={[s.tab, activeTab === k && s.tabActive]}
+              onPress={() => setActiveTab(k)}
+            >
+              <Text style={[s.tabText, activeTab === k && s.tabTextActive]}>
+                {k === "routes" ? `🚌 الخطوط (${savedRoutes.length})` : `📍 المحطات (${savedStops.length})`}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
 
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'stops' && styles.tabActive]}
-          onPress={() => setActiveTab('stops')}
-        >
-          <MaterialCommunityIcons
-            name="bus-stop-covered"
-            size={18}
-            color={activeTab === 'stops' ? COLORS.primary : COLORS.textSecondary}
-          />
-          <Text style={[styles.tabText, activeTab === 'stops' && styles.tabTextActive]}>
-            المحطات
-          </Text>
-          {savedStops.length > 0 && (
-            <View style={styles.tabBadge}>
-              <Text style={styles.tabBadgeText}>{savedStops.length}</Text>
-            </View>
-          )}
-        </TouchableOpacity>
-      </View>
-
-      {/* Content */}
-      {activeTab === 'routes' ? (
         <FlatList
-          data={savedRoutes}
-          keyExtractor={item => item.id}
-          renderItem={renderRoute}
-          contentContainerStyle={savedRoutes.length === 0 ? { flex: 1 } : styles.listContent}
-          ListEmptyComponent={EmptyRoutes}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />
+          data={data as any[]}
+          keyExtractor={(item: any) => item.id}
+          contentContainerStyle={s.list}
+          renderItem={({ item }: { item: any }) =>
+            activeTab === "routes" ? (
+              <RouteCard route={item} onPress={(r) => navigation.navigate("RouteDetail", { routeId: r.id, routeName: r.name_ar })} />
+            ) : (
+              <StopCard stop={item} onPress={(st) => navigation.navigate("StopDetail", { stopId: st.id, stopName: st.name_ar })} />
+            )
           }
-          showsVerticalScrollIndicator={false}
-        />
-      ) : (
-        <FlatList
-          data={savedStops}
-          keyExtractor={item => item.id}
-          renderItem={renderStop}
-          contentContainerStyle={savedStops.length === 0 ? { flex: 1 } : styles.listContent}
-          ListEmptyComponent={EmptyStops}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />
+          ListEmptyComponent={
+            <View style={s.emptyState}>
+              <Text style={s.emptyIcon}>{activeTab === "routes" ? "🚌" : "📍"}</Text>
+              <Text style={s.emptyTitle}>{activeTab === "routes" ? "لا توجد خطوط محفوظة" : "لا توجد محطات محفوظة"}</Text>
+              <Text style={s.emptyHint}>اضغط على ⭐ لحفظ المفضلة</Text>
+            </View>
           }
-          showsVerticalScrollIndicator={false}
         />
-      )}
-    </SafeAreaView>
+      </View>
+    </ErrorBoundary>
   );
 }
 
-// ─── Styles ──────────────────────────────────────────────────────────────────
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F3F4F6' },
-  header: {
-    paddingHorizontal: 24,
-    paddingTop: 16,
-    paddingBottom: 12,
-  },
-  headerTitle: {
-    fontSize: 26,
-    fontWeight: '800',
-    color: COLORS.text,
-    fontFamily: 'System',
-  },
-  // Tabs
-  tabRow: {
-    flexDirection: 'row',
-    marginHorizontal: 24,
-    backgroundColor: '#E5E7EB',
-    borderRadius: 12,
-    padding: 3,
-    marginBottom: 12,
-  },
-  tab: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 10,
-    borderRadius: 10,
-    gap: 6,
-  },
-  tabActive: {
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  tabText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: COLORS.textSecondary,
-  },
-  tabTextActive: {
-    color: COLORS.primary,
-    fontWeight: '700',
-  },
-  tabBadge: {
-    backgroundColor: COLORS.primary,
-    borderRadius: 8,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    minWidth: 20,
-    alignItems: 'center',
-  },
-  tabBadgeText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  listContent: { paddingHorizontal: 24, paddingBottom: 40 },
-  // Route Card
-  routeCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    marginBottom: 12,
-    flexDirection: 'row',
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  typeStripe: { width: 4 },
-  routeContent: { flex: 1, padding: 14, gap: 6 },
-  routeHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  routeTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  routeTypeLabel: { fontSize: 11, fontWeight: '700' },
-  routeName: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: COLORS.text,
-  },
-  fromToRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  fromToText: {
-    fontSize: 13,
-    color: COLORS.textSecondary,
-  },
-  metaRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  metaItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  metaText: {
-    fontSize: 12,
-    color: COLORS.textSecondary,
-  },
-  lastUsedText: {
-    fontSize: 11,
-    color: COLORS.textSecondary,
-  },
-  // Stop Card
-  stopCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    marginBottom: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 14,
-    gap: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 1,
-  },
-  stopIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: COLORS.primary + '12',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stopContent: { flex: 1, gap: 4 },
-  stopName: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: COLORS.text,
-  },
-  stopMetaRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  stopRoutes: {
-    flexDirection: 'row',
-    gap: 4,
-    flexWrap: 'wrap',
-  },
-  routeBadge: {
-    backgroundColor: COLORS.primary + '15',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 5,
-  },
-  routeBadgeText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: COLORS.primary,
-  },
-  moreRoutesText: {
-    fontSize: 10,
-    color: COLORS.textSecondary,
-    alignSelf: 'center',
-  },
-  distanceText: {
-    fontSize: 11,
-    color: COLORS.textSecondary,
-    fontWeight: '600',
-  },
-  // Empty
-  emptyContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 40,
-    gap: 8,
-  },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: COLORS.text,
-    marginTop: 12,
-  },
-  emptySubtitle: {
-    fontSize: 13,
-    color: COLORS.textSecondary,
-    textAlign: 'center',
-    lineHeight: 20,
-  },
+const s = StyleSheet.create({
+  root: { flex: 1, backgroundColor: colors.surface_2 },
+  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: spacing[4], paddingVertical: spacing[3] },
+  headerBtn: { width: layout.touchTarget, height: layout.touchTarget, alignItems: "center", justifyContent: "center" },
+  backIcon: { fontSize: 22, color: colors.text_primary },
+  title: { fontFamily: "IBM Plex Sans Arabic", fontSize: fontSize[20], fontWeight: fontWeight.bold, color: colors.text_primary },
+  tabs: { flexDirection: "row", marginHorizontal: spacing[4], marginBottom: spacing[3], backgroundColor: colors.surface, borderRadius: radius.pill, padding: 3 },
+  tab: { flex: 1, paddingVertical: spacing[2], borderRadius: radius.pill, alignItems: "center" },
+  tabActive: { backgroundColor: colors.brand_blue },
+  tabText: { fontFamily: "IBM Plex Sans Arabic", fontSize: fontSize[13], fontWeight: fontWeight.medium, color: colors.text_secondary },
+  tabTextActive: { color: colors.white },
+  list: { paddingHorizontal: spacing[4], paddingBottom: spacing[8] },
+  card: { flexDirection: "row", backgroundColor: colors.surface, borderRadius: radius.card, marginBottom: spacing[2], overflow: "hidden", ...shadows.sm },
+  modeStripe: { width: 4 },
+  cardContent: { flex: 1, padding: spacing[3] },
+  cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: spacing[1] },
+  date: { fontFamily: "IBM Plex Sans Arabic", fontSize: fontSize[11], color: colors.text_tertiary },
+  name: { fontFamily: "IBM Plex Sans Arabic", fontSize: fontSize[16], fontWeight: fontWeight.bold, color: colors.text_primary },
+  meta: { flexDirection: "row", justifyContent: "space-between", marginTop: spacing[1] },
+  metaText: { fontFamily: "IBM Plex Sans Arabic", fontSize: fontSize[13], color: colors.text_secondary },
+  amenities: { flexDirection: "row", gap: 4, marginTop: spacing[1] },
+  emptyState: { alignItems: "center", paddingTop: 64 },
+  emptyIcon: { fontSize: 48, marginBottom: 12 },
+  emptyTitle: { fontFamily: "IBM Plex Sans Arabic", fontSize: fontSize[18], fontWeight: fontWeight.bold, color: colors.text_primary, marginBottom: 4 },
+  emptyHint: { fontFamily: "IBM Plex Sans Arabic", fontSize: fontSize[14], color: colors.text_tertiary, textAlign: "center" },
 });

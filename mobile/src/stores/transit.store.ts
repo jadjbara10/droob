@@ -25,6 +25,7 @@ interface TransitState {
   error: string | null;
   searchQuery: string;
   filterMode: TransportMode | null;
+  usingMockData: boolean;
 
   // ── Favorites ────────────────────────────────────────────────────────
   favoriteStops: string[];
@@ -95,6 +96,7 @@ export const useTransitStore = create<TransitState>((set, get) => ({
   error: null,
   searchQuery: '',
   filterMode: null,
+  usingMockData: false,
   favoriteStops: [],
   favoriteRoutes: [],
 
@@ -103,12 +105,12 @@ export const useTransitStore = create<TransitState>((set, get) => ({
   setSelectedModes: (modes) => set({ selectedModes: modes }),
 
   fetchNearbyStops: async (lat, lng) => {
-    set({ isLoading: true, error: null });
+    set({ isLoading: true, error: null, usingMockData: false });
     try {
       const data = await stopsApi.nearby(lat, lng) as { data: TransitStop[] };
       set({ stops: data.data, isLoading: false });
     } catch (e) {
-      set({ error: (e as Error).message, isLoading: false });
+      set({ error: (e as Error).message, isLoading: false, usingMockData: true });
     }
   },
 
@@ -116,17 +118,24 @@ export const useTransitStore = create<TransitState>((set, get) => ({
   clearSelectedStop: () => set({ selectedStop: null }),
 
   searchStops: async (query) => {
-    const data = await stopsApi.list({ q: query }) as { data: TransitStop[] };
-    return data.data;
+    set({ isLoading: true, error: null, usingMockData: false });
+    try {
+      const data = await stopsApi.list({ q: query }) as { data: TransitStop[] };
+      set({ isLoading: false });
+      return data.data;
+    } catch (e) {
+      set({ error: (e as Error).message, isLoading: false, usingMockData: true });
+      return [];
+    }
   },
 
   fetchRoutes: async (params) => {
-    set({ isLoading: true });
+    set({ isLoading: true, error: null, usingMockData: false });
     try {
       const data = await routesApi.list(params || {}) as { data: TransitRoute[] };
       set({ routes: data.data, isLoading: false });
     } catch (e) {
-      set({ error: (e as Error).message, isLoading: false });
+      set({ error: (e as Error).message, isLoading: false, usingMockData: true });
     }
   },
 
@@ -148,7 +157,7 @@ export const useTransitStore = create<TransitState>((set, get) => ({
   clearError: () => set({ error: null }),
 
   planJourney: async (fromLat, fromLng, toLat, toLng, params) => {
-    set({ isLoading: true });
+    set({ isLoading: true, error: null, usingMockData: false });
     try {
       const data = await tripPlannerApi.plan({
         fromLat, fromLng, toLat, toLng,
@@ -157,7 +166,7 @@ export const useTransitStore = create<TransitState>((set, get) => ({
       set({ journeys: data.data, isLoading: false });
       return data.data;
     } catch (e) {
-      set({ error: (e as Error).message, isLoading: false });
+      set({ error: (e as Error).message, isLoading: false, usingMockData: true });
       return [];
     }
   },
@@ -166,22 +175,24 @@ export const useTransitStore = create<TransitState>((set, get) => ({
   clearJourneys: () => set({ journeys: [] }),
 
   fetchDepartures: async (stopId) => {
+    set({ isLoading: true, error: null, usingMockData: false });
     try {
       const data = await departuresApi.getForStop(stopId) as { stop: TransitStop; departures: Departure[]; generatedAt: string };
-      set({ departures: data.departures, selectedStop: data.stop });
+      set({ departures: data.departures, selectedStop: data.stop, isLoading: false });
     } catch (e) {
-      set({ error: (e as Error).message });
+      set({ error: (e as Error).message, isLoading: false, usingMockData: true });
     }
   },
 
   updateDepartures: (departures) => set({ departures }),
 
   fetchVehicles: async (routeId) => {
+    set({ isLoading: true, error: null, usingMockData: false });
     try {
       const data = await vehiclesApi.list(routeId ? { routeId } : undefined) as { data: TransitVehicle[] };
-      set({ vehicles: data.data });
+      set({ vehicles: data.data, isLoading: false });
     } catch (e) {
-      set({ error: (e as Error).message });
+      set({ error: (e as Error).message, isLoading: false, usingMockData: true });
     }
   },
 
@@ -194,11 +205,12 @@ export const useTransitStore = create<TransitState>((set, get) => ({
   },
 
   fetchAlerts: async () => {
+    set({ isLoading: true, error: null, usingMockData: false });
     try {
       const data = await alertsApi.list({ isActive: true }) as { data: TransitAlert[] };
-      set({ alerts: data.data });
+      set({ alerts: data.data, isLoading: false });
     } catch (e) {
-      set({ error: (e as Error).message });
+      set({ error: (e as Error).message, isLoading: false, usingMockData: true });
     }
   },
 

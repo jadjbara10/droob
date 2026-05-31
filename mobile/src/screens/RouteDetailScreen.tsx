@@ -1,296 +1,1116 @@
 // ============================================================================
 // دروب (Droob) — Route Detail Screen (تفاصيل الخط)
-// Shows route info: stops, schedule, live vehicles, alerts
+// Redesigned: route header + mode badge, quick stats, fare info,
+// tab switcher (Stops Timeline | Live Vehicles), pull-to-refresh,
+// loading/error/empty states, RTL Arabic, ErrorBoundary.
 // ============================================================================
-import React, { useState, useCallback } from 'react';
-import {
-  View, Text, FlatList, TouchableOpacity, ScrollView, StyleSheet,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { COLORS } from '../config/transport.config';
 
-interface Stop {
+import React, { useState, useCallback, useEffect, useMemo } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  FlatList,
+  RefreshControl,
+  Platform,
+  type ViewStyle,
+} from "react-native";
+import { useRoute, useNavigation } from "@react-navigation/native";
+import type { RouteProp } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import type { RootStackParamList } from "@/navigation/AppNavigator";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+import Animated, {
+  FadeInDown,
+  FadeInRight,
+  Layout as ReLayout,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withSequence,
+  withTiming,
+} from "react-native-reanimated";
+import {
+  colors,
+  transitColorMap,
+  radius,
+  spacing,
+  fontSize,
+  fontWeight,
+  shadows,
+} from "@theme/tokens";
+import type { TransitMode } from "@theme/tokens";
+import type { OccupancyLevel } from "@/types/transit";
+import type { TransportMode } from "@/types/transit.types";
+import { OccupancyIndicator } from "@components/OccupancyIndicator";
+import { ErrorBoundary } from "@components/ErrorBoundary";
+import { FARE } from "@/config/transport.config";
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  CONSTANTS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const SHIMMER_STOP_COUNT = 5;
+const SHIMMER_VEHICLE_COUNT = 3;
+
+type TabKey = "stops" | "vehicles";
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  LOCAL TYPES
+// ═══════════════════════════════════════════════════════════════════════════════
+
+interface RouteStop {
   id: string;
-  name: string;
+  nameAr: string;
   sequence: number;
   arrival?: string;
+  isTerminal: boolean;
   hasShelter: boolean;
-  hasLight: boolean;
-  accessible: boolean;
+  hasLighting: boolean;
+  hasAccessibility: boolean;
 }
 
-interface Vehicle {
+interface LiveVehicle {
   id: string;
-  plate: string;
+  vehicleId: string;
+  plateNumber: string;
   lat: number;
   lng: number;
-  speed: number;
-  occupancy: 'low' | 'medium' | 'high';
+  speedKmh: number;
+  heading: number;
+  occupancy: OccupancyLevel;
+  status: "active" | "idle" | "maintenance" | "offline";
+  nextStopAr?: string;
+  lastSeen: string;
 }
 
-const MOCK_ROUTE = {
-  id: 'BRT1',
-  name: 'الباص السريع — خط صويلح',
-  nameEn: 'BRT Line 1 — Sweileh',
-  type: 'brt' as const,
-  color: COLORS.brt,
-  operator: 'أمانة عمان الكبرى — قسم الباص السريع',
-  from: 'شارع القدس',
-  to: 'صويلح',
-  distance: 22.5, // km
-  duration: 35,   // min
-  headway: 'كل ١٠-١٥ دقيقة',
-  fare: '٠.٥٠ دينار أردني',
-  schedule: '٥:٣٠ صباحاً — ١١:٠٠ مساءً',
-  fridaySchedule: '٥:٣٠ ص — ١١:٠٠ ص | ١:٣٠ م — ١٠:٠٠ م',
-  features: ['مسار مخصص', 'محطات مكيفة', 'شاشات إلكترونية', 'آلة تذاكر', 'إنترنت مجاني'],
+interface RouteInfo {
+  id: string;
+  code: string;
+  nameAr: string;
+  nameEn: string;
+  mode: TransportMode;
+  color: string;
+  operator: string;
+  fromNameAr: string;
+  toNameAr: string;
+  distanceKm: number;
+  durationMin: number;
+  fareJod: number;
+  headwayMin: number | null;
+  schedule: string;
+  fridaySchedule: string;
+  hasFridaySchedule: boolean;
+  features: string[];
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  MOCK DATA
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const MOCK_ROUTE: RouteInfo = {
+  id: "BRT1",
+  code: "BRT1",
+  nameAr: "الباص السريع — خط صويلح",
+  nameEn: "BRT Line 1 — Sweileh",
+  mode: "brt",
+  color: "#E60026",
+  operator: "أمانة عمان الكبرى — قسم الباص السريع",
+  fromNameAr: "شارع القدس",
+  toNameAr: "صويلح",
+  distanceKm: 22.5,
+  durationMin: 35,
+  fareJod: 0.5,
+  headwayMin: 12,
+  schedule: "٥:٣٠ صباحاً — ١١:٠٠ مساءً",
+  fridaySchedule: "٥:٣٠ ص — ١١:٠٠ ص | ١:٣٠ م — ١٠:٠٠ م",
+  hasFridaySchedule: true,
+  features: ["مسار مخصص", "محطات مكيفة", "شاشات إلكترونية", "آلة تذاكر", "إنترنت مجاني"],
 };
 
-const MOCK_STOPS: Stop[] = [
-  { id: 's1', name: 'شارع القدس', sequence: 1, arrival: '٥:٣٠ ص', hasShelter: true, hasLight: true, accessible: true },
-  { id: 's2', name: 'وسط البلد', sequence: 2, arrival: '٥:٣٥ ص', hasShelter: true, hasLight: true, accessible: true },
-  { id: 's3', name: 'العبدلي', sequence: 3, arrival: '٥:٤٠ ص', hasShelter: true, hasLight: true, accessible: true },
-  { id: 's4', name: 'دوار الداخلية', sequence: 4, arrival: '٥:٤٨ ص', hasShelter: true, hasLight: true, accessible: true },
-  { id: 's5', name: 'الجامعة الأردنية', sequence: 5, arrival: '٥:٥٥ ص', hasShelter: true, hasLight: true, accessible: true },
-  { id: 's6', name: 'صويلح', sequence: 6, arrival: '٦:٠٥ ص', hasShelter: true, hasLight: true, accessible: true },
+const MOCK_STOPS: RouteStop[] = [
+  { id: "s1", nameAr: "شارع القدس", sequence: 1, arrival: "٥:٣٠ ص", isTerminal: true, hasShelter: true, hasLighting: true, hasAccessibility: true },
+  { id: "s2", nameAr: "وسط البلد", sequence: 2, arrival: "٥:٣٥ ص", isTerminal: false, hasShelter: true, hasLighting: true, hasAccessibility: true },
+  { id: "s3", nameAr: "العبدلي", sequence: 3, arrival: "٥:٤٠ ص", isTerminal: false, hasShelter: true, hasLighting: true, hasAccessibility: true },
+  { id: "s4", nameAr: "دوار الداخلية", sequence: 4, arrival: "٥:٤٨ ص", isTerminal: false, hasShelter: true, hasLighting: false, hasAccessibility: true },
+  { id: "s5", nameAr: "الجامعة الأردنية", sequence: 5, arrival: "٥:٥٥ ص", isTerminal: false, hasShelter: true, hasLighting: true, hasAccessibility: false },
+  { id: "s6", nameAr: "صويلح", sequence: 6, arrival: "٦:٠٥ ص", isTerminal: true, hasShelter: true, hasLighting: true, hasAccessibility: true },
 ];
 
-const MOCK_VEHICLES: Vehicle[] = [
-  { id: 'v1', plate: '٩-٤٢٣٥', lat: 31.956, lng: 35.906, speed: 45, occupancy: 'medium' },
-  { id: 'v2', plate: '٧-٨٩١٢', lat: 31.962, lng: 35.918, speed: 30, occupancy: 'low' },
-  { id: 'v3', plate: '٣-٥٦٧٨', lat: 31.972, lng: 35.921, speed: 52, occupancy: 'high' },
+const MOCK_VEHICLES: LiveVehicle[] = [
+  { id: "v1", vehicleId: "VH-4235", plateNumber: "٩-٤٢٣٥", lat: 31.956, lng: 35.906, speedKmh: 45, heading: 320, occupancy: "partial", status: "active", nextStopAr: "وسط البلد", lastSeen: new Date().toISOString() },
+  { id: "v2", vehicleId: "VH-8912", plateNumber: "٧-٨٩١٢", lat: 31.962, lng: 35.918, speedKmh: 30, heading: 310, occupancy: "empty", status: "active", nextStopAr: "العبدلي", lastSeen: new Date().toISOString() },
+  { id: "v3", vehicleId: "VH-5678", plateNumber: "٣-٥٦٧٨", lat: 31.972, lng: 35.921, speedKmh: 52, heading: 330, occupancy: "full", status: "active", nextStopAr: "الجامعة الأردنية", lastSeen: new Date().toISOString() },
+  { id: "v4", vehicleId: "VH-1122", plateNumber: "٦-١١٢٢", lat: 31.948, lng: 35.935, speedKmh: 0, heading: 0, occupancy: "empty", status: "idle", nextStopAr: "شارع القدس", lastSeen: new Date(Date.now() - 10 * 60000).toISOString() },
 ];
 
-function getOccupancyConfig(occ: Vehicle['occupancy']) {
-  switch (occ) {
-    case 'low': return { color: '#16A34A', label: 'فارغ', icon: '🔵' };
-    case 'medium': return { color: '#EAB308', label: 'ممتلئ جزئياً', icon: '🟡' };
-    case 'high': return { color: '#DC2626', label: 'ممتلئ', icon: '🔴' };
-  }
+// ═══════════════════════════════════════════════════════════════════════════════
+//  HELPERS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const MODE_LABELS: Record<string, string> = {
+  city_bus: "باص مدني",
+  brt: "باص سريع",
+  serveece: "سرفيس",
+  intercity: "بين المدن",
+};
+
+const VEHICLE_STATUS_CONFIG: Record<string, { label: string; color: string; dot: string }> = {
+  active: { label: "نشط", color: colors.on_time, dot: colors.on_time },
+  idle: { label: "متوقف", color: colors.delayed, dot: colors.delayed },
+  maintenance: { label: "صيانة", color: colors.cancelled, dot: colors.cancelled },
+  offline: { label: "غير متصل", color: colors.text_tertiary, dot: colors.text_tertiary },
+};
+
+/** Format JOD fare with currency symbol and optional transfer discount note */
+function formatFare(baseFare: number): { base: string; transferNote: string } {
+  const discount = FARE.TRANSFER_DISCOUNT;
+  const windowMin = FARE.TRANSFER_WINDOW_MIN;
+  const discounted = (baseFare * (1 - discount)).toFixed(3);
+  return {
+    base: `${baseFare.toFixed(3)} ${FARE.CURRENCY}`,
+    transferNote: `خصم التحويل: ${discounted} ${FARE.CURRENCY} (خصم ${Math.round(discount * 100)}% ضمن ${windowMin} دقيقة)`,
+  };
 }
 
-export default function RouteDetailScreen() {
-  const [activeTab, setActiveTab] = useState<'stops' | 'vehicles'>('stops');
+// ═══════════════════════════════════════════════════════════════════════════════
+//  SHIMMER LOADING
+// ═══════════════════════════════════════════════════════════════════════════════
 
-  const renderStop = useCallback(({ item, index }: { item: Stop; index: number }) => (
-    <View style={styles.stopRow}>
-      {/* Timeline */}
-      <View style={styles.timeline}>
-        <View style={[styles.timelineDot, index === 0 && styles.timelineDotFirst, index === MOCK_STOPS.length - 1 && styles.timelineDotLast]} />
-        {index < MOCK_STOPS.length - 1 && <View style={styles.timelineLine} />}
+const ShimmerBlock: React.FC<{ style?: ViewStyle }> = ({ style }) => {
+  const opacityVal = useSharedValue(0.3);
+  useEffect(() => {
+    opacityVal.value = withRepeat(
+      withSequence(withTiming(1, { duration: 800 }), withTiming(0.3, { duration: 800 })),
+      -1,
+      true,
+    );
+  }, []);
+  const animatedStyle = useAnimatedStyle(() => ({ opacity: opacityVal.value }));
+  return <Animated.View style={[animatedStyle, { backgroundColor: colors.surface_3, borderRadius: radius.sm }, style]} />;
+};
+
+const StopSkeletonRow: React.FC = () => (
+  <View style={skel.stopRow}>
+    <View style={skel.timeline}>
+      <ShimmerBlock style={{ width: 12, height: 12, borderRadius: 6 }} />
+      <ShimmerBlock style={{ width: 3, flex: 1, borderRadius: 2 }} />
+    </View>
+    <View style={skel.stopInfo}>
+      <ShimmerBlock style={{ width: "65%", height: 16 }} />
+      <ShimmerBlock style={{ width: "35%", height: 12, marginTop: 6 }} />
+    </View>
+  </View>
+);
+
+const VehicleSkeletonCard: React.FC = () => (
+  <View style={skel.vehicleCard}>
+    <View style={skel.vehicleLeft}>
+      <ShimmerBlock style={{ width: 44, height: 44, borderRadius: radius.lg }} />
+      <View style={{ gap: 4 }}>
+        <ShimmerBlock style={{ width: 80, height: 15 }} />
+        <ShimmerBlock style={{ width: 60, height: 11 }} />
       </View>
-      {/* Stop info */}
-      <View style={styles.stopInfo}>
-        <Text style={styles.stopName}>{item.name}</Text>
-        <View style={styles.stopMeta}>
-          <Text style={styles.arrivalTime}>⏱ {item.arrival}</Text>
-          <View style={styles.amenities}>
-            {item.hasShelter && <MaterialCommunityIcons name="umbrella" size={13} color={COLORS.textSecondary} />}
-            {item.hasLight && <MaterialCommunityIcons name="lightbulb-on-outline" size={13} color={COLORS.textSecondary} />}
-            {item.accessible && <MaterialCommunityIcons name="wheelchair-accessibility" size={13} color={COLORS.textSecondary} />}
-          </View>
+    </View>
+    <ShimmerBlock style={{ width: 70, height: 24, borderRadius: radius.pill }} />
+  </View>
+);
+
+const skel = StyleSheet.create({
+  stopRow: { flexDirection: "row", gap: 14, minHeight: 56, paddingRight: spacing[4] },
+  timeline: { alignItems: "center", width: 16, gap: 2 },
+  stopInfo: { flex: 1, gap: 2, paddingBottom: 12 },
+  vehicleCard: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: spacing[4],
+    backgroundColor: colors.surface,
+    borderRadius: radius.card,
+    marginBottom: spacing[3],
+  },
+  vehicleLeft: { flexDirection: "row", alignItems: "center", gap: 10 },
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  LOADING SKELETON - COMPLETE SCREEN
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const LoadingSkeleton: React.FC = () => (
+  <View style={ls.root}>
+    {/* Header shimmer */}
+    <View style={ls.header}>
+      <View style={{ flexDirection: "row", gap: 14, alignItems: "center" }}>
+        <ShimmerBlock style={{ width: 56, height: 56, borderRadius: radius.lg }} />
+        <View style={{ flex: 1, gap: 4 }}>
+          <ShimmerBlock style={{ width: "70%", height: 20 }} />
+          <ShimmerBlock style={{ width: "50%", height: 14 }} />
         </View>
       </View>
     </View>
-  ), []);
-
-  const renderVehicle = useCallback(({ item }: { item: Vehicle }) => {
-    const oc = getOccupancyConfig(item.occupancy);
-    return (
-      <View style={styles.vehicleCard}>
-        <View style={styles.vehicleHeader}>
-          <MaterialCommunityIcons name="bus-clock" size={22} color={MOCK_ROUTE.color} />
-          <View style={styles.vehicleInfo}>
-            <Text style={styles.vehiclePlate}>{item.plate}</Text>
-            <Text style={styles.vehicleSpeed}>{item.speed} كم/س</Text>
-          </View>
+    {/* Stats shimmer */}
+    <View style={ls.statsRow}>
+      {[1, 2, 3, 4].map((i) => (
+        <View key={i} style={ls.statCard}>
+          <ShimmerBlock style={{ width: 18, height: 18, borderRadius: 9 }} />
+          <ShimmerBlock style={{ width: 30, height: 10 }} />
+          <ShimmerBlock style={{ width: 50, height: 16 }} />
         </View>
-        <View style={[styles.occupancyBadge, { backgroundColor: oc.color + '20' }]}>
-          <Text style={[styles.occupancyText, { color: oc.color }]}>{oc.icon} {oc.label}</Text>
-        </View>
-      </View>
-    );
-  }, []);
+      ))}
+    </View>
+    {/* Tab shimmer */}
+    <View style={ls.tabRow}>
+      <ShimmerBlock style={{ flex: 1, height: 36, borderRadius: radius.sm }} />
+      <ShimmerBlock style={{ flex: 1, height: 36, borderRadius: radius.sm }} />
+    </View>
+    {/* List shimmer */}
+    <View style={{ paddingHorizontal: spacing[4], paddingTop: spacing[4] }}>
+      {Array.from({ length: SHIMMER_STOP_COUNT }).map((_, i) => (
+        <StopSkeletonRow key={i} />
+      ))}
+    </View>
+  </View>
+);
 
+const ls = StyleSheet.create({
+  root: { flex: 1, backgroundColor: colors.surface },
+  header: { padding: spacing[5], paddingBottom: spacing[4] },
+  statsRow: { flexDirection: "row", paddingHorizontal: spacing[4], gap: spacing[2], marginBottom: spacing[3] },
+  statCard: { flex: 1, backgroundColor: colors.surface, borderRadius: radius.card, padding: spacing[3], alignItems: "center", gap: 4 },
+  tabRow: { flexDirection: "row", marginHorizontal: spacing[4], gap: spacing[2], height: 40 },
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  ERROR STATE
+// ═══════════════════════════════════════════════════════════════════════════════
+
+interface ErrorStateProps { message: string; onRetry: () => void; }
+
+const ErrorState: React.FC<ErrorStateProps> = ({ message, onRetry }) => (
+  <View style={err.root}>
+    <Text style={err.icon}>⚠️</Text>
+    <Text style={err.title}>تعذر تحميل تفاصيل الخط</Text>
+    <Text style={err.msg}>{message}</Text>
+    <TouchableOpacity style={err.btn} onPress={onRetry} activeOpacity={0.8}>
+      <Text style={err.btnText}>إعادة المحاولة</Text>
+    </TouchableOpacity>
+  </View>
+);
+
+const err = StyleSheet.create({
+  root: { flex: 1, justifyContent: "center", alignItems: "center", padding: spacing[8], gap: 12 },
+  icon: { fontSize: 48, marginBottom: 8 },
+  title: { fontFamily: "IBM Plex Sans Arabic", fontSize: fontSize[18], fontWeight: fontWeight.bold, color: colors.text_primary, textAlign: "center" },
+  msg: { fontFamily: "IBM Plex Sans Arabic", fontSize: fontSize[14], color: colors.text_secondary, textAlign: "center", lineHeight: 22 },
+  btn: { backgroundColor: colors.brand_blue, borderRadius: radius.pill, paddingHorizontal: 32, paddingVertical: 14, marginTop: 12 },
+  btnText: { fontFamily: "IBM Plex Sans Arabic", fontSize: fontSize[15], fontWeight: fontWeight.bold, color: colors.white },
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  EMPTY STATE (shared by both tabs)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const EmptyState: React.FC<{ tab: TabKey; isVehicles: boolean }> = ({ tab }) => {
+  const icon = tab === "stops" ? "🚏" : "🚌";
+  const title = tab === "stops" ? "لا توجد محطات" : "لا توجد مركبات نشطة";
+  const subtitle = tab === "stops" ? "لم يتم تحميل محطات لهذا الخط" : "لا توجد مركبات تعمل على هذا الخط حالياً";
   return (
-    <SafeAreaView style={styles.container} edges={['bottom']}>
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Route Header */}
-        <View style={[styles.routeBanner, { backgroundColor: MOCK_ROUTE.color + '15' }]}>
-          <View style={[styles.routeBadge, { backgroundColor: MOCK_ROUTE.color }]}>
-            <MaterialCommunityIcons name="bus-clock" size={24} color="#FFF" />
-          </View>
-          <View style={styles.routeInfo}>
-            <Text style={styles.routeName}>{MOCK_ROUTE.name}</Text>
-            <Text style={styles.routeFromTo}>{MOCK_ROUTE.from}  ←  {MOCK_ROUTE.to}</Text>
-            <Text style={styles.operator}>{MOCK_ROUTE.operator}</Text>
-          </View>
-        </View>
-
-        {/* Quick Stats */}
-        <View style={styles.statsRow}>
-          {[
-            { icon: 'clock-outline', label: 'المدة', value: `${MOCK_ROUTE.duration} دق` },
-            { icon: 'map-marker-distance', label: 'المسافة', value: `${MOCK_ROUTE.distance} كم` },
-            { icon: 'cash-multiple', label: 'الأجرة', value: MOCK_ROUTE.fare },
-            { icon: 'sync', label: 'التواتر', value: MOCK_ROUTE.headway },
-          ].map((s, i) => (
-            <View key={i} style={styles.statCard}>
-              <MaterialCommunityIcons name={s.icon as any} size={18} color={MOCK_ROUTE.color} />
-              <Text style={styles.statLabel}>{s.label}</Text>
-              <Text style={styles.statValue}>{s.value}</Text>
-            </View>
-          ))}
-        </View>
-
-        {/* Schedule */}
-        <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>مواعيد التشغيل</Text>
-          <View style={styles.scheduleRow}>
-            <Text style={styles.scheduleLabel}>🗓 أيام الأسبوع:</Text>
-            <Text style={styles.scheduleValue}>{MOCK_ROUTE.schedule}</Text>
-          </View>
-          <View style={styles.scheduleRow}>
-            <Text style={styles.scheduleLabel}>🕌 الجمعة:</Text>
-            <Text style={styles.scheduleValue}>{MOCK_ROUTE.fridaySchedule}</Text>
-          </View>
-        </View>
-
-        {/* Features */}
-        <View style={styles.sectionCard}>
-          <Text style={styles.sectionTitle}>مميزات الخط</Text>
-          <View style={styles.featuresRow}>
-            {MOCK_ROUTE.features.map((f, i) => (
-              <View key={i} style={styles.featureBadge}>
-                <Text style={styles.featureText}>✓ {f}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
-
-        {/* Tab Switcher */}
-        <View style={styles.tabRow}>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === 'stops' && styles.tabActive]}
-            onPress={() => setActiveTab('stops')}
-          >
-            <MaterialCommunityIcons name="bus-stop-covered" size={18} color={activeTab === 'stops' ? COLORS.primary : COLORS.textSecondary} />
-            <Text style={[styles.tabText, activeTab === 'stops' && styles.tabTextActive]}>المحطات ({MOCK_STOPS.length})</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === 'vehicles' && styles.tabActive]}
-            onPress={() => setActiveTab('vehicles')}
-          >
-            <MaterialCommunityIcons name="bus-marker" size={18} color={activeTab === 'vehicles' ? COLORS.primary : COLORS.textSecondary} />
-            <Text style={[styles.tabText, activeTab === 'vehicles' && styles.tabTextActive]}>المركبات ({MOCK_VEHICLES.length})</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Stops List or Vehicles List */}
-        {activeTab === 'stops' ? (
-          <View style={styles.stopsContainer}>
-            {MOCK_STOPS.map((stop, idx) => (
-              <View key={stop.id}>{renderStop({ item: stop, index: idx })}</View>
-            ))}
-          </View>
-        ) : (
-          <View style={styles.vehiclesContainer}>
-            {MOCK_VEHICLES.map(v => (
-              <View key={v.id}>{renderVehicle({ item: v })}</View>
-            ))}
-          </View>
-        )}
-
-        <View style={{ height: 40 }} />
-      </ScrollView>
-    </SafeAreaView>
+    <View style={empty.root}>
+      <Text style={empty.icon}>{icon}</Text>
+      <Text style={empty.title}>{title}</Text>
+      <Text style={empty.subtitle}>{subtitle}</Text>
+    </View>
   );
+};
+
+const empty = StyleSheet.create({
+  root: { flex: 1, justifyContent: "center", alignItems: "center", padding: spacing[8], gap: 8, minHeight: 260 },
+  icon: { fontSize: 48, marginBottom: 8 },
+  title: { fontFamily: "IBM Plex Sans Arabic", fontSize: fontSize[18], fontWeight: fontWeight.bold, color: colors.text_primary },
+  subtitle: { fontFamily: "IBM Plex Sans Arabic", fontSize: fontSize[14], color: colors.text_secondary, textAlign: "center", lineHeight: 22, paddingHorizontal: spacing[8] },
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  ROUTE HEADER
+// ═══════════════════════════════════════════════════════════════════════════════
+
+interface RouteHeaderProps {
+  route: RouteInfo;
+  onDirectionToggle?: () => void;
+  isReverse?: boolean;
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F3F4F6' },
-  // Route banner
-  routeBanner: {
-    flexDirection: 'row',
-    padding: 20,
-    gap: 14,
-    alignItems: 'center',
+const RouteHeader: React.FC<RouteHeaderProps> = ({ route, onDirectionToggle, isReverse }) => {
+  const modeColor = transitColorMap[route.mode as TransitMode] || route.color;
+  const modeLabel = MODE_LABELS[route.mode] || route.mode;
+
+  return (
+    <View style={[header.root, { backgroundColor: modeColor + "0D" }]}>
+      {/* Mode badge */}
+      <View style={[header.badge, { backgroundColor: modeColor }]}>
+        <MaterialCommunityIcons name="bus-clock" size={24} color={colors.white} />
+      </View>
+
+      {/* Route name + meta */}
+      <View style={header.info}>
+        <View style={header.codeRow}>
+          <View style={[header.modePill, { backgroundColor: modeColor + "20" }]}>
+            <Text style={[header.modeLabel, { color: modeColor }]}>{modeLabel}</Text>
+          </View>
+          <Text style={[header.code, { color: modeColor }]}>{route.code}</Text>
+        </View>
+        <Text style={header.name} numberOfLines={2}>{route.nameAr}</Text>
+        <View style={header.fromTo}>
+          <Text style={header.fromToText} numberOfLines={1}>
+            {route.fromNameAr} ← {route.toNameAr}
+          </Text>
+        </View>
+        <Text style={header.operator}>{route.operator}</Text>
+      </View>
+
+      {/* Direction toggle */}
+      {onDirectionToggle && (
+        <TouchableOpacity
+          style={header.dirBtn}
+          onPress={onDirectionToggle}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          accessibilityRole="button"
+          accessibilityLabel={isReverse ? "الاتجاه الأصلي" : "الاتجاه المعاكس"}
+        >
+          <MaterialCommunityIcons
+            name="swap-vertical-bold"
+            size={20}
+            color={modeColor}
+          />
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+};
+
+const header = StyleSheet.create({
+  root: {
+    flexDirection: "row",
+    padding: spacing[5],
+    paddingBottom: spacing[4],
+    gap: spacing[3],
+    alignItems: "flex-start",
   },
-  routeBadge: {
-    width: 56, height: 56, borderRadius: 14,
-    alignItems: 'center', justifyContent: 'center',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4, elevation: 3,
+  badge: {
+    width: 56,
+    height: 56,
+    borderRadius: radius.lg,
+    alignItems: "center",
+    justifyContent: "center",
+    ...shadows.md,
   },
-  routeInfo: { flex: 1, gap: 3 },
-  routeName: { fontSize: 18, fontWeight: '800', color: COLORS.text },
-  routeFromTo: { fontSize: 13, color: COLORS.textSecondary },
-  operator: { fontSize: 11, color: COLORS.textSecondary, marginTop: 2 },
-  // Stats
-  statsRow: {
-    flexDirection: 'row', paddingHorizontal: 16, paddingTop: 8, gap: 8,
+  info: { flex: 1, gap: 3 },
+  codeRow: { flexDirection: "row", alignItems: "center", gap: spacing[2], marginBottom: 2 },
+  modePill: { paddingHorizontal: spacing[2], paddingVertical: 2, borderRadius: radius.pill },
+  modeLabel: { fontFamily: "IBM Plex Sans Arabic", fontSize: fontSize[11], fontWeight: fontWeight.bold as any },
+  code: { fontFamily: "IBM Plex Sans Arabic", fontSize: fontSize[20], fontWeight: fontWeight.bold as any, letterSpacing: 0.5 },
+  name: { fontFamily: "IBM Plex Sans Arabic", fontSize: fontSize[16], fontWeight: fontWeight.semiBold as any, color: colors.text_primary },
+  fromTo: { marginTop: 2 },
+  fromToText: { fontFamily: "IBM Plex Sans Arabic", fontSize: fontSize[13], color: colors.text_secondary },
+  operator: { fontFamily: "IBM Plex Sans Arabic", fontSize: fontSize[11], color: colors.text_tertiary, marginTop: 2 },
+  dirBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: radius.full,
+    backgroundColor: colors.surface,
+    alignItems: "center",
+    justifyContent: "center",
+    ...shadows.sm,
   },
-  statCard: {
-    flex: 1, backgroundColor: '#FFFFFF', borderRadius: 12,
-    padding: 12, alignItems: 'center', gap: 4,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 3, elevation: 1,
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  QUICK STATS ROW
+// ═══════════════════════════════════════════════════════════════════════════════
+
+interface StatTileProps {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  color: string;
+}
+
+const StatTile: React.FC<StatTileProps> = React.memo(({ icon, label, value, color }) => (
+  <View style={stat.root}>
+    <View style={[stat.iconWrap, { backgroundColor: color + "12" }]}>
+      {icon}
+    </View>
+    <Text style={stat.value}>{value}</Text>
+    <Text style={stat.label}>{label}</Text>
+  </View>
+));
+
+const stat = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: colors.surface,
+    borderRadius: radius.card,
+    padding: spacing[3],
+    alignItems: "center",
+    gap: 3,
+    ...shadows.sm,
   },
-  statLabel: { fontSize: 10, color: COLORS.textSecondary },
-  statValue: { fontSize: 13, fontWeight: '700', color: COLORS.text, textAlign: 'center' },
-  // Section cards
-  sectionCard: {
-    backgroundColor: '#FFFFFF', borderRadius: 14, padding: 16, marginHorizontal: 16, marginTop: 12,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.04, shadowRadius: 3, elevation: 1,
+  iconWrap: { width: 32, height: 32, borderRadius: radius.full, alignItems: "center", justifyContent: "center", marginBottom: 2 },
+  value: { fontFamily: "IBM Plex Sans Arabic", fontSize: fontSize[15], fontWeight: fontWeight.bold as any, color: colors.text_primary, textAlign: "center" },
+  label: { fontFamily: "IBM Plex Sans Arabic", fontSize: fontSize[11], color: colors.text_secondary, textAlign: "center" },
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  FARE CARD
+// ═══════════════════════════════════════════════════════════════════════════════
+
+interface FareCardProps {
+  fareJod: number;
+  color: string;
+}
+
+const FareCard: React.FC<FareCardProps> = React.memo(({ fareJod, color }) => {
+  const fare = formatFare(fareJod);
+  return (
+    <View style={fareC.root}>
+      <View style={fareC.leftCol}>
+        <MaterialCommunityIcons name="cash" size={20} color={colors.gold_accent} />
+        <Text style={fareC.title}>الأجرة</Text>
+      </View>
+      <View style={fareC.rightCol}>
+        <Text style={[fareC.baseFare, { color }]}>{fare.base}</Text>
+        <Text style={fareC.transferNote}>{fare.transferNote}</Text>
+      </View>
+    </View>
+  );
+});
+
+const fareC = StyleSheet.create({
+  root: {
+    flexDirection: "row",
+    backgroundColor: colors.surface,
+    borderRadius: radius.card,
+    padding: spacing[4],
+    marginHorizontal: spacing[4],
+    marginTop: spacing[2],
+    gap: spacing[3],
+    alignItems: "flex-start",
+    ...shadows.sm,
   },
-  sectionTitle: { fontSize: 15, fontWeight: '700', color: COLORS.text, marginBottom: 10 },
-  scheduleRow: {
-    flexDirection: 'row', marginBottom: 6, gap: 6,
+  leftCol: { flexDirection: "row", alignItems: "center", gap: spacing[2], minWidth: 80 },
+  title: { fontFamily: "IBM Plex Sans Arabic", fontSize: fontSize[14], fontWeight: fontWeight.bold as any, color: colors.text_primary },
+  rightCol: { flex: 1, gap: 4 },
+  baseFare: { fontFamily: "IBM Plex Sans Arabic", fontSize: fontSize[18], fontWeight: fontWeight.bold as any },
+  transferNote: { fontFamily: "IBM Plex Sans Arabic", fontSize: fontSize[11], color: colors.text_secondary, lineHeight: 16 },
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  SCHEDULE CARD
+// ═══════════════════════════════════════════════════════════════════════════════
+
+interface ScheduleCardProps {
+  schedule: string;
+  fridaySchedule: string;
+  hasFriday: boolean;
+  headwayMin: number | null;
+}
+
+const ScheduleCard: React.FC<ScheduleCardProps> = React.memo(({ schedule, fridaySchedule, hasFriday, headwayMin }) => (
+  <View style={sched.root}>
+    <View style={sched.titleRow}>
+      <MaterialCommunityIcons name="calendar-clock" size={18} color={colors.text_primary} />
+      <Text style={sched.title}>مواعيد التشغيل</Text>
+    </View>
+    {headwayMin && (
+      <View style={sched.row}>
+        <Text style={sched.label}>📊 التكرار:</Text>
+        <Text style={sched.value}>كل {headwayMin} دقيقة</Text>
+      </View>
+    )}
+    <View style={sched.row}>
+      <Text style={sched.label}>🗓 أيام الأسبوع:</Text>
+      <Text style={sched.value}>{schedule}</Text>
+    </View>
+    {hasFriday && (
+      <View style={sched.row}>
+        <Text style={sched.label}>🕌 الجمعة:</Text>
+        <Text style={sched.value}>{fridaySchedule}</Text>
+      </View>
+    )}
+  </View>
+));
+
+const sched = StyleSheet.create({
+  root: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.card,
+    padding: spacing[4],
+    marginHorizontal: spacing[4],
+    marginTop: spacing[2],
+    gap: spacing[2],
+    ...shadows.sm,
   },
-  scheduleLabel: { fontSize: 12, fontWeight: '600', color: COLORS.textSecondary, minWidth: 100 },
-  scheduleValue: { fontSize: 12, color: COLORS.text, flex: 1 },
-  featuresRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  featureBadge: {
-    backgroundColor: COLORS.onTime + '15', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8,
+  titleRow: { flexDirection: "row", alignItems: "center", gap: spacing[2], marginBottom: spacing[1] },
+  title: { fontFamily: "IBM Plex Sans Arabic", fontSize: fontSize[14], fontWeight: fontWeight.bold as any, color: colors.text_primary },
+  row: { flexDirection: "row", gap: spacing[2] },
+  label: { fontFamily: "IBM Plex Sans Arabic", fontSize: fontSize[11], fontWeight: fontWeight.medium as any, color: colors.text_secondary, minWidth: 80 },
+  value: { fontFamily: "IBM Plex Sans Arabic", fontSize: fontSize[11], color: colors.text_primary, flex: 1 },
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  FEATURES / TAGS ROW
+// ═══════════════════════════════════════════════════════════════════════════════
+
+interface FeaturesRowProps {
+  features: string[];
+  color: string;
+}
+
+const FeaturesRow: React.FC<FeaturesRowProps> = React.memo(({ features, color }) => (
+  <View style={feat.root}>
+    <View style={feat.titleRow}>
+      <MaterialCommunityIcons name="star-outline" size={16} color={colors.text_primary} />
+      <Text style={feat.title}>مميزات الخط</Text>
+    </View>
+    <View style={feat.chips}>
+      {features.map((f, i) => (
+        <View key={i} style={[feat.chip, { backgroundColor: color + "12" }]}>
+          <Text style={[feat.chipText, { color }]}>✓ {f}</Text>
+        </View>
+      ))}
+    </View>
+  </View>
+));
+
+const feat = StyleSheet.create({
+  root: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.card,
+    padding: spacing[4],
+    marginHorizontal: spacing[4],
+    marginTop: spacing[2],
+    gap: spacing[2],
+    ...shadows.sm,
   },
-  featureText: { fontSize: 11, color: COLORS.onTime, fontWeight: '600' },
-  // Tabs
-  tabRow: {
-    flexDirection: 'row', marginHorizontal: 16, marginTop: 16,
-    backgroundColor: '#E5E7EB', borderRadius: 10, padding: 3,
+  titleRow: { flexDirection: "row", alignItems: "center", gap: spacing[2] },
+  title: { fontFamily: "IBM Plex Sans Arabic", fontSize: fontSize[14], fontWeight: fontWeight.bold as any, color: colors.text_primary },
+  chips: { flexDirection: "row", flexWrap: "wrap", gap: spacing[2] },
+  chip: { paddingHorizontal: spacing[3], paddingVertical: spacing[1], borderRadius: radius.pill },
+  chipText: { fontFamily: "IBM Plex Sans Arabic", fontSize: fontSize[11], fontWeight: fontWeight.semiBold as any },
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  TAB SWITCHER
+// ═══════════════════════════════════════════════════════════════════════════════
+
+interface TabSwitcherProps {
+  activeTab: TabKey;
+  onTabChange: (tab: TabKey) => void;
+  stopCount: number;
+  vehicleCount: number;
+  color: string;
+}
+
+const TabSwitcher: React.FC<TabSwitcherProps> = React.memo(({ activeTab, onTabChange, stopCount, vehicleCount, color }) => {
+  const tabs: { key: TabKey; icon: string; label: string; count: number }[] = [
+    { key: "stops", icon: "bus-stop-covered", label: "المحطات", count: stopCount },
+    { key: "vehicles", icon: "bus-marker", label: "المركبات", count: vehicleCount },
+  ];
+  return (
+    <View style={tabSw.root}>
+      {tabs.map((t) => {
+        const isActive = activeTab === t.key;
+        return (
+          <TouchableOpacity
+            key={t.key}
+            style={[tabSw.tab, isActive && { backgroundColor: colors.surface, ...shadows.sm }]}
+            onPress={() => onTabChange(t.key)}
+            activeOpacity={0.7}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: isActive }}
+          >
+            <MaterialCommunityIcons
+              name={t.icon as any}
+              size={18}
+              color={isActive ? color : colors.text_tertiary}
+            />
+            <Text style={[tabSw.label, isActive && { color, fontWeight: fontWeight.bold as any }]}>
+              {t.label} ({t.count})
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+});
+
+const tabSw = StyleSheet.create({
+  root: {
+    flexDirection: "row",
+    marginHorizontal: spacing[4],
+    marginTop: spacing[4],
+    backgroundColor: colors.surface_2,
+    borderRadius: radius.input,
+    padding: 3,
+    gap: 2,
   },
   tab: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    paddingVertical: 10, borderRadius: 8, gap: 6,
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: spacing[2],
+    borderRadius: radius.sm,
+    gap: spacing[1],
   },
-  tabActive: { backgroundColor: '#FFFFFF', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 2, elevation: 1 },
-  tabText: { fontSize: 13, fontWeight: '600', color: COLORS.textSecondary },
-  tabTextActive: { color: COLORS.primary },
-  // Stops
-  stopsContainer: { paddingHorizontal: 24, paddingTop: 16 },
-  stopRow: { flexDirection: 'row', gap: 14, minHeight: 60 },
-  timeline: { alignItems: 'center', width: 16 },
-  timelineDot: {
-    width: 12, height: 12, borderRadius: 6, backgroundColor: MOCK_ROUTE.color, borderWidth: 2, borderColor: '#FFF',
-  },
-  timelineDotFirst: { width: 14, height: 14, borderRadius: 7 },
-  timelineDotLast: { backgroundColor: COLORS.onTime },
-  timelineLine: { width: 3, flex: 1, backgroundColor: MOCK_ROUTE.color + '40', marginVertical: 2 },
-  stopInfo: { flex: 1, paddingBottom: 16 },
-  stopName: { fontSize: 15, fontWeight: '700', color: COLORS.text },
-  stopMeta: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 },
-  arrivalTime: { fontSize: 12, color: COLORS.textSecondary },
-  amenities: { flexDirection: 'row', gap: 6 },
-  // Vehicles
-  vehiclesContainer: { paddingHorizontal: 16, paddingTop: 16, gap: 10 },
-  vehicleCard: {
-    backgroundColor: '#FFFFFF', borderRadius: 12, padding: 14,
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.03, shadowRadius: 2, elevation: 1,
-  },
-  vehicleHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  vehicleInfo: { gap: 2 },
-  vehiclePlate: { fontSize: 15, fontWeight: '700', color: COLORS.text },
-  vehicleSpeed: { fontSize: 12, color: COLORS.textSecondary },
-  occupancyBadge: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8 },
-  occupancyText: { fontSize: 11, fontWeight: '700' },
+  label: { fontFamily: "IBM Plex Sans Arabic", fontSize: fontSize[13], fontWeight: fontWeight.medium as any, color: colors.text_secondary },
 });
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  STOP TIMELINE ROW
+// ═══════════════════════════════════════════════════════════════════════════════
+
+interface StopRowProps {
+  stop: RouteStop;
+  index: number;
+  total: number;
+  color: string;
+  onPress: (stop: RouteStop) => void;
+}
+
+const StopRow: React.FC<StopRowProps> = React.memo(({ stop, index, total, color, onPress }) => {
+  const isFirst = index === 0;
+  const isLast = index === total - 1;
+
+  return (
+    <Animated.View entering={FadeInRight.duration(250).delay(index * 30)} layout={ReLayout.springify()}>
+      <TouchableOpacity
+        style={stopR.row}
+        onPress={() => onPress(stop)}
+        activeOpacity={0.7}
+        accessibilityRole="button"
+        accessibilityLabel={`محطة ${stop.nameAr}`}
+      >
+        {/* Timeline */}
+        <View style={stopR.timeline}>
+          {isFirst ? (
+            <View style={[stopR.dotTerminal, { backgroundColor: color }]}>
+              <View style={stopR.dotInner} />
+            </View>
+          ) : isLast ? (
+            <View style={[stopR.dotLast, { borderColor: colors.on_time }]}>
+              <View style={[stopR.dotFillLast, { backgroundColor: colors.on_time }]} />
+            </View>
+          ) : (
+            <View style={[stopR.dot, { backgroundColor: color }]} />
+          )}
+          {!isLast && <View style={[stopR.line, { backgroundColor: color + "30" }]} />}
+        </View>
+
+        {/* Stop info */}
+        <View style={stopR.info}>
+          <View style={stopR.nameRow}>
+            <Text style={stopR.name}>{stop.nameAr}</Text>
+            {stop.isTerminal && (
+              <View style={[stopR.terminalBadge, { backgroundColor: color + "15" }]}>
+                <Text style={[stopR.terminalLabel, { color }]}>محطة رئيسية</Text>
+              </View>
+            )}
+          </View>
+          <View style={stopR.metaRow}>
+            {stop.arrival ? (
+              <View style={stopR.timeTag}>
+                <MaterialCommunityIcons name="clock-outline" size={12} color={colors.text_tertiary} />
+                <Text style={stopR.time}>{stop.arrival}</Text>
+              </View>
+            ) : null}
+            <View style={stopR.amenities}>
+              {stop.hasShelter && (
+                <MaterialCommunityIcons name="umbrella" size={13} color={colors.text_tertiary} accessibilityLabel="مظلة" />
+              )}
+              {stop.hasLighting && (
+                <MaterialCommunityIcons name="lightbulb-on-outline" size={13} color={colors.text_tertiary} accessibilityLabel="إضاءة" />
+              )}
+              {stop.hasAccessibility && (
+                <MaterialCommunityIcons name="wheelchair-accessibility" size={13} color={colors.text_tertiary} accessibilityLabel="مناسب لذوي الاحتياجات" />
+              )}
+            </View>
+          </View>
+        </View>
+
+        {/* Chevron */}
+        <MaterialCommunityIcons name="chevron-left" size={18} color={colors.text_tertiary} />
+      </TouchableOpacity>
+    </Animated.View>
+  );
+});
+
+const stopR = StyleSheet.create({
+  row: { flexDirection: "row", gap: spacing[2], minHeight: 64, alignItems: "center", paddingRight: spacing[4] },
+  timeline: { alignItems: "center", width: 20, paddingTop: 2 },
+  dot: { width: 12, height: 12, borderRadius: 6, borderWidth: 2, borderColor: colors.surface },
+  dotTerminal: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  dotInner: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.white },
+  dotLast: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2.5,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.surface,
+  },
+  dotFillLast: { width: 10, height: 10, borderRadius: 5 },
+  line: { width: 3, flex: 1, minHeight: 20, borderRadius: 2, marginTop: 2 },
+  info: { flex: 1, paddingVertical: spacing[3], gap: 4 },
+  nameRow: { flexDirection: "row", alignItems: "center", gap: spacing[2] },
+  name: { fontFamily: "IBM Plex Sans Arabic", fontSize: fontSize[16], fontWeight: fontWeight.bold as any, color: colors.text_primary },
+  terminalBadge: { paddingHorizontal: spacing[2], paddingVertical: 1, borderRadius: radius.pill },
+  terminalLabel: { fontFamily: "IBM Plex Sans Arabic", fontSize: fontSize[11], fontWeight: fontWeight.semiBold as any },
+  metaRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  timeTag: { flexDirection: "row", alignItems: "center", gap: 4 },
+  time: { fontFamily: "IBM Plex Sans Arabic", fontSize: fontSize[11], color: colors.text_secondary },
+  amenities: { flexDirection: "row", gap: spacing[1] },
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  VEHICLE CARD
+// ═══════════════════════════════════════════════════════════════════════════════
+
+interface VehicleCardProps {
+  vehicle: LiveVehicle;
+  color: string;
+}
+
+const VehicleCard: React.FC<VehicleCardProps> = React.memo(({ vehicle, color }) => {
+  const statusCfg = VEHICLE_STATUS_CONFIG[vehicle.status] || VEHICLE_STATUS_CONFIG.offline;
+  const timeAgo = getTimeAgo(vehicle.lastSeen);
+
+  return (
+    <Animated.View entering={FadeInDown.duration(300)} layout={ReLayout.springify()}>
+      <View style={vhc.card}>
+        <View style={vhc.topRow}>
+          {/* Left: icon + info */}
+          <View style={vhc.leftCol}>
+            <View style={[vhc.iconWrap, { backgroundColor: color + "15" }]}>
+              <MaterialCommunityIcons name="bus-side" size={22} color={color} />
+            </View>
+            <View style={vhc.infoCol}>
+              <Text style={vhc.plate}>{vehicle.plateNumber}</Text>
+              <View style={vhc.metaRow}>
+                <MaterialCommunityIcons name="speedometer" size={12} color={colors.text_tertiary} />
+                <Text style={vhc.meta}>{vehicle.speedKmh} كم/س</Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Right: occupancy + status */}
+          <View style={vhc.rightCol}>
+            <OccupancyIndicator level={vehicle.occupancy} size="sm" />
+            <View style={[vhc.statusDot, { backgroundColor: statusCfg.dot }]} />
+          </View>
+        </View>
+
+        {/* Bottom: next stop + heading */}
+        <View style={vhc.bottomRow}>
+          <View style={vhc.nextStop}>
+            <MaterialCommunityIcons name="map-marker-outline" size={13} color={colors.text_secondary} />
+            <Text style={vhc.nextStopText} numberOfLines={1}>
+              {vehicle.nextStopAr || "—"}
+            </Text>
+          </View>
+          <View style={vhc.heading}>
+            <MaterialCommunityIcons
+              name="navigation-variant-outline"
+              size={12}
+              color={colors.text_tertiary}
+              style={{ transform: [{ rotate: `${vehicle.heading}deg` }] }}
+            />
+            <Text style={vhc.timestamp}>{timeAgo}</Text>
+          </View>
+        </View>
+      </View>
+    </Animated.View>
+  );
+});
+
+/** Simple relative time in Arabic */
+function getTimeAgo(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  const min = Math.floor(diff / 60000);
+  if (min < 1) return "الآن";
+  if (min < 60) return `منذ ${min} د`;
+  const hrs = Math.floor(min / 60);
+  return `منذ ${hrs} س`;
+}
+
+const vhc = StyleSheet.create({
+  card: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.card,
+    padding: spacing[4],
+    marginHorizontal: spacing[4],
+    marginBottom: spacing[3],
+    gap: spacing[3],
+    ...shadows.sm,
+  },
+  topRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  leftCol: { flexDirection: "row", alignItems: "center", gap: spacing[3] },
+  iconWrap: { width: 44, height: 44, borderRadius: radius.lg, alignItems: "center", justifyContent: "center" },
+  infoCol: { gap: 3 },
+  plate: { fontFamily: "IBM Plex Sans Arabic", fontSize: fontSize[16], fontWeight: fontWeight.bold as any, color: colors.text_primary },
+  metaRow: { flexDirection: "row", alignItems: "center", gap: 4 },
+  meta: { fontFamily: "IBM Plex Sans Arabic", fontSize: fontSize[11], color: colors.text_secondary },
+  rightCol: { flexDirection: "row", alignItems: "center", gap: spacing[2] },
+  statusDot: { width: 8, height: 8, borderRadius: 4 },
+  bottomRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingTop: spacing[2], borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
+  nextStop: { flexDirection: "row", alignItems: "center", gap: 4, flex: 1 },
+  nextStopText: { fontFamily: "IBM Plex Sans Arabic", fontSize: fontSize[11], color: colors.text_secondary },
+  heading: { flexDirection: "row", alignItems: "center", gap: 4 },
+  timestamp: { fontFamily: "IBM Plex Sans Arabic", fontSize: fontSize[11], color: colors.text_tertiary },
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  MAIN SCREEN
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const RouteDetailScreen: React.FC = () => {
+  const route = useRoute<RouteProp<RootStackParamList, "RouteDetail">>();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const { routeId } = route.params;
+
+  // ── State ──────────────────────────────────────────────────────────────
+  const [activeTab, setActiveTab] = useState<TabKey>("stops");
+  const [refreshing, setRefreshing] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // ── Data (mock-backed, swappable with apiClient) ───────────────────────
+  const routeInfo = useMemo(() => MOCK_ROUTE, []);
+  const stops = useMemo(() => MOCK_STOPS, []);
+  const vehicles = useMemo(() => MOCK_VEHICLES, []);
+
+  const modeColor = useMemo(
+    () => transitColorMap[routeInfo.mode as TransitMode] || routeInfo.color,
+    [routeInfo],
+  );
+
+  const fareInfo = useMemo(() => formatFare(routeInfo.fareJod), [routeInfo.fareJod]);
+
+  // ── Initial load simulation ────────────────────────────────────────────
+  useEffect(() => {
+    const load = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        // TODO: Replace with real apiClient calls:
+        // const [routeData, stopsData, vehiclesData] = await Promise.all([
+        //   apiClient.getRouteById(routeId),
+        //   apiClient.getRouteStops(routeId),
+        //   apiClient.getVehicles({ routeId }),
+        // ]);
+        await new Promise((r) => setTimeout(r, 500));
+      } catch (e: any) {
+        setError(e?.message || "فشل تحميل بيانات الخط");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    load();
+  }, [routeId]);
+
+  // ── Pull-to-refresh ───────────────────────────────────────────────────
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    setError(null);
+    try {
+      // TODO: Refresh data from API
+      await new Promise((r) => setTimeout(r, 600));
+    } catch (e: any) {
+      setError(e?.message || "فشل التحديث");
+    }
+    setRefreshing(false);
+  }, []);
+
+  // ── Handlers ──────────────────────────────────────────────────────────
+  const handleStopPress = useCallback(
+    (stop: RouteStop) => {
+      navigation.navigate("StopDetail", { stopId: stop.id, stopName: stop.nameAr });
+    },
+    [navigation],
+  );
+
+  const handleTabChange = useCallback((tab: TabKey) => {
+    setActiveTab(tab);
+  }, []);
+
+  // ── Header component (shared between both tabs) ────────────────────────
+  const listHeader = useMemo(
+    () => (
+      <View>
+        {/* Route header */}
+        <RouteHeader route={routeInfo} />
+
+        {/* Quick stats */}
+        <View style={main.statsRow}>
+          <StatTile
+            icon={<MaterialCommunityIcons name="clock-outline" size={18} color={modeColor} />}
+            label="المدة"
+            value={`${routeInfo.durationMin} د`}
+            color={modeColor}
+          />
+          <StatTile
+            icon={<MaterialCommunityIcons name="map-marker-distance" size={18} color={modeColor} />}
+            label="المسافة"
+            value={`${routeInfo.distanceKm} كم`}
+            color={modeColor}
+          />
+          <StatTile
+            icon={<MaterialCommunityIcons name="cash-multiple" size={18} color={modeColor} />}
+            label="الأجرة"
+            value={fareInfo.base}
+            color={modeColor}
+          />
+          <StatTile
+            icon={<MaterialCommunityIcons name="sync" size={18} color={modeColor} />}
+            label="التكرار"
+            value={routeInfo.headwayMin ? `كل ${routeInfo.headwayMin} د` : "—"}
+            color={modeColor}
+          />
+        </View>
+
+        {/* Fare detail card */}
+        <FareCard fareJod={routeInfo.fareJod} color={modeColor} />
+
+        {/* Schedule */}
+        <ScheduleCard
+          schedule={routeInfo.schedule}
+          fridaySchedule={routeInfo.fridaySchedule}
+          hasFriday={routeInfo.hasFridaySchedule}
+          headwayMin={routeInfo.headwayMin}
+        />
+
+        {/* Features */}
+        {routeInfo.features.length > 0 && (
+          <FeaturesRow features={routeInfo.features} color={modeColor} />
+        )}
+
+        {/* Tab Switcher */}
+        <TabSwitcher
+          activeTab={activeTab}
+          onTabChange={handleTabChange}
+          stopCount={stops.length}
+          vehicleCount={vehicles.length}
+          color={modeColor}
+        />
+      </View>
+    ),
+    [routeInfo, modeColor, fareInfo, activeTab, handleTabChange, stops.length, vehicles.length],
+  );
+
+  // ── Render: Stops tab ────────────────────────────────────────────────
+  const renderStopItem = useCallback(
+    ({ item, index }: { item: RouteStop; index: number }) => (
+      <StopRow
+        stop={item}
+        index={index}
+        total={stops.length}
+        color={modeColor}
+        onPress={handleStopPress}
+      />
+    ),
+    [stops.length, modeColor, handleStopPress],
+  );
+
+  const keyExtractor = useCallback((item: RouteStop | LiveVehicle, index: number) => "id" in item ? item.id : `v-${index}`, []);
+
+  // ── Render: Vehicles tab ──────────────────────────────────────────────
+  const renderVehicleItem = useCallback(
+    ({ item }: { item: LiveVehicle }) => (
+      <VehicleCard vehicle={item} color={modeColor} />
+    ),
+    [modeColor],
+  );
+
+  // ── Decide which FlatList config to use ───────────────────────────────
+  const isStopsTab = activeTab === "stops";
+  const data = isStopsTab ? stops : vehicles;
+  const renderItem = isStopsTab ? renderStopItem : renderVehicleItem;
+  const emptyComponent = useCallback(
+    () => <EmptyState tab={activeTab} isVehicles={!isStopsTab} />,
+    [activeTab, isStopsTab],
+  );
+
+  // ── Loading / Error gates ─────────────────────────────────────────────
+  if (isLoading) {
+    return (
+      <ErrorBoundary>
+        <View style={main.container}>
+          <LoadingSkeleton />
+        </View>
+      </ErrorBoundary>
+    );
+  }
+
+  if (error) {
+    return (
+      <ErrorBoundary>
+        <View style={main.container}>
+          <ErrorState message={error} onRetry={onRefresh} />
+        </View>
+      </ErrorBoundary>
+    );
+  }
+
+  // ── Main render ───────────────────────────────────────────────────────
+  return (
+    <ErrorBoundary>
+      <View style={main.container}>
+        <FlatList
+          data={data as any}
+          keyExtractor={keyExtractor}
+          renderItem={renderItem as any}
+          ListHeaderComponent={listHeader}
+          ListEmptyComponent={emptyComponent}
+          contentContainerStyle={main.listContent}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={modeColor}
+              colors={[modeColor]}
+            />
+          }
+          initialNumToRender={12}
+          maxToRenderPerBatch={10}
+          windowSize={7}
+          removeClippedSubviews={Platform.OS !== "web"}
+        />
+      </View>
+    </ErrorBoundary>
+  );
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  MAIN STYLES
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const main = StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.surface_2 },
+  listContent: { paddingBottom: spacing[12] },
+  statsRow: {
+    flexDirection: "row",
+    paddingHorizontal: spacing[4],
+    gap: spacing[2],
+  },
+});
+
+export default RouteDetailScreen;

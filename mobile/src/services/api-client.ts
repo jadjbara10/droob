@@ -8,6 +8,7 @@ import { z } from 'zod';
 
 const API_URL = Constants.expoConfig?.extra?.API_URL || 'http://localhost:3000';
 const API_VERSION = '/api/v1';
+const TIMEOUT_MS = 10_000;
 
 let authToken: string | null = null;
 
@@ -31,16 +32,62 @@ interface FetchOptions extends Omit<RequestInit, 'body'> {
   schema?: z.ZodTypeAny;
 }
 
+// ─── Errors ────────────────────────────────────────────────────────────────
+
 export class ApiError extends Error {
   constructor(
     public status: number,
     public code: string,
     message: string,
+    public enMessage?: string,
   ) {
     super(message);
     this.name = 'ApiError';
   }
 }
+
+/**
+ * Thrown when the device has no network connectivity or a request times out.
+ * Message is deliberately in Arabic since the app's primary UI language is Arabic.
+ */
+export class OfflineError extends Error {
+  constructor() {
+    super('لا يوجد اتصال بالإنترنت. يرجى التحقق من اتصالك والمحاولة مرة أخرى.');
+    this.name = 'OfflineError';
+  }
+}
+
+const STATUS_MESSAGES: Record<number, { ar: string; en: string }> = {
+  400: { ar: 'طلب غير صالح. يرجى التحقق من البيانات.', en: 'Invalid request. Please check your input.' },
+  401: { ar: 'غير مصرح. يرجى تسجيل الدخول مرة أخرى.', en: 'Unauthorized. Please log in again.' },
+  403: { ar: 'تم رفض الوصول.', en: 'Access denied.' },
+  404: { ar: 'المورد غير موجود.', en: 'Resource not found.' },
+  408: { ar: 'انتهت مهلة الطلب.', en: 'Request timed out.' },
+  422: { ar: 'فشل التحقق من صحة البيانات.', en: 'Validation failed.' },
+  429: { ar: 'طلبات كثيرة جداً. يرجى المحاولة لاحقاً.', en: 'Too many requests. Please try again later.' },
+  500: { ar: 'خطأ في الخادم. يرجى المحاولة لاحقاً.', en: 'Server error. Please try again later.' },
+  502: { ar: 'الخدمة غير متاحة مؤقتاً.', en: 'Service temporarily unavailable.' },
+  503: { ar: 'الخدمة غير متاحة. يرجى المحاولة لاحقاً.', en: 'Service unavailable. Please try again later.' },
+};
+
+/**
+ * Returns true if the given error is network-related (offline, timeout, DNS failure, etc.).
+ * Use this in callers to show offline UI instead of a generic error toast.
+ */
+export function isNetworkError(error: unknown): boolean {
+  if (error instanceof OfflineError) return true;
+  if (error instanceof TypeError) {
+    const msg = error.message.toLowerCase();
+    return (
+      msg.includes('network request failed') ||
+      msg.includes('failed to fetch') ||
+      msg.includes('networkerror')
+    );
+  }
+  return false;
+}
+
+// ─── Core Fetch with Timeout ──────────────────────────────────────────────
 
 async function apiFetch<T>(endpoint: string, options: FetchOptions = {}): Promise<T> {
   const { body, params, schema, ...fetchOptions } = options;
@@ -62,45 +109,90 @@ async function apiFetch<T>(endpoint: string, options: FetchOptions = {}): Promis
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     'Accept-Language': 'ar',
-    ...fetchOptions.headers as Record<string, string>,
+    ...(fetchOptions.headers as Record<string, string>),
   };
 
   if (authToken) {
     headers['Authorization'] = `Bearer ${authToken}`;
   }
 
-  const response = await fetch(url, {
-    ...fetchOptions,
-    headers,
-    body: body ? JSON.stringify(body) : undefined,
-  });
+  const method = (fetchOptions.method || 'GET').toUpperCase();
+  // Retry GET requests once on network failure or server error (5xx)
+  const maxAttempts = method === 'GET' ? 2 : 1;
+  let lastError: unknown;
 
-  // Handle non-JSON responses
-  const contentType = response.headers.get('content-type');
-  let data: unknown;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
-  if (contentType?.includes('application/json')) {
-    data = await response.json();
-  } else {
-    const text = await response.text();
-    data = text;
+      let response: Response;
+      try {
+        response = await fetch(url, {
+          ...fetchOptions,
+          headers,
+          body: body ? JSON.stringify(body) : undefined,
+          signal: controller.signal,
+        });
+      } finally {
+        clearTimeout(timeoutId);
+      }
+
+      // Handle non-JSON responses
+      const contentType = response.headers.get('content-type');
+      let data: unknown;
+
+      if (contentType?.includes('application/json')) {
+        data = await response.json();
+      } else {
+        const text = await response.text();
+        data = text;
+      }
+
+      if (!response.ok) {
+        const err = data as { error?: string; message?: string };
+        const msgs = STATUS_MESSAGES[response.status] ?? {
+          ar: 'حدث خطأ غير متوقع.',
+          en: 'An unexpected error occurred.',
+        };
+        throw new ApiError(
+          response.status,
+          err.error || 'UnknownError',
+          err.message || msgs.ar,
+          msgs.en,
+        );
+      }
+
+      // Optional Zod validation
+      if (schema) {
+        return schema.parse(data) as T;
+      }
+
+      return data as T;
+    } catch (err) {
+      // Map raw network / timeout errors to a typed OfflineError
+      if (err instanceof DOMException && err.name === 'AbortError') {
+        lastError = new OfflineError();
+      } else if (err instanceof TypeError) {
+        lastError = new OfflineError();
+      } else {
+        lastError = err;
+      }
+
+      // Retry GET on network errors or server errors (5xx)
+      if (method === 'GET' && attempt < maxAttempts) {
+        const isServerError = err instanceof ApiError && err.status >= 500;
+        if (isNetworkError(lastError) || isServerError) {
+          continue;
+        }
+      }
+
+      throw lastError;
+    }
   }
 
-  if (!response.ok) {
-    const err = data as { error?: string; message?: string };
-    throw new ApiError(
-      response.status,
-      err.error || 'UnknownError',
-      err.message || 'An error occurred',
-    );
-  }
-
-  // Optional Zod validation
-  if (schema) {
-    return schema.parse(data) as T;
-  }
-
-  return data as T;
+  // Should not be reached — loop either returns or throws
+  throw lastError;
 }
 
 // ─── API Methods ──────────────────────────────────────────────────────────

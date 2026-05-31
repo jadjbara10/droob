@@ -21,7 +21,9 @@ import { colors, radius, shadows } from "@theme/tokens";
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
-const { height: SCREEN_HEIGHT } = Dimensions.get("window");
+const { height: WINDOW_HEIGHT, width: WINDOW_WIDTH } = Dimensions.get("window");
+// Fallback to a reasonable height if Dimensions returns 0 (edge case on some Android devices)
+const SCREEN_HEIGHT = WINDOW_HEIGHT > 0 ? WINDOW_HEIGHT : 800;
 const SPRING = { damping: 20, stiffness: 200, mass: 0.8 };
 const HANDLE_HEIGHT = 20;
 const HANDLE_BAR_HEIGHT = 4;

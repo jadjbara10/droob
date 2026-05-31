@@ -43,6 +43,11 @@ export class ErrorBoundary extends Component<Props, State> {
             <Text style={styles.icon}>⚠️</Text>
             <Text style={styles.title}>حدث خطأ غير متوقع</Text>
             <Text style={styles.subtitle}>يرجى المحاولة مرة أخرى. تم إرسال تقرير بالخطأ تلقائياً.</Text>
+            {this.state.error && (
+              <Text style={styles.errorDetail} selectable>
+                {this.state.error.name}: {this.state.error.message}
+              </Text>
+            )}
             <TouchableOpacity style={styles.retryBtn} onPress={this.handleRetry} activeOpacity={0.8}>
               <Text style={styles.retryText}>إعادة المحاولة</Text>
             </TouchableOpacity>
@@ -60,6 +65,7 @@ const styles = StyleSheet.create({
   icon: { fontSize:48, marginBottom:16 },
   title: { fontFamily:"IBM Plex Sans Arabic", fontSize:fontSize[20], fontWeight:fontWeight.bold, color:colors.text_primary, textAlign:"center", marginBottom:8 },
   subtitle: { fontFamily:"IBM Plex Sans Arabic", fontSize:fontSize[14], color:colors.text_secondary, textAlign:"center", lineHeight:22, marginBottom:24 },
+  errorDetail: { fontFamily:"monospace", fontSize:11, color:colors.cancelled, textAlign:"left", backgroundColor:colors.surface_2, padding:8, borderRadius:radius.input, marginBottom:16, width:"100%", lineHeight:16 },
   retryBtn: { backgroundColor:colors.brand_blue, borderRadius:radius.pill, paddingHorizontal:32, paddingVertical:14 },
   retryText: { fontFamily:"IBM Plex Sans Arabic", fontSize:fontSize[15], fontWeight:fontWeight.bold, color:"#fff" },
 });

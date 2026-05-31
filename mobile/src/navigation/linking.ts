@@ -10,14 +10,20 @@ const config: LinkingOptions<Record<string, any>> = {
   prefixes: ["droob://", "https://app.droob.jo"],
   config: {
     screens: {
-      Home: "",
-      TripPlanner: "trip",
-      Departures: "stop/:stopId",
-      StopDetail: "stop/:stopId",
+      Onboarding: "onboarding",
+      MainTabs: {
+        screens: {
+          Home: "",
+          TripPlanner: "plan",
+          Departures: "departures",
+        },
+      },
+      Search: "search/:mode?",
       RouteDetail: "route/:routeId",
-      TicketWallet: "ticket/:ticketId",
+      StopDetail: "stop/:stopId",
+      JourneyDetail: "journey/:journeyId?",
+      Navigation: "navigate",
       Alerts: "alerts",
-      Profile: "profile",
       SavedRoutes: "saved",
     },
   },
@@ -47,7 +53,7 @@ export function parseRouteId(url: string): string | null {
   return match?.[1] ?? null;
 }
 
-export function parseTicketId(url: string): string | null {
-  const match = url.match(/ticket\/([^/?]+)/);
+export function parseJourneyId(url: string): string | null {
+  const match = url.match(/journey\/([^/?]+)/);
   return match?.[1] ?? null;
 }

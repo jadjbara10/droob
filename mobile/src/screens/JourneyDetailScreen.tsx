@@ -206,7 +206,17 @@ export default function JourneyDetailScreen() {
 
 function formatTime(iso: string): string {
   try {
-    const d = new Date(iso);
+    // Handle both ISO datetime and HH:MM time strings
+    let d: Date;
+    if (/^\d{2}:\d{2}/.test(iso)) {
+      // It's an HH:MM string — use today's date
+      const [h, m] = iso.split(':').map(Number);
+      d = new Date();
+      d.setHours(h, m, 0, 0);
+    } else {
+      d = new Date(iso);
+    }
+    if (isNaN(d.getTime())) return iso;
     return d.toLocaleTimeString('ar-JO', { hour: '2-digit', minute: '2-digit' });
   } catch {
     return iso;
