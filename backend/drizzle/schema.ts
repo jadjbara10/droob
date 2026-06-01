@@ -451,6 +451,10 @@ export const users = pgTable(
 export const usersRelations = relations(users, ({ many }) => ({
   communityReports: many(communityReports),
   refreshTokens: many(refreshTokens),
+  deviceTokens: many(deviceTokens),
+  payments: many(payments),
+  tickets: many(tickets),
+  walletTransactions: many(walletTransactions),
 }));
 
 // ═══════════════════════════════════════════════════════════════
@@ -549,6 +553,180 @@ export const activityLogs = pgTable(
 export const activityLogsRelations = relations(activityLogs, ({ one }) => ({
   user: one(users, {
     fields: [activityLogs.user_id],
+    references: [users.id],
+  }),
+}));
+
+// ═══════════════════════════════════════════════════════════════
+// DEVICE TOKENS — push notification device registration
+// ═══════════════════════════════════════════════════════════════
+export const deviceTokens = pgTable(
+  "device_tokens",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    user_id: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    token: text("token").notNull().unique(),
+    platform: text("platform").notNull(), // ios | android
+    is_active: boolean("is_active").notNull().default(true),
+    created_at: timestamp("created_at").notNull().defaultNow(),
+    updated_at: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => ({
+    idx_device_tokens_user: index("idx_device_tokens_user").on(table.user_id),
+    idx_device_tokens_active: index("idx_device_tokens_active").on(table.is_active),
+  })
+);
+
+export const deviceTokensRelations = relations(deviceTokens, ({ one }) => ({
+  user: one(users, {
+    fields: [deviceTokens.user_id],
+    references: [users.id],
+  }),
+}));
+
+// ═══════════════════════════════════════════════════════════════
+// PUSH NOTIFICATIONS — notification history
+// ═══════════════════════════════════════════════════════════════
+export const pushNotifications = pgTable(
+  "push_notifications",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    title_ar: text("title_ar").notNull(),
+    title_en: text("title_en"),
+    body_ar: text("body_ar").notNull(),
+    body_en: text("body_en"),
+    type: text("type"), // departure_alert | route_change | emergency | promo
+    sent_at: timestamp("sent_at").notNull().defaultNow(),
+    delivered_count: integer("delivered_count").notNull().default(0),
+    opened_count: integer("opened_count").notNull().default(0),
+  },
+  (table) => ({
+    idx_push_notifications_type: index("idx_push_notifications_type").on(table.type),
+    idx_push_notifications_sent: index("idx_push_notifications_sent").on(table.sent_at),
+  })
+);
+
+// ═══════════════════════════════════════════════════════════════
+// TICKETS — electronic tickets
+// ═══════════════════════════════════════════════════════════════
+export const tickets = pgTable(
+  "tickets",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    user_id: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    route_id: uuid("route_id")
+      .notNull()
+      .references(() => routes.id, { onDelete: "cascade" }),
+    from_stop_id: uuid("from_stop_id")
+      .notNull()
+      .references(() => stops.id, { onDelete: "cascade" }),
+    to_stop_id: uuid("to_stop_id")
+      .notNull()
+      .references(() => stops.id, { onDelete: "cascade" }),
+    fare_jod: decimal("fare_jod", { precision: 10, scale: 3 }).notNull(),
+    qr_code: text("qr_code").notNull().unique(),
+    status: text("status").notNull().default("active"), // active | used | expired | refunded
+    purchased_at: timestamp("purchased_at").notNull().defaultNow(),
+    used_at: timestamp("used_at"),
+    expires_at: timestamp("expires_at").notNull(),
+  },
+  (table) => ({
+    idx_tickets_user: index("idx_tickets_user").on(table.user_id),
+    idx_tickets_route: index("idx_tickets_route").on(table.route_id),
+    idx_tickets_status: index("idx_tickets_status").on(table.status),
+    idx_tickets_qr: index("idx_tickets_qr").on(table.qr_code),
+  })
+);
+
+export const ticketsRelations = relations(tickets, ({ one }) => ({
+  user: one(users, {
+    fields: [tickets.user_id],
+    references: [users.id],
+  }),
+  route: one(routes, {
+    fields: [tickets.route_id],
+    references: [routes.id],
+  }),
+  fromStop: one(stops, {
+    fields: [tickets.from_stop_id],
+    references: [stops.id],
+    relationName: "ticket_from_stop",
+  }),
+  toStop: one(stops, {
+    fields: [tickets.to_stop_id],
+    references: [stops.id],
+    relationName: "ticket_to_stop",
+  }),
+}));
+
+// ═══════════════════════════════════════════════════════════════
+// PAYMENTS — payment transactions
+// ═══════════════════════════════════════════════════════════════
+export const payments = pgTable(
+  "payments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    user_id: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    amount_jod: decimal("amount_jod", { precision: 10, scale: 3 }).notNull(),
+    currency: text("currency").notNull().default("JOD"),
+    method: text("method"), // efawateercom | zain_cash | card
+    status: text("status").notNull().default("pending"), // pending | completed | failed | refunded
+    reference_id: text("reference_id").unique(),
+    ticket_id: uuid("ticket_id").references(() => tickets.id, { onDelete: "set null" }),
+    created_at: timestamp("created_at").notNull().defaultNow(),
+    updated_at: timestamp("updated_at"),
+  },
+  (table) => ({
+    idx_payments_user: index("idx_payments_user").on(table.user_id),
+    idx_payments_status: index("idx_payments_status").on(table.status),
+    idx_payments_reference: index("idx_payments_reference").on(table.reference_id),
+  })
+);
+
+export const paymentsRelations = relations(payments, ({ one }) => ({
+  user: one(users, {
+    fields: [payments.user_id],
+    references: [users.id],
+  }),
+  ticket: one(tickets, {
+    fields: [payments.ticket_id],
+    references: [tickets.id],
+  }),
+}));
+
+// ═══════════════════════════════════════════════════════════════
+// WALLET TRANSACTIONS — user wallet for Zain Cash / e-wallet
+// ═══════════════════════════════════════════════════════════════
+export const walletTransactions = pgTable(
+  "wallet_transactions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    user_id: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    amount_jod: decimal("amount_jod", { precision: 10, scale: 3 }).notNull(),
+    type: text("type").notNull(), // deposit | withdrawal | payment | refund
+    balance_before: decimal("balance_before", { precision: 10, scale: 3 }),
+    balance_after: decimal("balance_after", { precision: 10, scale: 3 }),
+    reference: text("reference"),
+    created_at: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => ({
+    idx_wallet_user: index("idx_wallet_user").on(table.user_id),
+    idx_wallet_type: index("idx_wallet_type").on(table.type),
+    idx_wallet_created: index("idx_wallet_created").on(table.created_at),
+  })
+);
+
+export const walletTransactionsRelations = relations(walletTransactions, ({ one }) => ({
+  user: one(users, {
+    fields: [walletTransactions.user_id],
     references: [users.id],
   }),
 }));

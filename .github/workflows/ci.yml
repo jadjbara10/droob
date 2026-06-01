@@ -97,5 +97,37 @@ jobs:
       - name: Lint
         run: npm -w dashboard run lint
 
+      - name: Run tests
+        run: npm -w dashboard run test
+
       - name: Build check (no deploy)
         run: npm -w dashboard run build
+
+  # ─── Mobile (React Native / Expo) ────────────────────────────────────────
+  mobile:
+    name: Mobile (Expo / React Native)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        working-directory: mobile
+        run: npm ci
+
+      - name: Typecheck
+        working-directory: mobile
+        run: npm run typecheck
+
+      - name: Lint
+        working-directory: mobile
+        run: npm run lint
+
+      - name: Run tests
+        working-directory: mobile
+        run: npm run test

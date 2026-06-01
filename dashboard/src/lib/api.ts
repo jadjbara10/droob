@@ -193,6 +193,35 @@ export function fetchRetentionCohorts(): Promise<{ week: string; rate: number }[
   return apiFetch<{ week: string; rate: number }[]>("/analytics/retention");
 }
 
+// ─── Users ────────────────────────────────────────────────────────────
+export interface UserItem {
+  id: string;
+  name_ar: string;
+  name_en: string;
+  email: string;
+  phone: string;
+  role: "super_admin" | "operator" | "editor" | "viewer";
+  governorate: string;
+  created_at: string;
+  status: "active" | "inactive";
+}
+
+export function fetchUsers(): Promise<UserItem[]> {
+  return apiFetch<UserItem[]>("/users");
+}
+
+export function createUser(data: Partial<UserItem>): Promise<UserItem> {
+  return apiFetch<UserItem>("/users", { method: "POST", body: JSON.stringify(data) });
+}
+
+export function updateUser(id: string, data: Partial<UserItem>): Promise<UserItem> {
+  return apiFetch<UserItem>(`/users/${id}`, { method: "PATCH", body: JSON.stringify(data) });
+}
+
+export function deleteUser(id: string): Promise<void> {
+  return apiFetch<void>(`/users/${id}`, { method: "DELETE" });
+}
+
 // Reports
 export function downloadReport(type: string, format: "pdf" | "csv" | "excel"): Promise<Blob> {
   return fetch(`${API_BASE}/reports/${type}.${format}`).then((r) => r.blob());

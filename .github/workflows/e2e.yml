@@ -1,0 +1,133 @@
+# ──────────────────────────────────────────────────────────────
+# دروب Droob — Weekly E2E & Integration Test Pipeline
+# Runs every Monday morning + on manual dispatch
+# ──────────────────────────────────────────────────────────────
+
+name: E2E — Weekly Integration Tests
+
+on:
+  schedule:
+    # Monday 7:57 AM UTC (~10:57 AM Amman in summer)
+    - cron: "57 7 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ─── Mobile E2E (Detox) ─────────────────────────────────
+  mobile-e2e:
+    name: Mobile E2E (Detox)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        working-directory: mobile
+        run: npm ci
+
+      - name: Build Detox (Android)
+        working-directory: mobile
+        run: npm run e2e:build
+
+      - name: Run Detox E2E tests
+        working-directory: mobile
+        run: npm run e2e:test
+        continue-on-error: true
+
+      - name: Upload E2E test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mobile-e2e-report
+          path: |
+            mobile/e2e-reports/
+            mobile/artifacts/
+            mobile/.detox/
+          retention-days: 14
+
+  # ─── Backend Integration Tests ───────────────────────────
+  backend-integration:
+    name: Backend Integration Tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_DB: droob_test
+          POSTGRES_USER: droob
+          POSTGRES_PASSWORD: test_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run migrations
+        run: |
+          echo "DATABASE_URL=postgresql://droob:test_password@localhost:5432/droob_test" > backend/.env
+          npx drizzle-kit push --config backend/drizzle.config.ts
+        continue-on-error: false
+
+      - name: Run integration tests
+        run: npm -w backend run test
+        env:
+          DATABASE_URL: postgresql://droob:test_password@localhost:5432/droob_test
+          REDIS_URL: redis://localhost:6379
+        continue-on-error: true
+
+      - name: Upload backend test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-integration-report
+          path: backend/test-reports/
+          retention-days: 14
+
+  # ─── Summary ─────────────────────────────────────────────
+  summary:
+    name: Test Summary
+    runs-on: ubuntu-latest
+    needs: [mobile-e2e, backend-integration]
+    if: always()
+
+    steps:
+      - name: Summarize results
+        run: |
+          echo "## E2E Test Run Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Mobile E2E (Detox) | ${{ needs.mobile-e2e.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Backend Integration | ${{ needs.backend-integration.result }} |" >> $GITHUB_STEP_SUMMARY

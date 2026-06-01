@@ -10,9 +10,10 @@ import {
   fetchVehicles, addVehicle,
   fetchAlerts, createAlert, broadcastAlert,
   fetchDailyStats, fetchRetentionCohorts,
+  fetchUsers, createUser, updateUser, deleteUser,
   fetchSettings, updateSettings,
   KpiResponse, TripHour, TopStop, RouteListItem,
-  StopItem, VehicleItem, AlertItem, DailyStat,
+  StopItem, VehicleItem, AlertItem, DailyStat, UserItem,
 } from "./api";
 
 // ─── Generic useApi Hook ──────────────────────────────────────────────
@@ -181,6 +182,23 @@ export function useDailyStats(days: number = 30) {
 
 export function useRetentionCohorts() {
   return useApi(fetchRetentionCohorts);
+}
+
+// Users
+export function useUsers() {
+  return useApi(fetchUsers);
+}
+
+export function useCreateUser() {
+  return useMutation((data: Partial<UserItem>) => createUser(data));
+}
+
+export function useUpdateUser() {
+  return useMutation((id: string, data: Partial<UserItem>) => updateUser(id, data));
+}
+
+export function useDeleteUser() {
+  return useMutation((id: string) => deleteUser(id));
 }
 
 // Settings

@@ -11,14 +11,17 @@ import { ErrorBoundary } from "@components/ErrorBoundary";
 import { colors, radius, spacing, fontSize, fontWeight, shadows, layout } from "@theme/tokens";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
-type ReportType = "delay" | "crowding" | "ended_route" | "closed_stop";
+type ReportType = "delay" | "crowding" | "ended_route" | "closed_stop" | "data_correction";
 type Report = { id: string; type: ReportType; message: string; stopName: string; createdAt: string; confirmCount: number };
 
-const REPORT_TYPES: { key: ReportType; icon: string; label: string }[] = [
-  { key: "delay", icon: "⏰", label: "تأخير" },
-  { key: "crowding", icon: "👥", label: "ازدحام" },
-  { key: "ended_route", icon: "🏁", label: "انتهاء خط" },
-  { key: "closed_stop", icon: "🚫", label: "إغلاق محطة" },
+const REPORT_TYPES: { key: ReportType; icon: string; label: string; hint: string }[] = [
+  { key: "delay", icon: "⏰", label: "تأخير", hint: "أبلغ عن تأخير في مواعيد الباص" },
+  { key: "crowding", icon: "👥", label: "ازدحام", hint: "أبلغ عن ازدحام في باص أو محطة" },
+  { key: "ended_route", icon: "🏁", label: "انتهاء خط", hint: "أبلغ عن توقف أو انتهاء خط" },
+  { key: "closed_stop", icon: "🚫", label: "إغلاق محطة", hint: "أبلغ عن إغلاق أو تحويل محطة" },
+  { key: "data_correction", icon: "📝", label: "تصحيح بيانات", hint: "اقترح تعديل: اسم محطة، سعر، موعد، مسار خط — ترسل للداشبورد للمراجعة" },
+  { key: "ended_route", icon: "🏁", label: "انتهاء خط", hint: "أبلغ عن توقف أو انتهاء خط" },
+  { key: "closed_stop", icon: "🚫", label: "إغلاق محطة", hint: "أبلغ عن إغلاق أو تحويل محطة" },
 ];
 
 // ─── Mock Data ─────────────────────────────────────────────────────────────
@@ -40,7 +43,7 @@ function formatRelativeTime(iso: string): string {
   } catch { return ""; }
 }
 
-const TYPE_COLORS: Record<ReportType, string> = { delay: colors.delayed, crowding: colors.serveece, ended_route: colors.walking, closed_stop: colors.cancelled };
+const TYPE_COLORS: Record<ReportType, string> = { delay: colors.delayed, crowding: colors.serveece, ended_route: colors.walking, closed_stop: colors.cancelled, data_correction: colors.brand_blue };
 
 // ─── MAIN SCREEN ───────────────────────────────────────────────────────────
 export default function CommunityScreen() {
@@ -108,7 +111,7 @@ export default function CommunityScreen() {
             </View>
             <TextInput
               style={styles.input}
-              placeholder="صف المشكلة التي تواجهها..."
+              placeholder={selectedType === "data_correction" ? "ما التعديل المقترح؟ (مثال: اسم المحطة الصحيح هو...، السعر الجديد هو...)" : "صف المشكلة التي تواجهها..."}
               placeholderTextColor={colors.text_tertiary}
               value={message}
               onChangeText={setMessage}

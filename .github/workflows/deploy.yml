@@ -158,20 +158,16 @@ jobs:
         with:
           node-version: "22"
           cache: "npm"
-          cache-dependency-path: droob/package-lock.json
 
       - name: Install dependencies
-        working-directory: droob
         run: npm ci
 
       - name: Run database migrations
-        working-directory: droob
         run: npm run db:migrate
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
       - name: Run tests
-        working-directory: droob
         run: npm -w backend run test
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
@@ -195,13 +191,25 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm -w dashboard run test
+
       - name: Deploy to Vercel
         uses: amondnet/vercel-action@v25
         with:
           vercel-token: ${{ secrets.VERCEL_TOKEN }}
           vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
           vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          working-directory: droob/dashboard
+          working-directory: dashboard
           vercel-args: >
             ${{ github.event.inputs.environment == 'production' && '--prod' || '' }}
           alias-domains: |
@@ -227,7 +235,7 @@ jobs:
         with:
           node-version: "22"
           cache: "npm"
-          cache-dependency-path: droob/mobile/package-lock.json
+          cache-dependency-path: mobile/package-lock.json
 
       - name: Setup Expo
         uses: expo/expo-github-action@v8
@@ -236,11 +244,23 @@ jobs:
           token: ${{ secrets.EXPO_TOKEN }}
 
       - name: Install dependencies
-        working-directory: droob/mobile
+        working-directory: mobile
         run: npm ci
 
+      - name: Typecheck
+        working-directory: mobile
+        run: npm run typecheck
+
+      - name: Lint
+        working-directory: mobile
+        run: npm run lint
+
+      - name: Run tests
+        working-directory: mobile
+        run: npm run test
+
       - name: EAS Build
-        working-directory: droob/mobile
+        working-directory: mobile
         run: |
           eas build \
             --platform ${{ matrix.platform }} \
@@ -253,7 +273,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: mobile-${{ matrix.platform }}-build
-          path: droob/mobile/dist/
+          path: mobile/dist/
           retention-days: 90
 
   # ─── GTFS Weekly Sync ────────────────────────────────────────
@@ -273,14 +293,11 @@ jobs:
         with:
           node-version: "22"
           cache: "npm"
-          cache-dependency-path: droob/package-lock.json
 
       - name: Install dependencies
-        working-directory: droob
         run: npm ci
 
       - name: Download and process GTFS
-        working-directory: droob
         run: |
           curl -L -o /tmp/gtfs.zip "$GAM_GTFS_URL"
           npm run gtfs:convert -- --input /tmp/gtfs.zip
@@ -288,15 +305,12 @@ jobs:
           GAM_GTFS_URL: ${{ secrets.GAM_GTFS_URL }}
 
       - name: Run Python data pipeline
-        working-directory: droob
         run: python scripts/unified_transit_pipeline.py
 
       - name: Validate data
-        working-directory: droob
         run: python scripts/validate_unified_data.py
 
       - name: Seed database
-        working-directory: droob
         run: npm run data:seed
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}

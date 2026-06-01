@@ -6,6 +6,7 @@
 
 import { useState, useCallback } from "react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, Legend } from "recharts";
+import { downloadReport } from "@/lib/api";
 
 type Tab = "overview" | "trips" | "finance" | "performance";
 
@@ -19,6 +20,30 @@ export default function ReportsPage() {
     { key: "performance", label: "الأداء" },
   ];
 
+  const [exportLoading, setExportLoading] = useState<"pdf" | "excel" | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
+
+  const handleExport = async (format: "pdf" | "excel") => {
+    setExportLoading(format);
+    setExportError(null);
+    try {
+      const blob = await downloadReport(tab, format === "excel" ? "excel" : "pdf");
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `droob-report-${tab}.${format === "excel" ? "xlsx" : "pdf"}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "فشل تصدير التقرير";
+      setExportError(msg);
+    } finally {
+      setExportLoading(null);
+    }
+  };
+
   return (
     <div className="page-wrapper" dir="rtl">
       <div className="page-header">
@@ -27,8 +52,13 @@ export default function ReportsPage() {
           <p className="page-subtitle">تقارير دورية عن أداء المنظومة</p>
         </div>
         <div className="flex gap-3">
-          <button className="btn-primary">🖨️ تصدير PDF</button>
-          <button className="btn-outline">📊 تصدير Excel</button>
+          {exportError && <span className="text-sm text-red-600 self-center">{exportError}</span>}
+          <button className="btn-primary" onClick={() => handleExport("pdf")} disabled={exportLoading !== null}>
+            {exportLoading === "pdf" ? "جاري التصدير..." : "🖨️ تصدير PDF"}
+          </button>
+          <button className="btn-outline" onClick={() => handleExport("excel")} disabled={exportLoading !== null}>
+            {exportLoading === "excel" ? "جاري التصدير..." : "📊 تصدير Excel"}
+          </button>
         </div>
       </div>
 

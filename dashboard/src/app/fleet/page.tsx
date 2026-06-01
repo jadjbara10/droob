@@ -12,6 +12,8 @@ import DataTable from "@/components/ui/DataTable";
 import StatusBadge from "@/components/ui/StatusBadge";
 import { PulseDot } from "@/components/ui/StatusBadge";
 import { LiveVehicleMap } from "@/components/maps/LiveVehicleMap";
+import { useVehicles, useAddVehicle } from "@/lib/hooks";
+import type { VehicleItem } from "@/lib/api";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -93,53 +95,38 @@ const OccupancyMini: React.FC<{ level: "empty" | "partial" | "full" }> = ({ leve
   );
 };
 
-// ─── Mock Data ─────────────────────────────────────────────────────────────
+// ─── Helpers ────────────────────────────────────────────────────────────────
 
-const generateVehicles = (): Vehicle[] => {
-  const lines = [
-    { code: "BRT1", nameAr: "باص سريع ١" },
-    { code: "BRT2", nameAr: "باص سريع ٢" },
-    { code: "B100", nameAr: "باص رقم ١٠٠" },
-    { code: "B200", nameAr: "باص رقم ٢٠٠" },
-    { code: "B400", nameAr: "باص رقم ٤٠٠" },
-    { code: "B500", nameAr: "باص رقم ٥٠٠" },
-    { code: "B700", nameAr: "باص رقم ٧٠٠" },
-    { code: "B900", nameAr: "باص رقم ٩٠٠" },
-  ];
-
-  const drivers = ["أحمد محمد", "خالد العلي", "محمود حسن", "عمر عبدالله", "سامر يوسف", "طارق ناصر", "رائد خالد", "نادر سليم"];
-
-  const statuses: VehicleStatus[] = ["active", "active", "active", "active", "active", "active", "inactive", "out_of_service"];
-
-  const occupancies: ("empty" | "partial" | "full")[] = ["empty", "partial", "full", "partial", "full", "partial", "empty", "empty"];
-
-  // Amman coordinates approximate range
-  const baseLat = 31.957;
-  const baseLng = 35.916;
-
-  return Array.from({ length: 24 }, (_, i) => ({
-    id: `VEH-${String(i + 1).padStart(4, "0")}`,
-    lineCode: lines[i % lines.length].code,
-    lineNameAr: lines[i % lines.length].nameAr,
-    driverNameAr: drivers[i % drivers.length],
-    speed: Math.floor(Math.random() * 100) + 10,
-    status: statuses[i % statuses.length],
-    lastUpdate: `${Math.floor(Math.random() * 5)} دقائق`,
-    occupancy: occupancies[i % occupancies.length],
-    lat: baseLat + (Math.random() - 0.5) * 0.12,
-    lng: baseLng + (Math.random() - 0.5) * 0.12,
-    heading: Math.floor(Math.random() * 360),
-  }));
-};
+const mapVehicle = (v: VehicleItem): Vehicle => ({
+  id: v.id || v.plate,
+  lineCode: v.line_code,
+  lineNameAr: v.line_code,
+  driverNameAr: v.driver,
+  speed: v.speed,
+  status: (["active", "inactive", "out_of_service"].includes(v.status) ? v.status : "active") as VehicleStatus,
+  lastUpdate: "لحظي",
+  occupancy: "partial" as const,
+  lat: v.lat,
+  lng: v.lng,
+  heading: 0,
+});
 
 // ─── Page Component ─────────────────────────────────────────────────────────
 
 export default function FleetManagementPage() {
-  const [vehicles] = useState<Vehicle[]>(generateVehicles);
+  const { data: vehicleData, loading, error: fetchError, refetch } = useVehicles();
+  const { execute: addVehicle, loading: addingVehicle, error: addError } = useAddVehicle();
+
+  const vehicles = useMemo(() => (vehicleData || []).map(mapVehicle), [vehicleData]);
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<VehicleStatus | "all">("all");
   const [sortConfig, setSortConfig] = useState<{ key: keyof Vehicle; dir: "asc" | "desc" } | null>(null);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newVehicle, setNewVehicle] = useState<Partial<VehicleItem>>({
+    plate: "", driver: "", line_code: "", governorate: "عمان",
+    status: "active", mode: "bus",
+  });
 
   // Filter and sort
   const filteredVehicles = useMemo(() => {
@@ -277,10 +264,17 @@ export default function FleetManagementPage() {
     ],
     actions: (
       <div className="flex items-center gap-3">
-        <PulseDot color="bg-on-time" size="w-2 h-2" />
+        {fetchError && <span className="text-xs text-cancelled">{fetchError}</span>}
+        <PulseDot color={loading ? "bg-text-tertiary" : "bg-on-time"} size="w-2 h-2" />
         <span className="text-xs tabular-nums text-text-secondary">
-          {activeCount.toLocaleString("ar-JO")} مركبة نشطة من {vehicles.length}
+          {loading ? "جاري التحميل..." : `${activeCount.toLocaleString("ar-JO")} مركبة نشطة من ${vehicles.length}`}
         </span>
+        <button
+          onClick={() => setShowAddModal(true)}
+          className="px-3 py-1.5 rounded-input bg-brand-blue text-white text-xs font-bold hover:bg-brand-blue/90 transition-colors"
+        >
+          + إضافة مركبة
+        </button>
       </div>
     ),
   };
@@ -340,19 +334,36 @@ export default function FleetManagementPage() {
 
           {/* Table */}
           <div className="flex-1 overflow-auto">
-            <DataTable
-              columns={columns}
-              data={filteredVehicles}
-              enableRowSelection={true}
-              onRowSelectionChange={(rows) => setSelectedVehicleId(rows.length === 1 ? rows[0].id : null)}
-              emptyMessage="لا توجد مركبات مطابقة"
-            />
+            {loading ? (
+              <div className="p-6 space-y-4">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <div key={i} className="flex gap-4 animate-pulse">
+                    <div className="h-5 bg-surface-3 rounded w-20" />
+                    <div className="h-5 bg-surface-3 rounded w-32" />
+                    <div className="h-5 bg-surface-3 rounded w-24" />
+                    <div className="h-5 bg-surface-3 rounded w-16" />
+                    <div className="h-5 bg-surface-3 rounded w-20" />
+                    <div className="h-5 bg-surface-3 rounded w-12" />
+                    <div className="h-5 bg-surface-3 rounded w-24" />
+                    <div className="h-5 bg-surface-3 rounded w-16" />
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <DataTable
+                columns={columns}
+                data={filteredVehicles}
+                enableRowSelection={true}
+                onRowSelectionChange={(rows) => setSelectedVehicleId(rows.length === 1 ? rows[0].id : null)}
+                emptyMessage="لا توجد مركبات مطابقة"
+              />
+            )}
           </div>
 
           {/* Footer */}
           <div className="flex items-center justify-between px-4 py-2 border-t border-border bg-surface-2">
             <span className="text-xs text-text-tertiary">
-              عرض {filteredVehicles.length} من {vehicles.length} مركبة
+              {loading ? "جاري التحميل..." : `عرض ${filteredVehicles.length} من ${vehicles.length} مركبة`}
             </span>
             <span className="text-[10px] text-text-tertiary">تحديث تلقائي كل ٣٠ ثانية</span>
           </div>
@@ -422,6 +433,92 @@ export default function FleetManagementPage() {
           </div>
         </div>
       </div>
+
+      {/* ─── Add Vehicle Modal ─── */}
+      <AnimatePresence>
+        {showAddModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
+            onClick={() => setShowAddModal(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              onClick={(e: React.MouseEvent) => e.stopPropagation()}
+              className="w-[460px] p-6 bg-surface rounded-modal border border-border shadow-xl"
+            >
+              <h2 className="text-lg font-bold text-text-primary mb-4">إضافة مركبة جديدة</h2>
+
+              {addError && (
+                <div className="mb-4 p-3 bg-cancelled/10 border border-cancelled/20 rounded-card text-sm text-cancelled">
+                  ⚠️ {addError}
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                  <label className="block text-xs font-medium text-text-secondary mb-1">رقم اللوحة</label>
+                  <input className="w-full h-10 px-3 rounded-input bg-surface-2 border border-border text-sm text-text-primary focus:outline-none focus:border-brand-blue" value={newVehicle.plate} onChange={(e) => setNewVehicle((p) => ({ ...p, plate: e.target.value }))} />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-text-secondary mb-1">كود الخط</label>
+                  <input className="w-full h-10 px-3 rounded-input bg-surface-2 border border-border text-sm text-text-primary focus:outline-none focus:border-brand-blue" value={newVehicle.line_code} onChange={(e) => setNewVehicle((p) => ({ ...p, line_code: e.target.value }))} />
+                </div>
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-xs font-medium text-text-secondary mb-1">السائق</label>
+                <input className="w-full h-10 px-3 rounded-input bg-surface-2 border border-border text-sm text-text-primary focus:outline-none focus:border-brand-blue" value={newVehicle.driver} onChange={(e) => setNewVehicle((p) => ({ ...p, driver: e.target.value }))} />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                  <label className="block text-xs font-medium text-text-secondary mb-1">المحافظة</label>
+                  <select className="w-full h-10 px-3 rounded-input bg-surface-2 border border-border text-sm text-text-primary focus:outline-none focus:border-brand-blue" value={newVehicle.governorate} onChange={(e) => setNewVehicle((p) => ({ ...p, governorate: e.target.value }))}>
+                    {["عمان", "الزرقاء", "إربد", "البلقاء", "مادبا", "الكرك", "العقبة", "جرش", "عجلون", "المفرق"].map((g) => <option key={g} value={g}>{g}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-text-secondary mb-1">الحالة</label>
+                  <select className="w-full h-10 px-3 rounded-input bg-surface-2 border border-border text-sm text-text-primary focus:outline-none focus:border-brand-blue" value={newVehicle.status} onChange={(e) => setNewVehicle((p) => ({ ...p, status: e.target.value }))}>
+                    <option value="active">نشط</option>
+                    <option value="inactive">متوقف</option>
+                    <option value="out_of_service">معطل</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex gap-3 mt-6">
+                <button
+                  className="flex-1 h-11 rounded-input bg-brand-blue text-white text-sm font-bold hover:bg-brand-blue/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  disabled={addingVehicle}
+                  onClick={async () => {
+                    try {
+                      await addVehicle(newVehicle);
+                      refetch();
+                      setShowAddModal(false);
+                      setNewVehicle({ plate: "", driver: "", line_code: "", governorate: "عمان", status: "active", mode: "bus" });
+                    } catch { /* error shown via addError */ }
+                  }}
+                >
+                  {addingVehicle ? "جاري الإضافة..." : "+ إضافة مركبة"}
+                </button>
+                <button
+                  onClick={() => setShowAddModal(false)}
+                  disabled={addingVehicle}
+                  className="flex-1 h-11 rounded-input bg-surface-2 border border-border text-text-secondary text-sm font-medium hover:bg-surface-3 transition-colors"
+                >
+                  إلغاء
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </DashboardShell>
   );
 }

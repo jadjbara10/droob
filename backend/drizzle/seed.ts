@@ -102,6 +102,129 @@ const landmarkStops = [
   { code: "BRT-01", name_ar: "محطة الباص السريع - الصويلح", name_en: "BRT Station - Sweileh", lat: 32.0333, lng: 35.8333, gov: "عمان", is_terminal: true, is_landmark: true, has_shelter: true, has_lighting: true, has_accessibility: true, has_ticket_machine: true, has_ac: true },
   { code: "BRT-02", name_ar: "محطة الباص السريع - القدس", name_en: "BRT Station - Al-Quds", lat: 32.0000, lng: 35.9167, gov: "عمان", is_terminal: true, is_landmark: true, has_shelter: true, has_lighting: true, has_accessibility: true, has_ticket_machine: true, has_ac: true },
   { code: "BRT-03", name_ar: "محطة الباص السريع - العبدلي", name_en: "BRT Station - Abdali", lat: 31.9667, lng: 35.9167, gov: "عمان", is_terminal: false, is_landmark: true, has_shelter: true, has_lighting: true, has_accessibility: true, has_ticket_machine: true, has_ac: true },
+
+  // ═══════════════ Additional Landmarks & Terminals ═══════════════
+  // ── Amman Terminals ──
+  { code: "TM-06", name_ar: "مجمع رغدان", name_en: "Raghadan Terminal", lat: 31.9515, lng: 35.9300, gov: "عمان", is_terminal: true, is_landmark: true, has_shelter: true, has_lighting: true, has_accessibility: true, has_ticket_machine: true, has_ac: true },
+  { code: "TM-07", name_ar: "مجمع الشمال / طارق", name_en: "North Terminal / Tareq", lat: 31.9850, lng: 35.9480, gov: "عمان", is_terminal: true, is_landmark: true, has_shelter: true, has_lighting: true },
+
+  // ── Amman Landmarks (Neighborhoods) ──
+  { code: "LM-31", name_ar: "الشميساني", name_en: "Shmeisani", lat: 31.9800, lng: 35.9000, gov: "عمان", is_terminal: false, is_landmark: true, has_shelter: true, has_lighting: true, has_ac: true },
+  { code: "LM-32", name_ar: "طلعة العلي", name_en: "Tla'a Al-Ali", lat: 32.0000, lng: 35.8833, gov: "عمان", is_terminal: false, is_landmark: true, has_shelter: true, has_lighting: true },
+  { code: "LM-33", name_ar: "خلدا", name_en: "Khalda", lat: 32.0167, lng: 35.8533, gov: "عمان", is_terminal: false, is_landmark: true, has_shelter: true, has_lighting: true },
+  { code: "LM-34", name_ar: "عبدون", name_en: "Abdoun", lat: 31.9667, lng: 35.8833, gov: "عمان", is_terminal: false, is_landmark: true, has_shelter: true, has_lighting: true },
+  { code: "LM-35", name_ar: "الصويفية", name_en: "Sweifieh", lat: 31.9833, lng: 35.8667, gov: "عمان", is_terminal: false, is_landmark: true, has_shelter: true, has_lighting: true, has_ac: true },
+  { code: "LM-36", name_ar: "دابوق", name_en: "Dabouq", lat: 32.0000, lng: 35.8333, gov: "عمان", is_terminal: false, is_landmark: true, has_shelter: true, has_lighting: true },
+  { code: "LM-37", name_ar: "الجبيحة", name_en: "Jubeiha", lat: 32.0333, lng: 35.8500, gov: "عمان", is_terminal: false, is_landmark: true, has_shelter: true, has_lighting: true, has_ac: true },
+  { code: "LM-38", name_ar: "دير غبار", name_en: "Deir Ghbar", lat: 31.9680, lng: 35.8640, gov: "عمان", is_terminal: false, is_landmark: true, has_shelter: false, has_lighting: true },
+  { code: "LM-39", name_ar: "اليا دورة / البايدر", name_en: "Bayader / Wadi Abdoun", lat: 31.9583, lng: 35.8667, gov: "عمان", is_terminal: false, is_landmark: true, has_shelter: false, has_lighting: true },
+  { code: "LM-40", name_ar: "بسمان", name_en: "Basman", lat: 31.9500, lng: 35.9333, gov: "عمان", is_terminal: false, is_landmark: true, has_shelter: false, has_lighting: true },
+  { code: "LM-41", name_ar: "المدينة الرياضية", name_en: "Sports City", lat: 32.0000, lng: 35.8833, gov: "عمان", is_terminal: false, is_landmark: true, has_shelter: true, has_lighting: true },
+  { code: "LM-42", name_ar: "المدينة الطبية", name_en: "Medical City", lat: 31.9667, lng: 35.9000, gov: "عمان", is_terminal: false, is_landmark: true, has_shelter: true, has_lighting: true, has_accessibility: true },
+  { code: "LM-43", name_ar: "ام اذينة", name_en: "Um Uthaina", lat: 31.9850, lng: 35.8700, gov: "عمان", is_terminal: false, is_landmark: true, has_shelter: true, has_lighting: true },
+  { code: "LM-44", name_ar: "الجوفة", name_en: "Jofeh", lat: 31.9333, lng: 35.8000, gov: "عمان", is_terminal: false, is_landmark: true, has_shelter: false, has_lighting: true },
+  { code: "LM-45", name_ar: "دوار الأمير هاشم", name_en: "Prince Hashem Circle", lat: 31.9500, lng: 35.9167, gov: "عمان", is_terminal: false, is_landmark: true, has_shelter: false, has_lighting: true },
+
+  // ── Amman Regular Stops ──
+  { code: "ST-AM-01", name_ar: "القويسمة", name_en: "Qweismeh", lat: 31.8833, lng: 35.9333, gov: "عمان", is_terminal: false, is_landmark: false, has_shelter: true, has_lighting: true },
+  { code: "ST-AM-02", name_ar: "ناعور", name_en: "Naour", lat: 31.8667, lng: 35.8833, gov: "عمان", is_terminal: false, is_landmark: false, has_shelter: true, has_lighting: true },
+  { code: "ST-AM-03", name_ar: "أبو نصير", name_en: "Abu Nseir", lat: 32.0167, lng: 35.9000, gov: "عمان", is_terminal: false, is_landmark: false, has_shelter: true, has_lighting: true },
+  { code: "ST-AM-04", name_ar: "خريبة السوق", name_en: "Khraibet Essouq", lat: 31.9167, lng: 35.8333, gov: "عمان", is_terminal: false, is_landmark: false, has_shelter: false, has_lighting: true },
+  { code: "ST-AM-05", name_ar: "يدودة", name_en: "Yadouda", lat: 31.9000, lng: 35.8667, gov: "عمان", is_terminal: false, is_landmark: false, has_shelter: false, has_lighting: true },
+  { code: "ST-AM-06", name_ar: "المقابلين", name_en: "Al-Muqabalain", lat: 31.9000, lng: 35.9833, gov: "عمان", is_terminal: false, is_landmark: false, has_shelter: true, has_lighting: true },
+  { code: "ST-AM-07", name_ar: "الملحق / المحطة", name_en: "Al-Mahatta", lat: 31.9667, lng: 35.9333, gov: "عمان", is_terminal: false, is_landmark: false, has_shelter: true, has_lighting: true },
+  { code: "ST-AM-08", name_ar: "مرج الحمام", name_en: "Marj Al-Hamam", lat: 31.8833, lng: 35.8333, gov: "عمان", is_terminal: false, is_landmark: false, has_shelter: true, has_lighting: true },
+  { code: "ST-AM-09", name_ar: "البنيات", name_en: "Al-Bunayat", lat: 31.9000, lng: 35.8167, gov: "عمان", is_terminal: false, is_landmark: false, has_shelter: true, has_lighting: true },
+  { code: "ST-AM-10", name_ar: "وادي عبدون", name_en: "Wadi Abdoun", lat: 31.9583, lng: 35.8667, gov: "عمان", is_terminal: false, is_landmark: false, has_shelter: false, has_lighting: true },
+
+  // ── Irbid ──
+  { code: "TM-08", name_ar: "مجمع إربد", name_en: "Irbid Central Terminal", lat: 32.5500, lng: 35.8667, gov: "إربد", is_terminal: true, is_landmark: true, has_shelter: true, has_lighting: true, has_accessibility: true },
+  { code: "LM-46", name_ar: "جامعة اليرموك", name_en: "Yarmouk University", lat: 32.5333, lng: 35.8500, gov: "إربد", is_terminal: false, is_landmark: true, has_shelter: true, has_lighting: true, has_ac: true },
+  { code: "ST-IR-01", name_ar: "الحصن", name_en: "Al-Huson", lat: 32.4833, lng: 35.8833, gov: "إربد", is_terminal: false, is_landmark: false, has_shelter: true, has_lighting: true },
+  { code: "ST-IR-02", name_ar: "الرمثا", name_en: "Ramtha", lat: 32.5667, lng: 36.0333, gov: "إربد", is_terminal: false, is_landmark: false, has_shelter: true, has_lighting: true },
+  { code: "ST-IR-03", name_ar: "بيت راس", name_en: "Beit Ras", lat: 32.5833, lng: 35.8500, gov: "إربد", is_terminal: false, is_landmark: false, has_shelter: false, has_lighting: true },
+  { code: "ST-IR-04", name_ar: "حوارة", name_en: "Hawwara", lat: 32.5333, lng: 35.9167, gov: "إربد", is_terminal: false, is_landmark: false, has_shelter: true, has_lighting: true },
+  { code: "ST-IR-05", name_ar: "كفر يوبا", name_en: "Kufr Yuba", lat: 32.5333, lng: 35.8000, gov: "إربد", is_terminal: false, is_landmark: false, has_shelter: false, has_lighting: true },
+  { code: "ST-IR-06", name_ar: "الصريح", name_en: "Al-Sareeh", lat: 32.5000, lng: 35.9000, gov: "إربد", is_terminal: false, is_landmark: false, has_shelter: true, has_lighting: true },
+  { code: "ST-IR-07", name_ar: "أيدون", name_en: "Aydoun", lat: 32.5000, lng: 35.8333, gov: "إربد", is_terminal: false, is_landmark: false, has_shelter: true, has_lighting: true },
+  { code: "ST-IR-08", name_ar: "المزار الشمالي", name_en: "Al-Mazar Shamaliya", lat: 32.5833, lng: 35.7833, gov: "إربد", is_terminal: false, is_landmark: false, has_shelter: false, has_lighting: true },
+  { code: "ST-IR-09", name_ar: "الشجرة", name_en: "Shajara", lat: 32.6333, lng: 35.9333, gov: "إربد", is_terminal: false, is_landmark: false, has_shelter: false, has_lighting: true },
+  { code: "ST-IR-10", name_ar: "كفر أسد", name_en: "Kafr Asad", lat: 32.5833, lng: 35.7000, gov: "إربد", is_terminal: false, is_landmark: false, has_shelter: false, has_lighting: true },
+  { code: "ST-IR-11", name_ar: "الهاشمية", name_en: "Hashemiya", lat: 32.5333, lng: 35.9667, gov: "إربد", is_terminal: false, is_landmark: false, has_shelter: true, has_lighting: true },
+  { code: "ST-IR-12", name_ar: "الطيبة", name_en: "Al-Tayyiba", lat: 32.5333, lng: 35.7167, gov: "إربد", is_terminal: false, is_landmark: false, has_shelter: false, has_lighting: true },
+
+  // ── Zarqa ──
+  { code: "LM-47", name_ar: "جامعة الزرقاء", name_en: "Zarqa University", lat: 32.0667, lng: 36.0833, gov: "الزرقاء", is_terminal: false, is_landmark: true, has_shelter: true, has_lighting: true, has_ac: true },
+  { code: "ST-ZA-01", name_ar: "عوجان", name_en: "Awajan", lat: 32.0833, lng: 36.1000, gov: "الزرقاء", is_terminal: false, is_landmark: false, has_shelter: true, has_lighting: true },
+  { code: "ST-ZA-02", name_ar: "الخو", name_en: "Khaw", lat: 32.0833, lng: 36.0667, gov: "الزرقاء", is_terminal: false, is_landmark: false, has_shelter: true, has_lighting: true },
+  { code: "ST-ZA-03", name_ar: "دوار الأمير محمد", name_en: "Prince Mohammed Circle", lat: 32.0833, lng: 36.1167, gov: "الزرقاء", is_terminal: false, is_landmark: false, has_shelter: false, has_lighting: true },
+  { code: "ST-ZA-04", name_ar: "مدينة الملك عبدالله الثاني", name_en: "King Abdullah II Park", lat: 32.0667, lng: 36.0500, gov: "الزرقاء", is_terminal: false, is_landmark: false, has_shelter: true, has_lighting: true },
+  { code: "ST-ZA-05", name_ar: "الأزرق", name_en: "Al-Azraq", lat: 31.8333, lng: 36.8167, gov: "الزرقاء", is_terminal: false, is_landmark: false, has_shelter: false, has_lighting: true },
+  { code: "ST-ZA-06", name_ar: "الأمير حسن", name_en: "Al-Amir Hasan", lat: 32.1000, lng: 36.1000, gov: "الزرقاء", is_terminal: false, is_landmark: false, has_shelter: true, has_lighting: true },
+  { code: "ST-ZA-07", name_ar: "البتراوي", name_en: "Batrawi", lat: 32.0667, lng: 36.0833, gov: "الزرقاء", is_terminal: false, is_landmark: false, has_shelter: false, has_lighting: true },
+  { code: "ST-ZA-08", name_ar: "مستشفى الزرقاء", name_en: "Zarqa Hospital", lat: 32.0833, lng: 36.0667, gov: "الزرقاء", is_terminal: false, is_landmark: false, has_shelter: true, has_lighting: true, has_accessibility: true },
+
+  // ── Balqa ──
+  { code: "TM-09", name_ar: "مجمع السلط", name_en: "Salt Central Terminal", lat: 32.0333, lng: 35.7333, gov: "البلقاء", is_terminal: true, is_landmark: true, has_shelter: true, has_lighting: true, has_accessibility: true },
+  { code: "ST-BA-01", name_ar: "الفحيص", name_en: "Fuheis", lat: 32.0000, lng: 35.7667, gov: "البلقاء", is_terminal: false, is_landmark: false, has_shelter: true, has_lighting: true },
+  { code: "ST-BA-02", name_ar: "ماحص", name_en: "Maheis", lat: 32.0167, lng: 35.7500, gov: "البلقاء", is_terminal: false, is_landmark: false, has_shelter: false, has_lighting: true },
+  { code: "ST-BA-03", name_ar: "دير علا", name_en: "Deir Alla", lat: 32.1833, lng: 35.6167, gov: "البلقاء", is_terminal: false, is_landmark: false, has_shelter: true, has_lighting: true },
+  { code: "ST-BA-04", name_ar: "شونة الجنوب", name_en: "Shouna Junoob", lat: 31.9500, lng: 35.6333, gov: "البلقاء", is_terminal: false, is_landmark: false, has_shelter: true, has_lighting: true },
+  { code: "ST-BA-05", name_ar: "رمان", name_en: "Rumman", lat: 32.0500, lng: 35.7833, gov: "البلقاء", is_terminal: false, is_landmark: false, has_shelter: false, has_lighting: true },
+
+  // ── Madaba ──
+  { code: "TM-10", name_ar: "مجمع مادبا", name_en: "Madaba Terminal", lat: 31.7167, lng: 35.8000, gov: "مادبا", is_terminal: true, is_landmark: true, has_shelter: true, has_lighting: true },
+  { code: "ST-MD-01", name_ar: "الليا", name_en: "Liya", lat: 31.7167, lng: 35.7833, gov: "مادبا", is_terminal: false, is_landmark: false, has_shelter: true, has_lighting: true },
+  { code: "ST-MD-02", name_ar: "مليحة", name_en: "Mulaiha", lat: 31.7500, lng: 35.7833, gov: "مادبا", is_terminal: false, is_landmark: false, has_shelter: false, has_lighting: true },
+  { code: "ST-MD-03", name_ar: "جبل نيبو", name_en: "Mount Nebo", lat: 31.7667, lng: 35.7167, gov: "مادبا", is_terminal: false, is_landmark: false, has_shelter: true, has_lighting: true },
+  { code: "ST-MD-04", name_ar: "ذيبان", name_en: "Dhiban", lat: 31.7833, lng: 35.8000, gov: "مادبا", is_terminal: false, is_landmark: false, has_shelter: false, has_lighting: true },
+
+  // ── Karak ──
+  { code: "TM-11", name_ar: "مجمع الكرك", name_en: "Karak Terminal", lat: 31.1833, lng: 35.7000, gov: "الكرك", is_terminal: true, is_landmark: true, has_shelter: true, has_lighting: true },
+  { code: "ST-KA-01", name_ar: "القطرانة", name_en: "Qatraneh", lat: 31.2500, lng: 35.9333, gov: "الكرك", is_terminal: false, is_landmark: false, has_shelter: true, has_lighting: true },
+  { code: "ST-KA-02", name_ar: "المزار الجنوبي", name_en: "Al-Mazar Janubi", lat: 31.0667, lng: 35.7000, gov: "الكرك", is_terminal: false, is_landmark: false, has_shelter: true, has_lighting: true },
+  { code: "ST-KA-03", name_ar: "غور الصافي", name_en: "Ghor Al-Safi", lat: 31.0333, lng: 35.4667, gov: "الكرك", is_terminal: false, is_landmark: false, has_shelter: false, has_lighting: true },
+  { code: "ST-KA-04", name_ar: "فقع", name_en: "Faqqu", lat: 31.3833, lng: 35.7333, gov: "الكرك", is_terminal: false, is_landmark: false, has_shelter: false, has_lighting: true },
+
+  // ── Tafilah ──
+  { code: "ST-TA-01", name_ar: "الطفيلة - وسط البلد", name_en: "Tafilah City Center", lat: 30.8333, lng: 35.6000, gov: "الطفيلة", is_terminal: false, is_landmark: false, has_shelter: true, has_lighting: true },
+  { code: "ST-TA-02", name_ar: "بصيرا", name_en: "Busaira", lat: 30.7333, lng: 35.6167, gov: "الطفيلة", is_terminal: false, is_landmark: false, has_shelter: true, has_lighting: true },
+  { code: "ST-TA-03", name_ar: "الحسا", name_en: "Al-Hasa", lat: 30.8167, lng: 35.9833, gov: "الطفيلة", is_terminal: false, is_landmark: false, has_shelter: false, has_lighting: true },
+
+  // ── Maan ──
+  { code: "TM-12", name_ar: "مجمع معان", name_en: "Maan Terminal", lat: 30.2000, lng: 35.7333, gov: "معان", is_terminal: true, is_landmark: true, has_shelter: true, has_lighting: true, has_accessibility: true },
+  { code: "ST-MN-01", name_ar: "وادي موسى", name_en: "Wadi Musa", lat: 30.3167, lng: 35.4833, gov: "معان", is_terminal: false, is_landmark: false, has_shelter: true, has_lighting: true },
+  { code: "ST-MN-02", name_ar: "الشوبك", name_en: "Shoubak", lat: 30.5167, lng: 35.5333, gov: "معان", is_terminal: false, is_landmark: false, has_shelter: true, has_lighting: true },
+  { code: "ST-MN-03", name_ar: "الجفر", name_en: "Al-Jafr", lat: 30.3000, lng: 36.2167, gov: "معان", is_terminal: false, is_landmark: false, has_shelter: false, has_lighting: true },
+
+  // ── Aqaba ──
+  { code: "TM-13", name_ar: "مجمع العقبة", name_en: "Aqaba Terminal", lat: 29.5319, lng: 35.0056, gov: "العقبة", is_terminal: true, is_landmark: true, has_shelter: true, has_lighting: true, has_accessibility: true, has_ac: true },
+  { code: "ST-AQ-01", name_ar: "ميناء العقبة", name_en: "Aqaba Port", lat: 29.5167, lng: 35.0000, gov: "العقبة", is_terminal: false, is_landmark: false, has_shelter: true, has_lighting: true },
+  { code: "ST-AQ-02", name_ar: "أيلة", name_en: "Ayla Oasis", lat: 29.5481, lng: 35.0056, gov: "العقبة", is_terminal: false, is_landmark: false, has_shelter: true, has_lighting: true, has_ac: true },
+  { code: "ST-AQ-03", name_ar: "خليج طلعة", name_en: "Tala Bay", lat: 29.4167, lng: 34.9833, gov: "العقبة", is_terminal: false, is_landmark: false, has_shelter: true, has_lighting: true, has_ac: true },
+  { code: "ST-AQ-04", name_ar: "الشاطئ الجنوبي", name_en: "South Beach", lat: 29.3833, lng: 34.9833, gov: "العقبة", is_terminal: false, is_landmark: false, has_shelter: true, has_lighting: true },
+  { code: "ST-AQ-05", name_ar: "مطار العقبة", name_en: "Aqaba Airport", lat: 29.6183, lng: 35.0167, gov: "العقبة", is_terminal: false, is_landmark: false, has_shelter: true, has_lighting: true },
+  { code: "ST-AQ-06", name_ar: "الراشدية", name_en: "Al-Rashidya", lat: 29.5333, lng: 35.0167, gov: "العقبة", is_terminal: false, is_landmark: false, has_shelter: false, has_lighting: true },
+
+  // ── Jerash ──
+  { code: "TM-14", name_ar: "مجمع جرش", name_en: "Jerash Terminal", lat: 32.2833, lng: 35.9000, gov: "جرش", is_terminal: true, is_landmark: true, has_shelter: true, has_lighting: true },
+  { code: "ST-JE-01", name_ar: "سوف", name_en: "Souf", lat: 32.3000, lng: 35.8500, gov: "جرش", is_terminal: false, is_landmark: false, has_shelter: true, has_lighting: true },
+  { code: "ST-JE-02", name_ar: "المصطبة", name_en: "Al-Mastaba", lat: 32.2500, lng: 35.8833, gov: "جرش", is_terminal: false, is_landmark: false, has_shelter: false, has_lighting: true },
+  { code: "ST-JE-03", name_ar: "برما", name_en: "Burma", lat: 32.2500, lng: 35.7833, gov: "جرش", is_terminal: false, is_landmark: false, has_shelter: false, has_lighting: true },
+  { code: "ST-JE-04", name_ar: "كفر خل", name_en: "Kufr Khall", lat: 32.3167, lng: 35.9000, gov: "جرش", is_terminal: false, is_landmark: false, has_shelter: false, has_lighting: true },
+
+  // ── Ajloun ──
+  { code: "TM-15", name_ar: "مجمع عجلون", name_en: "Ajloun Terminal", lat: 32.3333, lng: 35.7500, gov: "عجلون", is_terminal: true, is_landmark: true, has_shelter: true, has_lighting: true },
+  { code: "ST-AJ-01", name_ar: "قلعة عجلون", name_en: "Ajloun Castle", lat: 32.3333, lng: 35.7333, gov: "عجلون", is_terminal: false, is_landmark: false, has_shelter: true, has_lighting: true },
+  { code: "ST-AJ-02", name_ar: "حلاوة", name_en: "Halawah", lat: 32.3333, lng: 35.7500, gov: "عجلون", is_terminal: false, is_landmark: false, has_shelter: false, has_lighting: true },
+  { code: "ST-AJ-03", name_ar: "عوجان", name_en: "Orjan", lat: 32.3333, lng: 35.7167, gov: "عجلون", is_terminal: false, is_landmark: false, has_shelter: false, has_lighting: true },
+
+  // ── Mafraq ──
+  { code: "TM-16", name_ar: "مجمع المفرق", name_en: "Mafraq Central Terminal", lat: 32.3500, lng: 36.2000, gov: "المفرق", is_terminal: true, is_landmark: true, has_shelter: true, has_lighting: true, has_accessibility: true },
+  { code: "ST-MF-01", name_ar: "الرويشد", name_en: "Ruwaished", lat: 32.5000, lng: 36.8000, gov: "المفرق", is_terminal: false, is_landmark: false, has_shelter: true, has_lighting: true },
+  { code: "ST-MF-02", name_ar: "الصفاوي", name_en: "Safawi", lat: 32.2000, lng: 37.1167, gov: "المفرق", is_terminal: false, is_landmark: false, has_shelter: false, has_lighting: true },
+  { code: "ST-MF-03", name_ar: "أم الجمال", name_en: "Um Al-Jimal", lat: 32.3167, lng: 36.3667, gov: "المفرق", is_terminal: false, is_landmark: false, has_shelter: true, has_lighting: true },
+  { code: "ST-MF-04", name_ar: "دير الكهف", name_en: "Deir Al-Kahf", lat: 32.2667, lng: 36.8333, gov: "المفرق", is_terminal: false, is_landmark: false, has_shelter: false, has_lighting: true },
 ];
 
 // ═══════════════════════════════════════════════════════════════
@@ -137,6 +260,28 @@ const routesData = [
   { code: "IR-AM-AJ", name_ar: "عمان ↔ عجلون", name_en: "Amman ↔ Ajloun", mode: "intercity", color: "#6B21A8", origin_code: "TM-01", dest_code: "LM-28", base_fare: "1.250", fare_min: "1.000", fare_max: "1.500", headway_peak: 45, headway_offpeak: 90, first_dep: "06:30", last_dep: "19:00" },
   { code: "IR-AM-JE", name_ar: "عمان ↔ جرش", name_en: "Amman ↔ Jerash", mode: "intercity", color: "#6B21A8", origin_code: "TM-01", dest_code: "LM-27", base_fare: "1.000", fare_min: "0.750", fare_max: "1.250", headway_peak: 30, headway_offpeak: 60, first_dep: "06:00", last_dep: "20:00" },
   { code: "IR-AM-MD", name_ar: "عمان ↔ مادبا", name_en: "Amman ↔ Madaba", mode: "intercity", color: "#6B21A8", origin_code: "TM-02", dest_code: "LM-25", base_fare: "0.750", fare_min: "0.750", fare_max: "1.000", headway_peak: 30, headway_offpeak: 45, first_dep: "06:30", last_dep: "20:00" },
+
+  // ═══════════════ Additional Routes ═══════════════
+  // ── New City Bus Routes (Amman internal) ──
+  { code: "7", name_ar: "الصويفية ↔ العبدلي", name_en: "Sweifieh ↔ Abdali", mode: "city_bus", color: "#0066CC", origin_code: "LM-35", dest_code: "TM-01", base_fare: "0.350", headway_peak: 12, headway_offpeak: 20, first_dep: "05:30", last_dep: "23:00" },
+  { code: "10", name_ar: "خلدا ↔ الصويفية ↔ عبدون", name_en: "Khalda ↔ Sweifieh ↔ Abdoun", mode: "city_bus", color: "#0066CC", origin_code: "LM-33", dest_code: "LM-34", base_fare: "0.350", headway_peak: 12, headway_offpeak: 20, first_dep: "05:30", last_dep: "22:30" },
+  { code: "15", name_ar: "الجبيحة ↔ المدينة الرياضية ↔ الشميساني", name_en: "Jubeiha ↔ Sports City ↔ Shmeisani", mode: "city_bus", color: "#0066CC", origin_code: "LM-37", dest_code: "LM-31", base_fare: "0.350", headway_peak: 10, headway_offpeak: 20, first_dep: "05:30", last_dep: "23:00" },
+  { code: "18", name_ar: "دابوق ↔ الجامعة الأردنية ↔ صويلح", name_en: "Dabouq ↔ UJ ↔ Sweileh", mode: "city_bus", color: "#0066CC", origin_code: "LM-36", dest_code: "TM-03", base_fare: "0.350", headway_peak: 10, headway_offpeak: 20, first_dep: "05:30", last_dep: "22:30" },
+  { code: "25", name_ar: "القويسمة ↔ المقابلين ↔ وسط البلد", name_en: "Qweismeh ↔ Muqabalain ↔ Downtown", mode: "city_bus", color: "#0066CC", origin_code: "ST-AM-01", dest_code: "LM-02", base_fare: "0.400", headway_peak: 15, headway_offpeak: 25, first_dep: "06:00", last_dep: "22:00" },
+  { code: "30", name_ar: "أبو نصير ↔ طبربور ↔ الهاشمي", name_en: "Abu Nseir ↔ Tabarbour ↔ Hashmi", mode: "city_bus", color: "#0066CC", origin_code: "ST-AM-03", dest_code: "LM-18", base_fare: "0.350", headway_peak: 12, headway_offpeak: 25, first_dep: "05:30", last_dep: "22:30" },
+  { code: "40", name_ar: "ناعور ↔ خريبة السوق ↔ وادي السير", name_en: "Naour ↔ Khraibet Essouq ↔ Wadi Seer", mode: "city_bus", color: "#0066CC", origin_code: "ST-AM-02", dest_code: "LM-08", base_fare: "0.400", headway_peak: 20, headway_offpeak: 30, first_dep: "06:00", last_dep: "21:30" },
+
+  // ── New Serveece Routes ──
+  { code: "S08", name_ar: "سرفيس - العبدلي ↔ الشميساني ↔ الجبيحة", name_en: "Serveece - Abdali ↔ Shmeisani ↔ Jubeiha", mode: "serveece", color: "#FF8C00", origin_code: "TM-01", dest_code: "LM-37", base_fare: "0.300", fare_min: "0.200", fare_max: "0.400", headway_peak: 5, headway_offpeak: 8, first_dep: "06:00", last_dep: "22:00" },
+  { code: "S09", name_ar: "سرفيس - وسط البلد ↔ عبدون ↔ الصويفية", name_en: "Serveece - Downtown ↔ Abdoun ↔ Sweifieh", mode: "serveece", color: "#FF8C00", origin_code: "LM-02", dest_code: "LM-35", base_fare: "0.250", fare_min: "0.200", fare_max: "0.350", headway_peak: 5, headway_offpeak: 10, first_dep: "06:00", last_dep: "22:00" },
+  { code: "S10", name_ar: "سرفيس - صويلح ↔ خلدا ↔ دابوق", name_en: "Serveece - Sweileh ↔ Khalda ↔ Dabouq", mode: "serveece", color: "#FF8C00", origin_code: "TM-03", dest_code: "LM-36", base_fare: "0.250", fare_min: "0.200", fare_max: "0.350", headway_peak: 5, headway_offpeak: 10, first_dep: "06:00", last_dep: "22:00" },
+  { code: "S11", name_ar: "سرفيس - الهاشمي ↔ المقابلين ↔ القويسمة", name_en: "Serveece - Hashmi ↔ Muqabalain ↔ Qweismeh", mode: "serveece", color: "#FF8C00", origin_code: "LM-18", dest_code: "ST-AM-01", base_fare: "0.300", fare_min: "0.200", fare_max: "0.400", headway_peak: 5, headway_offpeak: 10, first_dep: "06:00", last_dep: "21:30" },
+
+  // ── New Intercity Routes ──
+  { code: "IR-AM-RT", name_ar: "عمان ↔ الرمثا", name_en: "Amman ↔ Ramtha", mode: "intercity", color: "#6B21A8", origin_code: "TM-01", dest_code: "ST-IR-02", base_fare: "1.500", fare_min: "1.250", fare_max: "2.000", headway_peak: 45, headway_offpeak: 90, first_dep: "06:00", last_dep: "20:00" },
+  { code: "IR-AM-PT", name_ar: "عمان ↔ البتراء", name_en: "Amman ↔ Petra", mode: "intercity", color: "#6B21A8", origin_code: "TM-01", dest_code: "LM-30", base_fare: "3.500", fare_min: "3.000", fare_max: "4.000", headway_peak: 60, headway_offpeak: 120, first_dep: "06:00", last_dep: "17:00" },
+  { code: "IR-AM-TF", name_ar: "عمان ↔ الطفيلة", name_en: "Amman ↔ Tafilah", mode: "intercity", color: "#6B21A8", origin_code: "TM-02", dest_code: "ST-TA-01", base_fare: "1.750", fare_min: "1.500", fare_max: "2.250", headway_peak: 60, headway_offpeak: 120, first_dep: "06:30", last_dep: "18:00" },
+  { code: "IR-AQ-PT", name_ar: "العقبة ↔ البتراء", name_en: "Aqaba ↔ Petra", mode: "intercity", color: "#6B21A8", origin_code: "LM-23", dest_code: "LM-30", base_fare: "2.500", fare_min: "2.000", fare_max: "3.000", headway_peak: 60, headway_offpeak: 120, first_dep: "07:00", last_dep: "16:00" },
 ];
 
 // ═══════════════════════════════════════════════════════════════
@@ -367,12 +512,199 @@ async function seed() {
     console.log(`  ✓ ${r.code} — weekday schedules created`);
   }
 
-  console.log(`\n✅ تمت الزراعة بنجاح! (${scheduleCount} جدول زمني)`);
-  console.log("📍 المحافظات: 12");
-  console.log("🏢 المشغلون: 5");
-  console.log("🚏 المحطات: 37");
-  console.log("🗺 الخطوط: 22");
-  console.log("🔗 ارتباطات: ~44");
+  // 7. Schedules for new routes (routes beyond the first 10)
+  console.log("\n🕐 زراعة جداول الخطوط الجديدة...");
+  for (const r of routesData.slice(10)) {
+    const routeKey = `${r.code}-${r.mode}`;
+    const routeId = routeMap[routeKey];
+    const originStopId = stopMap[r.origin_code];
+    if (!routeId || !originStopId) continue;
+
+    const [existing] = await db.select().from(schema.schedules)
+      .where(eq(schema.schedules.route_id, routeId))
+      .limit(1);
+    if (existing) {
+      console.log(`  ⏭ ${r.code} (جدول موجود مسبقاً)`);
+      continue;
+    }
+
+    const headway = (r as any).headway_peak || 15;
+    for (let h = 5; h <= 23; h++) {
+      for (let m = 0; m < 60; m += headway) {
+        if (h === 5 && m < 30) continue;
+        if (h === 23 && m > 0) break;
+        const timeStr = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+        await db.insert(schema.schedules).values({
+          id: stableUUID(`sched-${r.code}-weekday-${timeStr}`),
+          route_id: routeId,
+          stop_id: originStopId,
+          day_of_week: scheduleCount % 7,
+          departure_time: timeStr,
+          schedule_type: "weekday",
+          is_active: true,
+        });
+        scheduleCount++;
+      }
+    }
+    console.log(`  ✓ ${r.code} — weekday schedules created`);
+  }
+
+  // 8. Vehicles (المركبات)
+  console.log("\n🚌 زراعة المركبات...");
+  let vehicleCount = 0;
+  const vehiclesData = [
+    // GAM city buses
+    { plate: "1-10001", type: "bus", agency_code: "GAM", capacity: 45 },
+    { plate: "1-10002", type: "bus", agency_code: "GAM", capacity: 45 },
+    { plate: "1-10003", type: "bus", agency_code: "GAM", capacity: 40 },
+    { plate: "1-10004", type: "bus", agency_code: "GAM", capacity: 40 },
+    { plate: "1-10005", type: "bus", agency_code: "GAM", capacity: 50 },
+    { plate: "1-10006", type: "bus", agency_code: "GAM", capacity: 45 },
+    { plate: "1-10007", type: "bus", agency_code: "GAM", capacity: 40 },
+    { plate: "1-10008", type: "bus", agency_code: "GAM", capacity: 45 },
+    { plate: "1-10009", type: "bus", agency_code: "GAM", capacity: 50 },
+    { plate: "1-10010", type: "bus", agency_code: "GAM", capacity: 45 },
+    // BRT buses
+    { plate: "1-20001", type: "brt_bus", agency_code: "BRT-GAM", capacity: 60 },
+    { plate: "1-20002", type: "brt_bus", agency_code: "BRT-GAM", capacity: 60 },
+    { plate: "1-20003", type: "brt_bus", agency_code: "BRT-GAM", capacity: 60 },
+    // Serveece minivans
+    { plate: "1-30001", type: "minivan", agency_code: "SERV-PVT", capacity: 14 },
+    { plate: "1-30002", type: "minivan", agency_code: "SERV-PVT", capacity: 14 },
+    { plate: "1-30003", type: "minivan", agency_code: "SERV-PVT", capacity: 12 },
+    { plate: "1-30004", type: "minivan", agency_code: "SERV-PVT", capacity: 14 },
+    { plate: "1-30005", type: "minivan", agency_code: "SERV-PVT", capacity: 12 },
+    { plate: "1-30006", type: "minivan", agency_code: "SERV-PVT", capacity: 14 },
+    { plate: "1-30007", type: "minivan", agency_code: "SERV-PVT", capacity: 14 },
+    { plate: "1-30008", type: "minivan", agency_code: "SERV-PVT", capacity: 12 },
+    // JETT intercity coaches
+    { plate: "1-40001", type: "coach", agency_code: "JETT", capacity: 50 },
+    { plate: "1-40002", type: "coach", agency_code: "JETT", capacity: 50 },
+    { plate: "1-40003", type: "coach", agency_code: "JETT", capacity: 45 },
+    // BOS intercity
+    { plate: "1-40004", type: "coach", agency_code: "BOS", capacity: 45 },
+    { plate: "1-40005", type: "coach", agency_code: "BOS", capacity: 45 },
+    // Trust intercity
+    { plate: "1-40006", type: "coach", agency_code: "TRUST", capacity: 50 },
+  ];
+  const vehicleMap: Record<string, string> = {};
+  for (const v of vehiclesData) {
+    const [existing] = await db.select().from(schema.vehicles).where(eq(schema.vehicles.plate, v.plate)).limit(1);
+    if (!existing) {
+      const [inserted] = await db.insert(schema.vehicles).values({
+        id: stableUUID(`vehicle-${v.plate}`),
+        plate: v.plate,
+        type: v.type,
+        agency_id: agencyMap[v.agency_code] || null,
+        capacity: v.capacity,
+        is_active: true,
+      }).returning({ id: schema.vehicles.id });
+      vehicleMap[v.plate] = inserted.id;
+      vehicleCount++;
+      if (vehicleCount <= 5) console.log(`  ✓ ${v.plate} — ${v.type}`);
+    }
+  }
+  console.log(`  ... ${vehicleCount} مركبة إجمالاً`);
+
+  // 9. Trips for today (رحلة اليوم — sample departures)
+  console.log("\n🚍 زراعة رحلات اليوم...");
+  let tripCount = 0;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const todayStr = today.toISOString().split("T")[0];
+
+  for (const r of routesData) {
+    const routeKey = `${r.code}-${r.mode}`;
+    const routeId = routeMap[routeKey];
+    if (!routeId) continue;
+
+    // Find a matching vehicle for this route's mode
+    let vehicleId: string | null = null;
+    for (const v of vehiclesData) {
+      const agencyCodeForRoute = r.mode === "city_bus" ? "GAM" :
+        r.mode === "brt" ? "BRT-GAM" :
+        r.mode === "serveece" ? "SERV-PVT" :
+        r.code.includes("IR-AM-ZA") ? "BOS" : "JETT";
+      if (v.agency_code === agencyCodeForRoute && vehicleMap[v.plate]) {
+        vehicleId = vehicleMap[v.plate];
+        break;
+      }
+    }
+
+    const headway = (r as any).headway_peak || 15;
+    const firstH = parseInt((r as any).first_dep?.split(":")[0] || "6");
+    const lastH = parseInt((r as any).last_dep?.split(":")[0] || "22");
+
+    // Generate 3-5 sample trips for today per route
+    const tripHours = [];
+    const morningHour = firstH;
+    const middayHour = Math.min(12, lastH);
+    const afternoonHour = Math.min(16, lastH);
+    const eveningHour = lastH - 1;
+
+    tripHours.push(morningHour, middayHour, afternoonHour);
+    if (eveningHour > afternoonHour) tripHours.push(eveningHour);
+    if (lastH >= 22) tripHours.push(20);
+
+    for (const h of tripHours) {
+      for (let m = 0; m < 60; m += headway * 2) {
+        if (tripCount >= 200) break; // cap at 200 trips
+        const depStr = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+        // Skip if before first dep or after last dep
+        if (depStr < (r as any).first_dep || depStr > (r as any).last_dep) continue;
+
+        const depTime = new Date(`${todayStr}T${depStr}:00+03:00`);
+        // Skip past trips (already departed)
+        if (depTime < new Date()) continue;
+
+        // Determine status and occupancy
+        const now = new Date();
+        const msUntilDeparture = depTime.getTime() - now.getTime();
+        const minsUntilDeparture = msUntilDeparture / (1000 * 60);
+        let status: string;
+        let occupancy: string;
+        if (minsUntilDeparture < 0) {
+          status = "completed";
+          occupancy = "full";
+        } else if (minsUntilDeparture < 15) {
+          status = "in_progress";
+          occupancy = Math.random() > 0.5 ? "partial" : "full";
+        } else if (minsUntilDeparture < 60) {
+          status = "scheduled";
+          occupancy = Math.random() > 0.6 ? "empty" : "partial";
+        } else {
+          status = "scheduled";
+          occupancy = "empty";
+        }
+
+        // Arrival approx 30-90 min later based on mode
+        const travelMins = r.mode === "intercity" ? 90 : r.mode === "brt" ? 35 : 45;
+        const arrTime = new Date(depTime.getTime() + travelMins * 60000);
+
+        await db.insert(schema.trips).values({
+          id: stableUUID(`trip-${r.code}-${depStr}`),
+          route_id: routeId,
+          vehicle_id: vehicleId,
+          departure_time: depTime,
+          arrival_time: arrTime,
+          status,
+          occupancy,
+        });
+        tripCount++;
+      }
+    }
+  }
+  console.log(`  ✓ ${tripCount} رحلة لليوم`);
+
+  // 10. Summary
+  console.log(`\n✅ تمت الزراعة بنجاح!`);
+  console.log(`📍 المحافظات: ${governoratesData.length}`);
+  console.log(`🏢 المشغلون: ${agenciesData.length}`);
+  console.log(`🚏 المحطات: ${landmarkStops.length}`);
+  console.log(`🗺  الخطوط: ${routesData.length}`);
+  console.log(`🚌 المركبات: ${vehicleCount}`);
+  console.log(`🕐 جداول: ${scheduleCount}`);
+  console.log(`🚍 رحلات اليوم: ${tripCount}`);
   console.log("");
 }
 

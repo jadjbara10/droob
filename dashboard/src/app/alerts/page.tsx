@@ -9,6 +9,7 @@ import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import DashboardShell from "@/components/DashboardShell";
 import { SeverityBadge } from "@/components/ui/StatusBadge";
+import { useCreateAlert, useBroadcastAlert } from "@/lib/hooks";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -139,6 +140,9 @@ const EmergencyBroadcast: React.FC = () => {
   const [countdown, setCountdown] = useState(3);
   const [isCountingDown, setIsCountingDown] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
+  const [sentCount, setSentCount] = useState<number | null>(null);
+  const { execute: createAlert, loading: creating } = useCreateAlert();
+  const { execute: broadcastAlert, loading: broadcasting } = useBroadcastAlert();
 
   const handleOpen = () => {
     setIsOpen(true);
@@ -155,7 +159,15 @@ const EmergencyBroadcast: React.FC = () => {
       setCountdown(count);
       if (count === 0) {
         clearInterval(interval);
-        setConfirmed(true);
+        createAlert({
+          type: "emergency",
+          severity: "critical",
+          title_ar: "بث طارئ",
+          message_ar: "إشعار طارئ لجميع المستخدمين",
+          affected_lines: [],
+          affected_governorate: null,
+        }).then((a) => broadcastAlert(a.id).then((r) => setSentCount(r.sent)))
+          .finally(() => setConfirmed(true));
       }
     }, 1000);
   };
@@ -257,7 +269,7 @@ const EmergencyBroadcast: React.FC = () => {
                     </svg>
                   </div>
                   <h2 className="text-lg font-bold text-text-primary mb-2">تم البث بنجاح</h2>
-                  <p className="text-sm text-text-secondary mb-6">تم إرسال التنبيه الطارئ إلى 12,450 مستخدم</p>
+                  <p className="text-sm text-text-secondary mb-6">تم إرسال التنبيه الطارئ إلى {(sentCount ?? 12450).toLocaleString("ar-JO")} مستخدم</p>
                   <button
                     onClick={handleClose}
                     className="px-6 py-2 rounded-input bg-brand-blue text-white text-sm font-medium hover:bg-brand-blue/90 transition-colors"
@@ -332,6 +344,9 @@ export default function AlertsCenterPage() {
 
   const [showLineDropdown, setShowLineDropdown] = useState(false);
 
+  const { execute: createAlert, loading: alertCreating } = useCreateAlert();
+  const [toast, setToast] = useState<{ type: "success" | "error" | "info"; message: string } | null>(null);
+
   const toggleLine = (code: string) => {
     setFormData((prev) => ({
       ...prev,
@@ -341,9 +356,27 @@ export default function AlertsCenterPage() {
     }));
   };
 
-  const handleSubmit = (action: "send" | "schedule" | "preview") => {
-    // In production: API call
-    console.log(`Alert action: ${action}`, formData);
+  const handleSubmit = async (action: "send" | "schedule" | "preview") => {
+    if (action === "preview") {
+      setToast({ type: "info", message: "معاينة — لم يتم الإرسال" });
+      return;
+    }
+    try {
+      await createAlert({
+        type: formData.type,
+        severity: formData.severity,
+        title_ar: formData.messageAr.slice(0, 100),
+        message_ar: formData.messageAr,
+        affected_lines: formData.selectedLines,
+        affected_governorate: null,
+        status: action === "schedule" ? "scheduled" : "sent",
+      });
+      setToast({ type: "success", message: `تم ${action === "send" ? "إرسال" : "جدولة"} التنبيه بنجاح` });
+      setFormData({ type: "delay", severity: "warning", selectedLines: [], messageAr: "", messageEn: "" });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "فشل إرسال التنبيه";
+      setToast({ type: "error", message: msg });
+    }
   };
 
   const headerProps = {
@@ -360,6 +393,20 @@ export default function AlertsCenterPage() {
   return (
     <DashboardShell headerProps={headerProps}>
       <div className="space-y-6">
+        {/* Toast notification */}
+        {toast && (
+          <div className={`p-4 rounded-card border text-sm flex items-center justify-between ${
+            toast.type === "success"
+              ? "bg-brand-green/10 border-brand-green/20 text-brand-green"
+              : toast.type === "error"
+                ? "bg-cancelled/10 border-cancelled/20 text-cancelled"
+                : "bg-brand-blue/10 border-brand-blue/20 text-brand-blue"
+          }`}>
+            <span>{toast.message}</span>
+            <button onClick={() => setToast(null)} className="text-current opacity-50 hover:opacity-100 text-lg leading-none">&times;</button>
+          </div>
+        )}
+
         {/* ─── Alert Composer ─── */}
         <section>
           <div className="flex items-center gap-2 mb-4">
@@ -527,17 +574,18 @@ export default function AlertsCenterPage() {
             <div className="flex items-center gap-3">
               <button
                 onClick={() => handleSubmit("send")}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-input bg-brand-blue text-white text-sm font-bold hover:bg-brand-blue/90 transition-colors"
+                disabled={alertCreating}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-input bg-brand-blue text-white text-sm font-bold hover:bg-brand-blue/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <SendIcon />
-                إرسال الآن
+                {alertCreating ? "جاري الإرسال..." : <><SendIcon /> إرسال الآن</>}
               </button>
               <button
                 onClick={() => handleSubmit("schedule")}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-input bg-surface-2 border border-border text-text-secondary text-sm font-medium hover:bg-surface-3 transition-colors"
+                disabled={alertCreating}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-input bg-surface-2 border border-border text-text-secondary text-sm font-medium hover:bg-surface-3 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <ClockIconSmall />
-                جدولة
+                {alertCreating ? "جاري..." : "جدولة"}
               </button>
               <button
                 onClick={() => handleSubmit("preview")}

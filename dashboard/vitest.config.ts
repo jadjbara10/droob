@@ -8,6 +8,14 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./test/setup.ts'],
     include: ['test/**/*.test.{ts,tsx}'],
+    coverage: {
+      provider: 'v8',
+      thresholds: {
+        lines: 60,
+        branches: 50,
+        functions: 60,
+      },
+    },
     deps: {
       optimizer: {
         web: {
