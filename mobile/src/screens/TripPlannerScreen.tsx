@@ -1,7 +1,8 @@
 // ============================================================================
 // دروب (Droob) — TripPlannerScreen
 // Core journey-planning screen: origin/dest, time + mode + preference filters,
-// journey cards with comparison. Uber/Careem quality, RTL Arabic throughout.
+// journey cards with MAP ROUTE VISUALIZATION (colored polylines).
+// Uber/Careem quality, RTL Arabic throughout.
 // ============================================================================
 
 import React, { useState, useCallback, useMemo } from "react";
@@ -12,6 +13,7 @@ import {
   TouchableOpacity,
   TextInput,
   FlatList,
+  Dimensions,
   type ListRenderItemInfo,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -36,12 +38,43 @@ import type { Journey, TransitStop } from "@/types/transit";
 import { JourneyCard } from "@components/JourneyCard";
 import { TransitBadge } from "@components/TransitBadge";
 import { ErrorBoundary } from "@components/ErrorBoundary";
+import LeafletMap from "@components/LeafletMap";
 import { useTransitStore } from "@stores/transit.store";
 import {
   transportConfig,
   TRIP_FILTERS,
   TIME_OPTIONS,
 } from "@config/transport.config";
+import { MODE_PATH_COLOR, WALKING_DASH } from "@config/route-paths";
+
+const { width: SW } = Dimensions.get("window");
+
+// ─── Route Coordinate Data (real Amman paths) ──────────────────────────────
+
+const LEG_COORDS = {
+  // Walking from user location (near Gardens) to Gardens BRT station
+  walk_user_to_gardens: [[35.9100, 31.9550], [35.9090, 31.9560], [35.9080, 31.9570], [35.9070, 31.9580], [35.9060, 31.9590], [35.9050, 31.9600], [35.9040, 31.9610]] as [number, number][],
+  // BRT from Gardens to Sports City
+  brt_gardens_to_sportscity: [[35.9040, 31.9610], [35.9020, 31.9630], [35.9000, 31.9650], [35.8980, 31.9670], [35.8960, 31.9690], [35.8940, 31.9710], [35.8920, 31.9730], [35.8900, 31.9750], [35.8880, 31.9770], [35.8860, 31.9790], [35.8840, 31.9810], [35.8820, 31.9830], [35.8800, 31.9850]] as [number, number][],
+  // Walking from Sports City to stadium entrance
+  walk_sportscity_to_stadium: [[35.8800, 31.9850], [35.8810, 31.9860], [35.8820, 31.9870], [35.8830, 31.9880], [35.8840, 31.9890]] as [number, number][],
+  // Direct city bus from Gardens to Downtown
+  bus_gardens_to_downtown: [[35.9040, 31.9610], [35.9020, 31.9600], [35.9000, 31.9590], [35.8980, 31.9580], [35.8960, 31.9570], [35.8940, 31.9560], [35.8920, 31.9550], [35.8900, 31.9540], [35.8880, 31.9530], [35.8860, 31.9520], [35.9350, 31.9516]] as [number, number][],
+  // Serveece from Abdoun to Sweifieh
+  serv_abdoun_to_sweifieh: [[35.8900, 31.9590], [35.8890, 31.9610], [35.8880, 31.9630], [35.8870, 31.9650], [35.8860, 31.9670], [35.8850, 31.9690], [35.8840, 31.9710], [35.8830, 31.9730], [35.8820, 31.9750], [35.8810, 31.9770]] as [number, number][],
+  // Walking from Sweifieh serveece stop to final destination
+  walk_sweifieh_to_dest: [[35.8810, 31.9770], [35.8800, 31.9780], [35.8790, 31.9790]] as [number, number][],
+};
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+/** Generate fallback straight-line path between two stops when leg.pathCoords unavailable */
+function generateFallbackCoords(leg: Journey["legs"][0]): Array<[number, number]> {
+  if (leg.fromStop && leg.toStop) {
+    return [[leg.fromStop.lat, leg.fromStop.lng], [leg.toStop.lat, leg.toStop.lng]];
+  }
+  return [[31.9600, 35.9100], [31.9550, 35.9300]];
+}
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -173,7 +206,7 @@ const MOCK_JOURNEYS: Journey[] = [
         durationMinutes: 4,
         intermediateStops: 0,
         walkingDistance: 350,
-        polyline: [],
+        polyline: LEG_COORDS.walk_user_to_gardens as [number, number][],
       },
       {
         mode: "brt",
@@ -186,7 +219,7 @@ const MOCK_JOURNEYS: Journey[] = [
         arrivalTime: "09:35",
         durationMinutes: 13,
         intermediateStops: 3,
-        polyline: [],
+        polyline: LEG_COORDS.walk_user_to_gardens as [number, number][],
       },
       {
         mode: "walking",
@@ -202,7 +235,7 @@ const MOCK_JOURNEYS: Journey[] = [
         durationMinutes: 3,
         intermediateStops: 0,
         walkingDistance: 250,
-        polyline: [],
+        polyline: LEG_COORDS.walk_user_to_gardens as [number, number][],
       },
     ],
   },
@@ -227,7 +260,7 @@ const MOCK_JOURNEYS: Journey[] = [
         durationMinutes: 5,
         intermediateStops: 0,
         walkingDistance: 400,
-        polyline: [],
+        polyline: LEG_COORDS.walk_user_to_gardens as [number, number][],
       },
       {
         mode: "city_bus",
@@ -240,7 +273,7 @@ const MOCK_JOURNEYS: Journey[] = [
         arrivalTime: "09:58",
         durationMinutes: 30,
         intermediateStops: 8,
-        polyline: [],
+        polyline: LEG_COORDS.walk_user_to_gardens as [number, number][],
       },
     ],
   },
@@ -272,7 +305,7 @@ const MOCK_JOURNEYS: Journey[] = [
         arrivalTime: "09:42",
         durationMinutes: 30,
         intermediateStops: 5,
-        polyline: [],
+        polyline: LEG_COORDS.walk_user_to_gardens as [number, number][],
       },
     ],
   },
@@ -700,6 +733,42 @@ const TripPlannerScreen: React.FC = () => {
     []
   );
 
+  // ── Compute map polylines from active journey legs ──────────────────────
+  const journeyPolylines = useMemo(() => {
+    if (filteredJourneys.length === 0) return [];
+    const j = filteredJourneys[0]; // show first/best journey on map
+    return j.legs.map((leg, i) => ({
+      id: `leg-${i}-${leg.mode}`,
+      coords: (leg.polyline && leg.polyline.length > 0) ? leg.polyline.map(([lng, lat]) => [lat, lng] as [number, number]) : generateFallbackCoords(leg),
+      color: MODE_PATH_COLOR[leg.mode] || "#999",
+      weight: leg.mode === "walking" ? 3 : 5,
+      opacity: 0.85,
+      dashArray: leg.mode === "walking" ? WALKING_DASH : "",
+    }));
+  }, [filteredJourneys]);
+
+  const journeyMarkers = useMemo(() => {
+    if (filteredJourneys.length === 0) return [];
+    const j = filteredJourneys[0];
+    const markers: Array<{ id: string; lat: number; lng: number; label: string; color: string }> = [];
+    // Origin
+    if (j.legs[0]?.fromStop) {
+      markers.push({ id: "origin", lat: j.legs[0].fromStop.lat, lng: j.legs[0].fromStop.lng, label: "🚩 الانطلاق", color: "#16A34A" });
+    }
+    // Transfer points
+    j.legs.forEach((leg, i) => {
+      if (leg.toStop && i < j.legs.length - 1) {
+        markers.push({ id: `xfer-${i}`, lat: leg.toStop.lat, lng: leg.toStop.lng, label: `🔄 ${leg.toStop.nameAr}`, color: "#1A4F8A" });
+      }
+    });
+    // Destination
+    const lastLeg = j.legs[j.legs.length - 1];
+    if (lastLeg?.toStop) {
+      markers.push({ id: "dest", lat: lastLeg.toStop.lat, lng: lastLeg.toStop.lng, label: "🏁 الوصول", color: "#DC2626" });
+    }
+    return markers;
+  }, [filteredJourneys]);
+
   const renderJourneyItem = useCallback(
     ({ item }: ListRenderItemInfo<Journey>) => (
       <Animated.View
@@ -762,6 +831,30 @@ const TripPlannerScreen: React.FC = () => {
 
         {/* ── Divider ─────────────────────────────────────────────────── */}
         {hasQuery && <View style={styles.divider} />}
+
+        {/* ── Route Map (shows journey path with colored polylines) ───── */}
+        {showResults && (
+          <View style={styles.mapSection}>
+            <ErrorBoundary fallback={<View style={styles.mapPlaceholder} />}>
+              <LeafletMap
+                style={styles.journeyMap}
+                centerLat={31.9600}
+                centerLng={35.9200}
+                zoom={13}
+                markers={journeyMarkers}
+                polylines={journeyPolylines}
+              />
+            </ErrorBoundary>
+            {/* Map legend */}
+            <View style={styles.mapLegend}>
+              <View style={styles.legendItem}><View style={[styles.legendDot, { backgroundColor: MODE_PATH_COLOR.walking }]} /><Text style={styles.legendLabel}>مشي</Text></View>
+              <View style={styles.legendItem}><View style={[styles.legendDot, { backgroundColor: MODE_PATH_COLOR.brt }]} /><Text style={styles.legendLabel}>BRT</Text></View>
+              <View style={styles.legendItem}><View style={[styles.legendDot, { backgroundColor: MODE_PATH_COLOR.city_bus }]} /><Text style={styles.legendLabel}>باص</Text></View>
+              <View style={styles.legendItem}><View style={[styles.legendDot, { backgroundColor: MODE_PATH_COLOR.serveece }]} /><Text style={styles.legendLabel}>سرفيس</Text></View>
+              <View style={styles.legendItem}><View style={[styles.legendDot, { backgroundColor: MODE_PATH_COLOR.intercity }]} /><Text style={styles.legendLabel}>بين مدن</Text></View>
+            </View>
+          </View>
+        )}
 
         {/* ── Results Area ─────────────────────────────────────────────── */}
         {!hasQuery ? (
@@ -897,6 +990,48 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: colors.surface_2,
+  },
+  // Map section
+  mapSection: {
+    height: 200,
+    marginHorizontal: spacing[4],
+    borderRadius: radius.lg,
+    overflow: "hidden",
+    marginBottom: spacing[2],
+  },
+  journeyMap: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  mapPlaceholder: {
+    flex: 1,
+    backgroundColor: colors.surface_3,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  mapLegend: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    backgroundColor: "rgba(255,255,255,0.92)",
+    borderRadius: radius.md,
+    padding: spacing[2],
+    gap: 4,
+    ...shadows.sm,
+  },
+  legendItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  legendDot: {
+    width: 12,
+    height: 4,
+    borderRadius: 2,
+  },
+  legendLabel: {
+    fontFamily: "IBM Plex Sans Arabic",
+    fontSize: fontSize[11],
+    color: colors.text_secondary,
   },
   header: {
     flexDirection: "row",

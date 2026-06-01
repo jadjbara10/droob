@@ -20,12 +20,18 @@ interface Props {
   centerLng?: number;
   zoom?: number;
   markers?: Array<{ id: string; lat: number; lng: number; label: string; color?: string }>;
+  polylines?: Array<{ id: string; coords: Array<[number, number]>; color: string; weight?: number; opacity?: number; dashArray?: string }>;
 }
 
-function buildHTML(centerLat: number, centerLng: number, zoom: number, markers: Props["markers"]): string {
+function buildHTML(centerLat: number, centerLng: number, zoom: number, markers: Props["markers"], polylines: Props["polylines"]): string {
   const markerJS = (markers || []).map(m =>
     `L.circleMarker([${m.lat},${m.lng}],{radius:8,fillColor:'${m.color||"#1A4F8A"}',color:'#fff',weight:2,fillOpacity:0.9}).bindPopup('${m.label}').addTo(map);`
   ).join("\n");
+
+  const polylineJS = (polylines || []).map(p => {
+    const coordsStr = p.coords.map(c => `[${c[0]},${c[1]}]`).join(",");
+    return `L.polyline([${coordsStr}],{color:'${p.color}',weight:${p.weight||4},opacity:${p.opacity||0.8},dashArray:'${p.dashArray||""}'}).bindPopup('${p.id}').addTo(map);`;
+  }).join("\n");
 
   return `<!DOCTYPE html><html><head>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
@@ -35,12 +41,13 @@ function buildHTML(centerLat: number, centerLng: number, zoom: number, markers: 
 </head><body><div id="map"></div><script>
 var map=L.map('map',{zoomControl:false,attributionControl:false}).setView([${centerLat},${centerLng}],${zoom});
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(map);
+${polylineJS}
 ${markerJS}
 window.addEventListener('message',function(e){var d=JSON.parse(e.data);if(d.action==='flyTo')map.flyTo([d.lat,d.lng],d.zoom||14,{duration:0.8})});
 </script></body></html>`;
 }
 
-export const LeafletMap = forwardRef<LeafletMapRef, Props>(({ style, centerLat=31.9539, centerLng=35.9106, zoom=13, markers }, ref) => {
+export const LeafletMap = forwardRef<LeafletMapRef, Props>(({ style, centerLat=31.9539, centerLng=35.9106, zoom=13, markers, polylines }, ref) => {
   const webViewRef = useRef<WebView>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
@@ -53,7 +60,7 @@ export const LeafletMap = forwardRef<LeafletMapRef, Props>(({ style, centerLat=3
     clearMarkers: () => {},
   }));
 
-  const html = buildHTML(centerLat, centerLng, zoom, markers);
+  const html = buildHTML(centerLat, centerLng, zoom, markers, polylines);
 
   return (
     <View style={[styles.container, style]}>

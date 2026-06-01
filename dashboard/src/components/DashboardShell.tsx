@@ -79,10 +79,9 @@ const NAV_ITEMS: NavItem[] = [
     icon: <HomeIcon className="w-5 h-5" />,
   },
   {
-    href: "/fleet",
-    label: "إدارة الأسطول",
+    href: "/ads",
+    label: "إدارة الإعلانات",
     icon: <TruckIcon className="w-5 h-5" />,
-    badge: 3,
   },
   {
     href: "/alerts",
