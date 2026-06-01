@@ -1,6 +1,15 @@
 // ============================================================================
 // دروب (Droob) — Route Paths (polylines) for Amman transit lines
 // Each route has coordinate pairs [lat, lng] for drawing on the map
+//
+// SOURCES:
+// - ArcGIS Transportation_Service (EPSG:28191 → WGS84 conversion)
+//   https://www.ammancitygis.gov.jo/arcgis/rest/services/Transportation_Service/MapServer
+// - ammancitygis.gov.jo/Transportation — 406 routes indexed by terminal/company
+// - Wikipedia: Amman BRT — stations, lines, opening dates
+//
+// BRT routes 1-6: Real GPS coordinates extracted from official GIS portal
+// Other routes: Estimated coordinates based on Amman geography
 // ============================================================================
 
 export interface RoutePath {
@@ -11,27 +20,39 @@ export interface RoutePath {
 }
 
 // ─── BRT Routes (fixed stations, dedicated lanes) ──────────────────────────
+// Source: ammancitygis.gov.jo ArcGIS Transportation_Service (EPSG:28191 → WGS84)
 
 export const BRT1_PATH: RoutePath = {
   id: "brt1",
-  name: "BRT1 — صويلح ← المحطة",
+  name: "BRT 99 — صويلح ← المتحف (وسط البلد)",
   color: "#E60026",
   coords: [
-    [32.0185, 35.8500], // صويلح
-    [32.0140, 35.8570],
-    [32.0100, 35.8640],
-    [32.0050, 35.8710], // الجامعة الأردنية
-    [32.0000, 35.8760],
-    [31.9950, 35.8820],
-    [31.9900, 35.8880], // المدينة الرياضية
-    [31.9850, 35.8920],
-    [31.9800, 35.8980], // مجمع الشمال
-    [31.9750, 35.9040], // الجاردنز
-    [31.9700, 35.9100], // دوار الواحة
-    [31.9650, 35.9160],
-    [31.9600, 35.9220], // الرابع
-    [31.9550, 35.9280], // وسط البلد
-    [31.9516, 35.9335], // المحطة (رأس العين)
+    [32.02233, 35.84529], // صويلح
+    [32.02464, 35.85623],
+    [32.01726, 35.86626],
+    [32.01139, 35.87072],
+    [32.00535, 35.87321],
+    [32.00061, 35.87756], // الجامعة الأردنية
+    [31.99443, 35.88724],
+    [31.98894, 35.89452],
+    [31.98593, 35.89792], // المدينة الرياضية
+    [31.98572, 35.89749],
+    [31.98623, 35.89843],
+    [31.98737, 35.90177],
+    [31.98739, 35.90519],
+    [31.99143, 35.91291],
+    [31.99326, 35.93102],
+    [31.99115, 35.93853],
+    [31.98965, 35.94434],
+    [31.98942, 35.94427],
+    [31.98590, 35.89801],
+    [31.98529, 35.89804],
+    [31.98785, 35.94341],
+    [31.98033, 35.94018],
+    [31.97517, 35.93880],
+    [31.96786, 35.94786],
+    [31.96384, 35.95521],
+    [31.96137, 35.95892], // المتحف / وسط البلد
   ],
 };
 
@@ -220,3 +241,7 @@ export const MODE_PATH_COLOR: Record<string, string> = {
 
 // Walking path style (dashed)
 export const WALKING_DASH = "8,8";
+
+// ─── Generated data available as standalone imports ─────────────────────────
+// import { SERV_COASTER_ROUTES } from "./serveece-routes";  // 306 routes
+// import { BUS_STOPS } from "./bus-stops";                    // 454 stops
