@@ -66,7 +66,8 @@ export async function alertsRoutes(app: FastifyInstance) {
     return reply.send(toCamelCase(alert));
   });
 
-  app.post("/", async (request: FastifyRequest, reply: FastifyReply) => {
+  // POST /api/v1/alerts — Create alert (requires auth)
+  app.post("/", { preHandler: [app.authenticate] }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const body = alertCreateSchema.parse(request.body);
       const [newAlert] = await db.insert(alerts).values({
@@ -90,7 +91,8 @@ export async function alertsRoutes(app: FastifyInstance) {
     }
   });
 
-  app.patch("/:id", async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
+  // PATCH /api/v1/alerts/:id — Update alert (requires auth)
+  app.patch("/:id", { preHandler: [app.authenticate] }, async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
     try {
       const body = alertCreateSchema.partial().parse(request.body);
       const updateData: any = { updated_at: new Date() };
@@ -116,8 +118,17 @@ export async function alertsRoutes(app: FastifyInstance) {
     }
   });
 
-  // POST /alerts/emergency — Big red button: broadcast to all users immediately
-  app.post("/emergency", async (request: FastifyRequest, reply: FastifyReply) => {
+  // POST /alerts/emergency — Requires auth + admin/editor role
+  app.post("/emergency", { preHandler: [app.authenticate] }, async (request: FastifyRequest, reply: FastifyReply) => {
+    // Role check: only admin, super_admin, editor, or operator can broadcast emergencies
+    const allowedRoles = ["super_admin", "admin", "editor", "operator"];
+    const userRole = (request as any).userRole;
+    if (!userRole || !allowedRoles.includes(userRole)) {
+      return reply.status(403).send({
+        error: "Forbidden",
+        message: "صلاحيات غير كافية. مطلوب دور مشرف أو محرر لبث تنبيه طارئ."
+      });
+    }
     try {
       const body = z.object({
         message_ar: z.string().min(1),

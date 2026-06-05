@@ -4,6 +4,10 @@
 // journey cards with MAP ROUTE VISUALIZATION (colored polylines).
 // Uber/Careem quality, RTL Arabic throughout.
 // ============================================================================
+import { useInterstitialAd } from "@components/AdInterstitial";
+import { useRewardedAd } from "@components/AdRewarded";
+import { AD_INTERSTITIAL_TRIP, AD_REWARDED_EXTRA_TRIPS, MAX_FREE_TRIPS_PER_DAY } from "@config/ads";
+// ============================================================================
 
 import React, { useState, useCallback, useMemo } from "react";
 import {
@@ -17,7 +21,7 @@ import {
   type ListRenderItemInfo,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useRoute } from "@react-navigation/native";
 import Animated, {
   FadeInDown,
   FadeOutUp,
@@ -34,12 +38,15 @@ import {
   layout as lo,
 } from "@theme/tokens";
 import type { TransitMode } from "@theme/tokens";
-import type { Journey, TransitStop } from "@/types/transit";
+import type { Journey as CanonicalJourney } from "@/types/transit.types";
 import { JourneyCard } from "@components/JourneyCard";
 import { TransitBadge } from "@components/TransitBadge";
 import { ErrorBoundary } from "@components/ErrorBoundary";
 import LeafletMap from "@components/LeafletMap";
 import { useTransitStore } from "@stores/transit.store";
+import { useAppStore } from "@stores/app.store";
+import { canonicalJourneyToDisplay } from "@/services/api";
+import type { Journey, TransitStop } from "@/types/transit";
 import {
   transportConfig,
   TRIP_FILTERS,
@@ -590,6 +597,33 @@ const TripPlannerScreen: React.FC = () => {
   ]);
   const [showSearch, setShowSearch] = useState(false);
   const [searchTarget, setSearchTarget] = useState<"from" | "to">("from");
+  const [fromCoords, setFromCoords] = useState<[number, number] | null>(null);
+  const [toCoords, setToCoords] = useState<[number, number] | null>(null);
+
+  // Ad hooks
+  const interstitial = useInterstitialAd(AD_INTERSTITIAL_TRIP, "trip");
+  const rewardedTrips = useRewardedAd(AD_REWARDED_EXTRA_TRIPS, "extra_trip");
+
+  // Handle incoming coordinates from MapScreen selection
+  
+  // Handle incoming coordinates from MapScreen via Zustand store (reliable)
+  const pendingMapCoords = useAppStore((s) => s.pendingMapCoords);
+  const pendingMapTarget = useAppStore((s) => s.pendingMapTarget);
+  const clearPendingMapSelection = useAppStore((s) => s.clearPendingMapSelection);
+
+  React.useEffect(() => {
+    if (pendingMapCoords && pendingMapTarget) {
+      const label = `${pendingMapCoords.lat.toFixed(4)}, ${pendingMapCoords.lng.toFixed(4)}`;
+      if (pendingMapTarget === "from") {
+        setFromCoords([pendingMapCoords.lat, pendingMapCoords.lng]);
+        setFromLabel(label);
+      } else {
+        setToCoords([pendingMapCoords.lat, pendingMapCoords.lng]);
+        setToLabel(label);
+      }
+      clearPendingMapSelection();
+    }
+  }, [pendingMapCoords, pendingMapTarget, clearPendingMapSelection]);
 
   // ── Store ──────────────────────────────────────────────────────────────
   const storeJourneys = useTransitStore((s) => s.journeys);
@@ -597,18 +631,14 @@ const TripPlannerScreen: React.FC = () => {
   const storeError = useTransitStore((s) => s.error);
   const storeLoading = useTransitStore((s) => s.isLoading);
 
-  /** Combined display journeys: real store data or fallback to mock. */
+  /** Combined display journeys: real store data transformed for UI. */
   const displayJourneys: Journey[] = useMemo(() => {
     if (storeJourneys.length > 0) {
-      // Convert store-format journeys (transit.types.ts) to display format (transit.ts)
-      // For now fall back to mocks since the store Journey differs from
-      // the JourneyCard's expected shape. In production the API would return
-      // the correct shape.
-      return MOCK_JOURNEYS;
+      // Transform canonical journeys (from backend/store) → display format
+      return (storeJourneys as unknown as CanonicalJourney[]).map(canonicalJourneyToDisplay);
     }
-    if (!fromLabel && !toLabel) return [];
-    return MOCK_JOURNEYS;
-  }, [storeJourneys, fromLabel, toLabel]);
+    return []; // No mock fallback — show empty/idle state when no results
+  }, [storeJourneys]);
 
   // Sorted by active preference
   const sortedJourneys = useMemo(() => {
@@ -673,21 +703,21 @@ const TripPlannerScreen: React.FC = () => {
   const handleSearch = useCallback(async () => {
     if (!fromLabel || !toLabel) return;
     try {
-      await planJourney(
-        transportConfig.ammanCenter.lat,
-        transportConfig.ammanCenter.lng,
-        31.9636,
-        35.9156,
-        {
-          preferredModes: selectedModes.join(","),
-          timeType: timeKey === "arrive_by" ? "arrive" : "depart",
-          preference: activePref,
-        }
-      );
+      // Use actual coordinates from fromCoords/toCoords or default to Amman center
+      const fromLat = fromCoords?.[0] ?? transportConfig.ammanCenter.lat;
+      const fromLng = fromCoords?.[1] ?? transportConfig.ammanCenter.lng;
+      const toLat = toCoords?.[0] ?? 31.9636;
+      const toLng = toCoords?.[1] ?? 35.9156;
+
+      await planJourney(fromLat, fromLng, toLat, toLng, {
+        preferredModes: selectedModes.join(","),
+        timeType: timeKey === "arrive_by" ? "arrive" : "depart",
+        preference: activePref,
+      });
     } catch {
       // Store sets error state — we render it via ErrorState
     }
-  }, [fromLabel, toLabel, selectedModes, timeKey, activePref, planJourney]);
+  }, [fromLabel, toLabel, fromCoords, toCoords, selectedModes, timeKey, activePref, planJourney]);
 
   const handleCardSelect = useCallback(
     (journey: Journey) => {
@@ -946,6 +976,10 @@ const TripPlannerScreen: React.FC = () => {
                 onPress={() => {
                   if (searchTarget === "from") {
                     setFromLabel("موقعي الحالي");
+                    setFromCoords(null);
+                  } else {
+                    setToLabel("موقعي الحالي");
+                    setToCoords(null);
                   }
                   setShowSearch(false);
                 }}
@@ -953,6 +987,22 @@ const TripPlannerScreen: React.FC = () => {
               >
                 <View style={styles.currentLocDot} />
                 <Text style={styles.currentLocText}>موقعي الحالي</Text>
+              </TouchableOpacity>
+
+              {/* Select on Map */}
+              <TouchableOpacity
+                style={styles.selectOnMapBtn}
+                onPress={() => {
+                  setShowSearch(false);
+                  navigation.navigate("Map", {
+                    selectionMode: true,
+                    selectionTarget: searchTarget,
+                  });
+                }}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.selectOnMapIcon}>🗺️</Text>
+                <Text style={styles.selectOnMapText}>تحديد على الخارطة</Text>
               </TouchableOpacity>
 
               {/* Quick Stops */}
@@ -1447,6 +1497,22 @@ const styles = StyleSheet.create({
     backgroundColor: colors.on_time,
   },
   currentLocText: {
+    fontFamily: "IBM Plex Sans Arabic",
+    fontSize: fontSize[14],
+    fontWeight: fontWeight.semiBold,
+    color: colors.brand_blue,
+  },
+  selectOnMapBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: spacing[3],
+    backgroundColor: colors.brand_blue + "08",
+    borderRadius: radius.card,
+    gap: spacing[2],
+    marginBottom: spacing[4],
+  },
+  selectOnMapIcon: { fontSize: 20 },
+  selectOnMapText: {
     fontFamily: "IBM Plex Sans Arabic",
     fontSize: fontSize[14],
     fontWeight: fontWeight.semiBold,

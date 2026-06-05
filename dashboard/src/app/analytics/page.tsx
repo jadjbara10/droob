@@ -188,7 +188,7 @@ const TopDestinations: React.FC<{ data: Destination[] }> = ({ data }) => {
     <div className="space-y-1 w-full">
       {data.map((d) => (
         <div key={d.name} className="group flex items-center gap-3" style={{ height: barH }}>
-          <span className="w-28 text-xs text-text-secondary truncate flex-shrink-0" title={d.name}>
+          <span className="w-28 text-xs text-secondary truncate flex-shrink-0" title={d.name}>
             {d.name}
           </span>
           <div className="flex-1 h-4 bg-surface-3 rounded-full overflow-hidden">
@@ -199,13 +199,13 @@ const TopDestinations: React.FC<{ data: Destination[] }> = ({ data }) => {
               className="h-full rounded-full bg-brand-blue group-hover:opacity-80 transition-opacity"
             />
           </div>
-          <span className="w-16 text-xs tabular-nums text-text-secondary text-right flex-shrink-0 font-medium">
+          <span className="w-16 text-xs tabular-nums text-secondary text-right flex-shrink-0 font-medium">
             {d.trips.toLocaleString("ar-JO")}
           </span>
           <span className="w-6 text-xs text-center flex-shrink-0">
             {d.trend === "up" && <span className="text-brand-green">↑</span>}
-            {d.trend === "down" && <span className="text-cancelled">↓</span>}
-            {d.trend === "flat" && <span className="text-text-tertiary">→</span>}
+            {d.trend === "down" && <span className="text-critical">↓</span>}
+            {d.trend === "flat" && <span className="text-muted">→</span>}
           </span>
         </div>
       ))}
@@ -219,27 +219,27 @@ const RetentionTable: React.FC<{ data: RetentionCohort[] }> = ({ data }) => {
   const getColor = (pct: number): string => {
     if (pct >= 50) return "bg-brand-green/20 text-brand-green";
     if (pct >= 40) return "bg-delayed/20 text-delayed";
-    return "bg-cancelled/10 text-cancelled";
+    return "bg-critical/10 text-critical";
   };
 
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-border">
-            <th className="text-right py-3 px-4 text-xs font-medium text-text-tertiary">الفوج</th>
-            <th className="text-right py-3 px-4 text-xs font-medium text-text-tertiary">الحجم</th>
-            <th className="text-center py-3 px-4 text-xs font-medium text-text-tertiary">الأسبوع ١</th>
-            <th className="text-center py-3 px-4 text-xs font-medium text-text-tertiary">الأسبوع ٢</th>
-            <th className="text-center py-3 px-4 text-xs font-medium text-text-tertiary">الأسبوع ٤</th>
-            <th className="text-center py-3 px-4 text-xs font-medium text-text-tertiary">الأسبوع ٨</th>
+          <tr className="border-b border-gray-800">
+            <th className="text-right py-3 px-4 text-xs font-medium text-muted">الفوج</th>
+            <th className="text-right py-3 px-4 text-xs font-medium text-muted">الحجم</th>
+            <th className="text-center py-3 px-4 text-xs font-medium text-muted">الأسبوع ١</th>
+            <th className="text-center py-3 px-4 text-xs font-medium text-muted">الأسبوع ٢</th>
+            <th className="text-center py-3 px-4 text-xs font-medium text-muted">الأسبوع ٤</th>
+            <th className="text-center py-3 px-4 text-xs font-medium text-muted">الأسبوع ٨</th>
           </tr>
         </thead>
         <tbody>
           {data.map((row) => (
-            <tr key={row.cohort} className="border-b border-border hover:bg-surface-2 transition-colors">
-              <td className="py-3 px-4 font-medium text-text-primary text-right">{row.cohort}</td>
-              <td className="py-3 px-4 tabular-nums text-text-secondary text-right">
+            <tr key={row.cohort} className="border-b border-gray-800 hover:bg-surface-2 transition-colors">
+              <td className="py-3 px-4 font-medium text-primary text-right">{row.cohort}</td>
+              <td className="py-3 px-4 tabular-nums text-secondary text-right">
                 {row.size.toLocaleString("ar-JO")}
               </td>
               {[row.week1, row.week2, row.week4, row.week8].map((val, i) => (
@@ -282,7 +282,7 @@ export default function AnalyticsPage() {
             className={`text-xs px-3 py-1.5 rounded-pill font-medium transition-all ${
               timeRange === r.value
                 ? "bg-brand-blue text-white"
-                : "bg-surface-2 text-text-secondary hover:bg-surface-3"
+                : "bg-surface-2 text-secondary hover:bg-surface-3"
             }`}
           >
             {r.label}
@@ -296,20 +296,20 @@ export default function AnalyticsPage() {
     <DashboardShell headerProps={headerProps}>
       <div className="space-y-6">
         {/* ─── DAU / MAU Trend ─── */}
-        <section className="p-6 bg-surface rounded-card border border-border shadow-sm">
+        <section className="p-6 bg-surface rounded-card border border-gray-800 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h2 className="text-lg font-bold text-text-primary">المستخدمون النشطون</h2>
-              <p className="text-xs text-text-tertiary mt-0.5">مقارنة بين المستخدمين اليوميين والشهريين</p>
+              <h2 className="text-lg font-bold text-primary">المستخدمون النشطون</h2>
+              <p className="text-xs text-muted mt-0.5">مقارنة بين المستخدمين اليوميين والشهريين</p>
             </div>
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-1.5 text-xs">
                 <span className="w-3 h-0.5 rounded-full bg-brand-blue block" />
-                <span className="text-text-secondary">يومي (DAU)</span>
+                <span className="text-secondary">يومي (DAU)</span>
               </div>
               <div className="flex items-center gap-1.5 text-xs">
                 <span className="w-3 h-0.5 rounded-full bg-brand-green block" />
-                <span className="text-text-secondary">شهري (MAU)</span>
+                <span className="text-secondary">شهري (MAU)</span>
               </div>
             </div>
           </div>
@@ -317,45 +317,43 @@ export default function AnalyticsPage() {
             {/* DAU line */}
             <AreaChart
               data={DAILY_USERS.map((d) => ({ label: d.day, value: d.dau }))}
-              color="var(--brand-blue)"
-              gradientFrom="var(--brand-blue)"
-              gradientTo="transparent"
+              color="#00A3FF"
             />
           </div>
           {/* Summary cards */}
-          <div className="grid grid-cols-4 gap-4 mt-4 pt-4 border-t border-border">
+          <div className="grid grid-cols-4 gap-4 mt-4 pt-4 border-t border-gray-800">
             <div className="text-center">
-              <div className="text-2xl font-bold tabular-nums text-text-primary">
+              <div className="text-2xl font-bold tabular-nums text-primary">
                 {Math.round((DAILY_USERS[DAILY_USERS.length - 1]?.dau ?? 0) / 1000)}K
               </div>
-              <div className="text-[11px] text-text-tertiary mt-0.5">متوسط اليومي</div>
+              <div className="text-[11px] text-muted mt-0.5">متوسط اليومي</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold tabular-nums text-text-primary">
+              <div className="text-2xl font-bold tabular-nums text-primary">
                 {Math.round((DAILY_USERS[DAILY_USERS.length - 1]?.mau ?? 0) / 1000)}K
               </div>
-              <div className="text-[11px] text-text-tertiary mt-0.5">المستخدمون الشهريون</div>
+              <div className="text-[11px] text-muted mt-0.5">المستخدمون الشهريون</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold tabular-nums text-brand-green">
                 +14.2%
               </div>
-              <div className="text-[11px] text-text-tertiary mt-0.5">نسبة النمو</div>
+              <div className="text-[11px] text-muted mt-0.5">نسبة النمو</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold tabular-nums text-text-primary">
+              <div className="text-2xl font-bold tabular-nums text-primary">
                 4.2
               </div>
-              <div className="text-[11px] text-text-tertiary mt-0.5">جلسات/مستخدم</div>
+              <div className="text-[11px] text-muted mt-0.5">جلسات/مستخدم</div>
             </div>
           </div>
         </section>
 
         {/* ─── Peak Hours Heatmap ─── */}
-        <section className="p-6 bg-surface rounded-card border border-border shadow-sm">
+        <section className="p-6 bg-surface rounded-card border border-gray-800 shadow-sm">
           <div>
-            <h2 className="text-lg font-bold text-text-primary">أوقات الذروة حسب اليوم</h2>
-            <p className="text-xs text-text-tertiary mt-0.5">عدد الرحلات حسب الساعة واليوم (آخر ٣٠ يوم)</p>
+            <h2 className="text-lg font-bold text-primary">أوقات الذروة حسب اليوم</h2>
+            <p className="text-xs text-muted mt-0.5">عدد الرحلات حسب الساعة واليوم (آخر ٣٠ يوم)</p>
           </div>
           <div className="mt-4">
             <PeakHoursHeatmap />
@@ -365,19 +363,19 @@ export default function AnalyticsPage() {
         {/* ─── Top Destinations + Retention ─── */}
         <div className="grid grid-cols-2 gap-4">
           {/* Top Destinations */}
-          <section className="p-6 bg-surface rounded-card border border-border shadow-sm">
+          <section className="p-6 bg-surface rounded-card border border-gray-800 shadow-sm">
             <div className="mb-4">
-              <h2 className="text-lg font-bold text-text-primary">أكثر الوجهات بحثاً</h2>
-              <p className="text-xs text-text-tertiary mt-0.5">إجمالي مرات البحث عن الوجهات</p>
+              <h2 className="text-lg font-bold text-primary">أكثر الوجهات بحثاً</h2>
+              <p className="text-xs text-muted mt-0.5">إجمالي مرات البحث عن الوجهات</p>
             </div>
             <TopDestinations data={DESTINATIONS} />
           </section>
 
           {/* Retention */}
-          <section className="p-6 bg-surface rounded-card border border-border shadow-sm">
+          <section className="p-6 bg-surface rounded-card border border-gray-800 shadow-sm">
             <div className="mb-4">
-              <h2 className="text-lg font-bold text-text-primary">الاحتفاظ بالمستخدمين</h2>
-              <p className="text-xs text-text-tertiary mt-0.5">نسبة العودة حسب الفوج</p>
+              <h2 className="text-lg font-bold text-primary">الاحتفاظ بالمستخدمين</h2>
+              <p className="text-xs text-muted mt-0.5">نسبة العودة حسب الفوج</p>
             </div>
             <RetentionTable data={RETENTION_DATA} />
           </section>

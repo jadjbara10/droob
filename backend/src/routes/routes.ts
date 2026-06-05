@@ -136,8 +136,8 @@ export async function routesRoutes(app: FastifyInstance) {
       return reply.send(response);
   });
 
-  // POST /api/v1/routes — Create route
-  app.post("/", async (request: FastifyRequest, reply: FastifyReply) => {
+  // POST /api/v1/routes — Create route (requires auth)
+  app.post("/", { preHandler: [app.authenticate] }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const body = routeCreateSchema.parse(request.body);
 
@@ -188,8 +188,8 @@ export async function routesRoutes(app: FastifyInstance) {
     }
   });
 
-  // PATCH /api/v1/routes/:id
-  app.patch("/:id", async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
+  // PATCH /api/v1/routes/:id — Update route (requires auth)
+  app.patch("/:id", { preHandler: [app.authenticate] }, async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
     try {
       const { id } = request.params;
       const body = routeCreateSchema.partial().parse(request.body);
@@ -260,8 +260,8 @@ export async function routesRoutes(app: FastifyInstance) {
     return reply.send({ stops: stopsData });
   });
 
-  // POST /api/v1/routes/:id/stops — Add stop to route
-  app.post("/:id/stops", async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
+  // POST /api/v1/routes/:id/stops — Add stop to route (requires auth)
+  app.post("/:id/stops", { preHandler: [app.authenticate] }, async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
     try {
       const { id } = request.params;
       const body = z.object({
@@ -296,8 +296,8 @@ export async function routesRoutes(app: FastifyInstance) {
     }
   });
 
-  // DELETE /api/v1/routes/:id/stops/:stopId — Remove stop from route
-  app.delete("/:id/stops/:stopId", async (request: FastifyRequest<{ Params: { id: string; stopId: string } }>, reply: FastifyReply) => {
+  // DELETE /api/v1/routes/:id/stops/:stopId — Remove stop from route (requires auth)
+  app.delete("/:id/stops/:stopId", { preHandler: [app.authenticate] }, async (request: FastifyRequest<{ Params: { id: string; stopId: string } }>, reply: FastifyReply) => {
     const { id, stopId } = request.params;
 
     const deleted = await db.delete(routeStops)

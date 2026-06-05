@@ -1250,6 +1250,86 @@ export async function updateSettings(_data: Partial<AppSettings>): Promise<{ ok:
   return { ok: true };
 }
 
+// ─── Type Transformation Layer ──────────────────────────────────────────────
+// Converts canonical types (transit.types.ts, matching backend) to the shapes
+// expected by UI components (JourneyCard, DepartureCard, StopCard, etc.).
+// This is the bridge that allows real API data to reach the UI.
+
+export function canonicalStopToDisplay(
+  s: Stop & { distance_m?: number },
+): import("@/types/transit").TransitStop {
+  return {
+    id: s.id,
+    nameAr: s.name_ar,
+    nameEn: s.name_en,
+    code: s.code,
+    lat: s.lat,
+    lng: s.lng,
+    modes: [], // Populated by caller from route data
+    isLandmark: s.isTerminal ?? false,
+    isAccessible: s.hasAccessibility ?? false,
+    distance: s.distance_m ?? undefined,
+  };
+}
+
+export function canonicalJourneyToDisplay(
+  j: Journey,
+): import("@/types/transit").Journey {
+  return {
+    id: j.id,
+    legs: j.legs.map(canonicalLegToDisplay),
+    totalDurationMinutes: j.duration_min,
+    walkingMinutes: Math.round(j.walkingDistance_km * 12), // ~5 km/h walk speed
+    transfers: Math.max(0, j.legs.filter((l) => l.mode !== "walking").length - 1),
+    fareAmount: j.totalFare_jod,
+    fareCurrency: "د.أ",
+    departureTime: j.departureTime,
+    arrivalTime: j.arrivalTime,
+    modes: [...new Set(j.legs.filter((l) => l.mode !== "walking").map((l) => l.mode as import("@/types/transit").TransitMode))] as import("@/types/transit").TransitMode[],
+  };
+}
+
+function canonicalLegToDisplay(
+  leg: JourneyLeg,
+): import("@/types/transit").RouteLeg {
+  return {
+    mode: leg.mode as import("@/types/transit").TransitMode,
+    lineCode: leg.routeCode ?? undefined,
+    lineNameAr: leg.routeName_ar ?? undefined,
+    lineNameEn: leg.routeName_en ?? undefined,
+    fromStop: canonicalStopToDisplay({ ...leg.fromStop, distance_m: undefined } as any),
+    toStop: canonicalStopToDisplay({ ...leg.toStop, distance_m: undefined } as any),
+    departureTime: leg.departureTime,
+    arrivalTime: leg.arrivalTime,
+    durationMinutes: leg.duration_min,
+    intermediateStops: 0,
+    polyline: leg.polyline ?? [],
+    walkingDistance: leg.mode === "walking" ? Math.round(leg.distance_km * 1000) : undefined,
+  };
+}
+
+export function canonicalDepartureToDisplay(
+  d: Departure,
+): import("@/types/transit").Departure {
+  const fare = typeof d.fare === "number" ? d.fare : ((d.fare as any)?.min ?? 0);
+  return {
+    id: d.tripId ?? d.routeId,
+    stopId: "",
+    lineCode: d.code,
+    lineNameAr: d.name_ar,
+    lineNameEn: d.name_en,
+    destinationAr: d.name_ar,
+    destinationEn: d.name_en,
+    mode: d.mode as import("@/types/transit").TransitMode,
+    scheduledAt: d.departureTime,
+    estimatedAt: d.departureTime,
+    countdownMinutes: d.waitMinutes,
+    status: (d.status === "on_time" ? "on_time" : d.status === "delayed" ? "delayed" : "cancelled") as import("@/types/transit").DepartureStatus,
+    occupancy: (d.occupancy ?? "partial") as import("@/types/transit").OccupancyLevel,
+    hasAlert: false,
+  };
+}
+
 // ─── Internal Helpers ───────────────────────────────────────────────────────
 
 /**

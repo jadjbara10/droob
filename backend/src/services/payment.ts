@@ -13,9 +13,7 @@
  */
 
 import { db } from "../db/index.js";
-// TODO: Add payments, tickets, walletTransactions tables to schema
-// import { payments, tickets, walletTransactions } from "../../drizzle/schema.js";
-const payments: any = null, tickets: any = null, walletTransactions: any = null;
+import { payments, tickets, walletTransactions } from "../../drizzle/schema.js";
 import { eq, desc, sql } from "drizzle-orm";
 import { randomUUID } from "crypto";
 

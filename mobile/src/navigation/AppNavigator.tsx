@@ -1,58 +1,62 @@
 // ============================================================================
-// دروب (Droob) — App Navigation (Guest-first, no login required)
-// Flow: Onboarding → MainTabs (Home, Planner, Departures)
-// Stack: Search (modal), RouteDetail, StopDetail, JourneyDetail, Navigation,
-//        Alerts, SavedRoutes
-// Auth available later for payment features
+// دروب (Droob) — App Navigation (Guest-first, 4 tabs, i18n-ready)
+// Flow: Onboarding (once) → MainTabs (Home, Planner, Routes, Profile)
+// Stack: Search, RouteDetail, StopDetail, JourneyDetail, Navigation, Auth, etc.
 // ============================================================================
 
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { NavigationContainer, useNavigation } from '@react-navigation/native';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { colors, spacing, radius, fontSize, fontWeight, shadows } from '@theme/tokens';
-import linkingConfig from './linking';
-import type { Journey } from '../types/transit.types';
+import React, { createContext, useContext, useState, useCallback, useEffect } from "react";
+import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { NavigationContainer, useNavigation } from "@react-navigation/native";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { useTranslation } from "react-i18next";
+import { colors, spacing, radius, fontSize, fontWeight, shadows } from "@theme/tokens";
+import { useAppStore } from "@stores/app.store";
+import linkingConfig from "./linking";
+import type { Journey } from "../types/transit.types";
 
 // Screens
-import OnboardingScreen from '../screens/OnboardingScreen';
-import HomeScreen from '../screens/HomeScreen';
-import TripPlannerScreen from '../screens/TripPlannerScreen';
-import DeparturesScreen from '../screens/DeparturesScreen';
-import SearchScreen from '../screens/SearchScreen';
-import RouteDetailScreen from '../screens/RouteDetailScreen';
-import StopDetailScreen from '../screens/StopDetailScreen';
-import JourneyDetailScreen from '../screens/JourneyDetailScreen';
-import NavigationScreen from '../screens/NavigationScreen';
-import AlertsScreen from '../screens/AlertsScreen';
-import SavedRoutesScreen from '../screens/SavedRoutesScreen';
-import CommunityScreen from '../screens/CommunityScreen';
-import AuthScreen from '../screens/AuthScreen';
-import MapScreen from '../screens/MapScreen';
+import OnboardingScreen from "../screens/OnboardingScreen";
+import HomeScreen from "../screens/HomeScreen";
+import TripPlannerScreen from "../screens/TripPlannerScreen";
+import DeparturesScreen from "../screens/DeparturesScreen";
+import RoutesScreen from "../screens/RoutesScreen";
+import ProfileScreen from "../screens/ProfileScreen";
+import SearchScreen from "../screens/SearchScreen";
+import RouteDetailScreen from "../screens/RouteDetailScreen";
+import StopDetailScreen from "../screens/StopDetailScreen";
+import JourneyDetailScreen from "../screens/JourneyDetailScreen";
+import NavigationScreen from "../screens/NavigationScreen";
+import AlertsScreen from "../screens/AlertsScreen";
+import SavedRoutesScreen from "../screens/SavedRoutesScreen";
+import CommunityScreen from "../screens/CommunityScreen";
+import AuthScreen from "../screens/AuthScreen";
+import MapScreen from "../screens/MapScreen";
 
 // ─── Param Lists ──────────────────────────────────────────────────────────
 
 export type RootStackParamList = {
   Onboarding: undefined;
   MainTabs: undefined;
-  Search: { mode?: 'origin' | 'destination' | 'general' };
+  Search: { mode?: "origin" | "destination" | "general" };
   RouteDetail: { routeId: string; routeName?: string };
   StopDetail: { stopId: string; stopName: string };
   JourneyDetail: { journeyId?: string; journey?: Journey };
   Navigation: undefined;
   Alerts: undefined;
   SavedRoutes: undefined;
-  Community: undefined;
+  Community: { prefillType?: string; routeId?: string; stopId?: string } | undefined;
   Auth: undefined;
-  Map: undefined;
+  Map: { selectionMode?: boolean; selectionTarget?: "from" | "to" } | undefined;
 };
 
 export type MainTabParamList = {
   Home: undefined;
   TripPlanner: undefined;
-  Departures: { stopId?: string; stopName?: string };
+  Routes: { routeId?: string } | undefined;
+  Profile: undefined;
+  Departures: { stopId?: string; stopName?: string } | undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -72,7 +76,7 @@ const ActiveTripContext = createContext<ActiveTripContextValue>({
   isNavigating: false,
   startNavigation: () => {},
   stopNavigation: () => {},
-  tripLabel: '',
+  tripLabel: "",
   setTripLabel: () => {},
 });
 
@@ -80,11 +84,11 @@ export const useActiveTrip = () => useContext(ActiveTripContext);
 
 function ActiveTripProvider({ children }: { children: React.ReactNode }) {
   const [isNavigating, setIsNavigating] = useState(false);
-  const [tripLabel, setTripLabel] = useState('');
+  const [tripLabel, setTripLabel] = useState("");
   const startNavigation = useCallback(() => setIsNavigating(true), []);
   const stopNavigation = useCallback(() => {
     setIsNavigating(false);
-    setTripLabel('');
+    setTripLabel("");
   }, []);
 
   return (
@@ -106,13 +110,13 @@ function ActiveTripBanner() {
     <TouchableOpacity
       style={styles.tripBanner}
       activeOpacity={0.9}
-      onPress={() => navigation.navigate('Navigation')}
+      onPress={() => navigation.navigate("Navigation")}
       accessibilityRole="button"
-      accessibilityLabel={tripLabel ? `رحلة نشطة إلى ${tripLabel}` : 'رحلة نشطة — اضغط للعودة'}
+      accessibilityLabel={tripLabel ? `Active trip to ${tripLabel}` : "Active trip — tap to return"}
     >
       <View style={styles.tripBannerDot} />
       <Text style={styles.tripBannerLabel} numberOfLines={1}>
-        {tripLabel ? `🧭 ${tripLabel}` : '🧭 رحلة نشطة'}
+        {tripLabel ? `🧭 ${tripLabel}` : "🧭 Active Trip"}
       </Text>
       <TouchableOpacity
         onPress={(e) => { e.stopPropagation(); stopNavigation(); }}
@@ -125,28 +129,14 @@ function ActiveTripBanner() {
   );
 }
 
-// ─── NavigationScreen Wrapper ─────────────────────────────────────────────
-
-function NavigationScreenWrapper() {
-  const { startNavigation, stopNavigation, setTripLabel } = useActiveTrip();
-
-  useEffect(() => {
-    startNavigation();
-    setTripLabel('رحلة حالية');
-    return () => {
-      stopNavigation();
-    };
-  }, []);
-
-  return <NavigationScreen />;
-}
-
 // ─── Main Tabs ────────────────────────────────────────────────────────────
 
 function MainTabs() {
+  const { t } = useTranslation();
+
   return (
     <Tab.Navigator
-      screenOptions={({ route }) => ({
+      screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: colors.brand_blue,
         tabBarInactiveTintColor: colors.text_tertiary,
@@ -159,39 +149,42 @@ function MainTabs() {
           paddingTop: 6,
         },
         tabBarLabelStyle: {
-          fontFamily: 'IBM Plex Sans Arabic',
+          fontFamily: "IBM Plex Sans Arabic",
           fontSize: 11,
           fontWeight: fontWeight.bold,
         },
-        tabBarIcon: ({ focused, color }) => {
-          const icons: Record<string, string> = { Home: '🗺️', TripPlanner: '🧭', Departures: '🕐' };
+        tabBarIcon: ({ focused }: { focused: boolean; color: string; size: number }) => {
+          const icons: Record<string, string> = {
+            Home: "🗺️", TripPlanner: "🧭", Routes: "🛣️", Profile: "👤",
+          };
           return (
-            <React.Fragment>
-              {React.createElement('Text' as any, { style: { fontSize: focused ? 22 : 18 } }, icons[route.name] || '📍')}
-            </React.Fragment>
+            <Text style={{ fontSize: focused ? 22 : 18 }}>
+              {icons[route.name] ?? "📍"}
+            </Text>
           );
         },
-      })}
+      }}
     >
-      <Tab.Screen name="Home" component={HomeScreen} options={{ tabBarLabel: 'الخريطة' }} />
-      <Tab.Screen name="TripPlanner" component={TripPlannerScreen} options={{ tabBarLabel: 'المخطط' }} />
-      <Tab.Screen name="Departures" component={DeparturesScreen} options={{ tabBarLabel: 'المغادرات' }} />
+      <Tab.Screen name="Home" component={HomeScreen} options={{ tabBarLabel: t("nav.map") }} />
+      <Tab.Screen name="TripPlanner" component={TripPlannerScreen} options={{ tabBarLabel: t("nav.planner") }} />
+      <Tab.Screen name="Routes" component={RoutesScreen} options={{ tabBarLabel: t("nav.routes") }} />
+      <Tab.Screen name="Profile" component={ProfileScreen} options={{ tabBarLabel: t("nav.profile") }} />
     </Tab.Navigator>
   );
 }
 
-// ─── Default header options for detail screens ────────────────────────────
+// ─── Default detail header options ────────────────────────────────────────
 
 const detailHeaderOptions = {
   headerStyle: { backgroundColor: colors.surface },
   headerTintColor: colors.brand_blue,
   headerTitleStyle: {
-    fontFamily: 'IBM Plex Sans Arabic',
+    fontFamily: "IBM Plex Sans Arabic",
     fontSize: fontSize[16],
     fontWeight: fontWeight.semiBold as any,
     color: colors.text_primary,
   },
-  headerBackTitle: 'رجوع' as string | undefined,
+  headerBackTitle: "Back" as string | undefined,
 };
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -199,118 +192,83 @@ const detailHeaderOptions = {
 // ═══════════════════════════════════════════════════════════════════════════
 
 export default function AppNavigator() {
+  const isOnboarded = useAppStore((s) => s.isOnboarded);
+
   return (
     <ActiveTripProvider>
       <NavigationContainer linking={linkingConfig}>
-        <Stack.Navigator screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
-          {/* Onboarding — entry flow */}
+        <Stack.Navigator
+          screenOptions={{ headerShown: false, animation: "slide_from_right" }}
+          initialRouteName={isOnboarded ? "MainTabs" : "Onboarding"}
+        >
+          {/* Onboarding — entry flow (shown once) */}
           <Stack.Screen name="Onboarding">
-            {(props) => <OnboardingScreen onComplete={() => (props.navigation as any).replace('MainTabs')} />}
+            {(props) => (
+              <OnboardingScreen
+                onComplete={() => (props.navigation as any).replace("MainTabs")}
+                onLogin={() => (props.navigation as any).navigate("Auth")}
+              />
+            )}
           </Stack.Screen>
 
-          {/* Main Tabs */}
+          {/* Main Tabs (4 tabs) */}
           <Stack.Screen name="MainTabs" component={MainTabs} />
 
-          {/* Search — modal presentation */}
+          {/* Search — modal */}
           <Stack.Screen
             name="Search"
             component={SearchScreen}
-            options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
+            options={{ presentation: "modal", animation: "slide_from_bottom" }}
           />
 
           {/* Route Detail */}
           <Stack.Screen
             name="RouteDetail"
             component={RouteDetailScreen}
-            options={{
-              headerShown: true,
-              headerTitle: 'تفاصيل الخط',
-              ...detailHeaderOptions,
-            }}
+            options={{ headerShown: true, headerTitle: "Route Details", ...detailHeaderOptions }}
           />
 
           {/* Stop Detail */}
           <Stack.Screen
             name="StopDetail"
             component={StopDetailScreen}
-            options={{
-              headerShown: true,
-              headerTitle: 'تفاصيل المحطة',
-              ...detailHeaderOptions,
-            }}
+            options={{ headerShown: true, headerTitle: "Stop Details", ...detailHeaderOptions }}
           />
 
           {/* Journey Detail */}
           <Stack.Screen
             name="JourneyDetail"
             component={JourneyDetailScreen}
-            options={{
-              headerShown: true,
-              headerTitle: 'تفاصيل الرحلة',
-              ...detailHeaderOptions,
-            }}
+            options={{ headerShown: true, headerTitle: "Journey Details", ...detailHeaderOptions }}
           />
 
-          {/* Navigation — active trip (full screen, swipe-back disabled) */}
+          {/* Navigation — active trip */}
           <Stack.Screen
             name="Navigation"
             component={NavigationScreen}
-            options={{
-              headerShown: false,
-              animation: 'slide_from_bottom',
-              gestureEnabled: false,
-            }}
+            options={{ headerShown: false, animation: "slide_from_bottom", gestureEnabled: false }}
           />
 
           {/* Alerts */}
-          <Stack.Screen
-            name="Alerts"
-            component={AlertsScreen}
-            options={{
-              headerShown: false,
-            }}
-          />
+          <Stack.Screen name="Alerts" component={AlertsScreen} options={{ headerShown: false }} />
 
-          {/* Saved Routes / Bookmarks */}
-          <Stack.Screen
-            name="SavedRoutes"
-            component={SavedRoutesScreen}
-            options={{
-              headerShown: false,
-            }}
-          />
+          {/* Saved Routes */}
+          <Stack.Screen name="SavedRoutes" component={SavedRoutesScreen} options={{ headerShown: false }} />
 
           {/* Community Reports */}
-          <Stack.Screen
-            name="Community"
-            component={CommunityScreen}
-            options={{
-              headerShown: false,
-            }}
-          />
+          <Stack.Screen name="Community" component={CommunityScreen} options={{ headerShown: false }} />
 
           {/* Auth — modal */}
           <Stack.Screen
             name="Auth"
             component={AuthScreen}
-            options={{
-              presentation: 'modal',
-              animation: 'slide_from_bottom',
-              headerShown: false,
-            }}
+            options={{ presentation: "modal", animation: "slide_from_bottom", headerShown: false }}
           />
 
           {/* Full Map View */}
-          <Stack.Screen
-            name="Map"
-            component={MapScreen}
-            options={{
-              headerShown: false,
-            }}
-          />
+          <Stack.Screen name="Map" component={MapScreen} options={{ headerShown: false }} />
         </Stack.Navigator>
 
-        {/* Active trip banner — overlays content when navigating */}
         <ActiveTripBanner />
       </NavigationContainer>
     </ActiveTripProvider>
@@ -321,12 +279,12 @@ export default function AppNavigator() {
 
 const styles = StyleSheet.create({
   tripBanner: {
-    position: 'absolute',
+    position: "absolute",
     left: spacing[4],
     right: spacing[4],
     bottom: 80,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: colors.brand_blue,
     paddingHorizontal: spacing[4],
     paddingVertical: spacing[3],
@@ -335,30 +293,18 @@ const styles = StyleSheet.create({
     ...shadows.lg,
     zIndex: 100,
   },
-  tripBannerDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#4ADE80',
-  },
+  tripBannerDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: "#4ADE80" },
   tripBannerLabel: {
     flex: 1,
-    fontFamily: 'IBM Plex Sans Arabic',
+    fontFamily: "IBM Plex Sans Arabic",
     fontSize: fontSize[14],
     fontWeight: fontWeight.semiBold,
     color: colors.white,
   },
   tripBannerClose: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 24, height: 24, borderRadius: 12,
+    backgroundColor: "rgba(255,255,255,0.2)",
+    alignItems: "center", justifyContent: "center",
   },
-  tripBannerCloseText: {
-    fontSize: 12,
-    color: colors.white,
-    fontWeight: fontWeight.bold,
-  },
+  tripBannerCloseText: { fontSize: 12, color: colors.white, fontWeight: fontWeight.bold },
 });

@@ -45,6 +45,13 @@ import type { TransitStop, QuickChip, ServiceAlert } from "@/types/transit";
 import { BottomSheet, type BottomSheetRef } from "@components/BottomSheet";
 import { TransitBadge } from "@components/TransitBadge";
 import { CountdownTimer } from "@components/CountdownTimer";
+import AdBanner from "@components/AdBanner";
+import { AD_BANNER_HOME } from "@config/ads";
+import { useTransitStore } from "@stores/transit.store";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import type { RootStackParamList } from "../navigation/AppNavigator";
+import { canonicalStopToDisplay } from "@/services/api";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -109,9 +116,10 @@ interface SearchBarProps {
   onFocus: () => void;
   value?: string;
   onClear?: () => void;
+  onProfilePress?: () => void;
 }
 
-const SearchBar: React.FC<SearchBarProps> = React.memo(({ onFocus, value, onClear }) => (
+const SearchBar: React.FC<SearchBarProps> = React.memo(({ onFocus, value, onClear, onProfilePress }) => (
   <Animated.View entering={SlideInDown.duration(400).springify()} style={styles.searchOuter}>
     <View style={styles.searchBar}>
       <TouchableOpacity onPress={onClear} style={styles.searchIconBox} activeOpacity={0.6}>
@@ -129,7 +137,7 @@ const SearchBar: React.FC<SearchBarProps> = React.memo(({ onFocus, value, onClea
         accessibilityLabel="بحث عن وجهة"
         accessibilityHint="اضغط للبحث عن محطة أو وجهة"
       />
-      <TouchableOpacity style={styles.searchAvatar} activeOpacity={0.7} accessibilityLabel="الملف الشخصي">
+      <TouchableOpacity style={styles.searchAvatar} onPress={onProfilePress} activeOpacity={0.7} accessibilityLabel="الملف الشخصي">
         <Text style={styles.avatarText}>ع</Text>
       </TouchableOpacity>
     </View>
@@ -492,19 +500,53 @@ const HomeScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const bsRef = useRef<BottomSheetRef>(null);
   const mapRef = useRef<LeafletMapRef>(null);
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+
+  // Real state from store
+  const storedStops = useTransitStore((s) => s.stops);
+  const storeLoading = useTransitStore((s) => s.isLoading);
+  const storeError = useTransitStore((s) => s.error);
+  const userLocation = useTransitStore((s) => s.userLocation);
+  const fetchNearbyStops = useTransitStore((s) => s.fetchNearbyStops);
+  const fetchAlerts = useTransitStore((s) => s.fetchAlerts);
+  const storedAlerts = useTransitStore((s) => s.alerts);
 
   const [snapIdx, setSnapIdx] = useState(0);
   const [alert, setAlert] = useState<ServiceAlert | null>(null);
-  const [isOffline, setIsOffline] = useState(true); // mock = offline
+  const [isOffline, setIsOffline] = useState(false);
   const [activeTab, setActiveTab] = useState<SheetTab>("near_me");
   const [isRefreshing, setIsRefreshing] = useState(false);
-  // ── Simulate offline data load ─────────────────────────────────────────
+
+  // ── Fetch real data on mount ───────────────────────────────────────────
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsOffline(false);
-    }, 5000);
-    return () => clearTimeout(timer);
-  }, []);
+    // Use Amman center as default until real GPS is available
+    fetchNearbyStops(31.9539, 35.9106);
+    fetchAlerts();
+  }, [fetchNearbyStops, fetchAlerts]);
+
+  // ── Derive display data from store ─────────────────────────────────────
+  const displayStops: TransitStop[] = useMemo(
+    () => storedStops.slice(0, 8).map((s) => canonicalStopToDisplay(s as any)),
+    [storedStops]
+  );
+
+  const alertFromStore: ServiceAlert | null = useMemo(() => {
+    if (storedAlerts.length === 0) return null;
+    const a = storedAlerts[0];
+    return {
+      id: a.id,
+      severity: a.severity as ServiceAlert["severity"],
+      titleAr: a.title_ar,
+      titleEn: a.title_en,
+      messageAr: a.message_ar,
+      messageEn: a.message_en,
+      affectedLines: a.affectedRouteIds ?? [],
+      affectedStops: a.affectedStopIds ?? [],
+      startsAt: a.startsAt,
+      endsAt: a.endsAt ?? undefined,
+      isActive: a.isActive,
+    };
+  }, [storedAlerts]);
 
   // ── Map fly-to helper ──────────────────────────────────────────────────
   const flyTo = useCallback((lng: number, lat: number, zoom = 14) => {
@@ -513,23 +555,33 @@ const HomeScreen: React.FC = () => {
 
   // ── Handlers ───────────────────────────────────────────────────────────
   const handleSearchFocus = useCallback(() => {
-    bsRef.current?.snapTo(2);
-  }, []);
+    navigation.navigate("Search", { mode: "general" });
+  }, [navigation]);
 
   const handleChip = useCallback(
     (chip: QuickChip) => {
       flyTo(chip.lng, chip.lat, 15);
+      navigation.navigate("Search", { mode: "general" });
     },
-    [flyTo],
+    [flyTo, navigation],
   );
 
   const handleStop = useCallback(
     (stop: TransitStop) => {
       flyTo(stop.lng, stop.lat, 16);
       bsRef.current?.snapTo(1);
+      // Navigate to stop detail after brief delay for map animation
+      setTimeout(() => {
+        navigation.navigate("StopDetail", { stopId: stop.id, stopName: stop.nameAr });
+      }, 300);
     },
-    [flyTo],
+    [flyTo, navigation],
   );
+
+  // Navigate to profile/auth when avatar tapped
+  const handleProfilePress = useCallback(() => {
+    navigation.navigate("Auth");
+  }, [navigation]);
 
   const handleLocation = useCallback(() => {
     flyTo(AMAAN_COORDS[0], AMAAN_COORDS[1], 13);
@@ -556,25 +608,26 @@ const HomeScreen: React.FC = () => {
     setSnapIdx(index);
   }, []);
 
-  // ── Map markers from stops + user location ─────────────────────────────
+  // ── Map markers from real stops + user location ──────────────────────
   const mapMarkers = useMemo(() => {
-    const markers = NEARBY_STOPS.map((s) => ({
+    const markers = displayStops.map((s) => ({
       id: s.id,
       lat: s.lat,
       lng: s.lng,
       label: s.nameAr,
       color: MODE_COLOR_MAP[s.modes[0]] || colors.bus_city,
     }));
-    // Add a simulated user-location marker (different styling via LeafletMap circleMarker color)
-    markers.push({
-      id: "user-loc",
-      lat: MOCK_USER_LOCATION[1],
-      lng: MOCK_USER_LOCATION[0],
-      label: "موقعي",
-      color: colors.brand_blue,
-    });
+    if (userLocation) {
+      markers.push({
+        id: "user-loc",
+        lat: userLocation.lat,
+        lng: userLocation.lng,
+        label: "موقعي",
+        color: colors.brand_blue,
+      });
+    }
     return markers;
-  }, []);
+  }, [displayStops, userLocation]);
 
   // ── Sheet content (rebuilt only when its dependencies change) ───────────
   const renderSheet = useCallback(() => {
@@ -583,7 +636,7 @@ const HomeScreen: React.FC = () => {
         snapIndex={snapIdx}
         activeTab={activeTab}
         chips={QUICK_CHIPS}
-        stops={NEARBY_STOPS}
+        stops={displayStops}
         onChip={handleChip}
         onStop={handleStop}
         onTabChange={handleTabChange}
@@ -592,7 +645,7 @@ const HomeScreen: React.FC = () => {
         onRefresh={handleRefresh}
       />
     );
-  }, [snapIdx, activeTab, handleChip, handleStop, handleTabChange, handleSearchFocus, isRefreshing, handleRefresh]);
+  }, [snapIdx, activeTab, handleChip, handleStop, handleTabChange, handleSearchFocus, isRefreshing, handleRefresh, displayStops]);
 
   // ── Render ─────────────────────────────────────────────────────────────
   return (
@@ -620,7 +673,7 @@ const HomeScreen: React.FC = () => {
       {/* ── SEARCH BAR (absolute top) ── */}
       <ErrorBoundary fallback={null}>
         <View style={[styles.searchContainer, { top: insets.top + spacing[2] }]}>
-          <SearchBar onFocus={handleSearchFocus} />
+          <SearchBar onFocus={handleSearchFocus} onProfilePress={handleProfilePress} />
         </View>
       </ErrorBoundary>
 
@@ -661,6 +714,7 @@ const HomeScreen: React.FC = () => {
           {renderSheet()}
         </BottomSheet>
       </ErrorBoundary>
+      <AdBanner adUnitId={AD_BANNER_HOME} />
     </View>
   );
 };

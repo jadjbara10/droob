@@ -11,9 +11,7 @@
  */
 
 import { db } from "../db/index.js";
-// TODO: Add deviceTokens, pushNotifications tables to schema
-// import { deviceTokens, pushNotifications } from "../../drizzle/schema.js";
-const deviceTokens: any = null, pushNotifications: any = null;
+import { deviceTokens, pushNotifications } from "../../drizzle/schema.js";
 import { eq, and, sql } from "drizzle-orm";
 import { Queue, Worker } from "bullmq";
 import { redis } from "../redis/index.js";

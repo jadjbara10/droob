@@ -5,6 +5,21 @@ import { stops } from "../../drizzle/schema.js";
 import { eq, ilike, sql, and, or } from "drizzle-orm";
 import { cacheGet, cacheSet, cacheDel } from "../redis/index.js";
 
+// ──── Haversine Distance (meters) ────
+function haversineDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371000; // Earth radius in meters
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLng / 2) *
+      Math.sin(dLng / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
 const stopsQuerySchema = z.object({
   q: z.string().optional(),
   governorate: z.string().optional(),
@@ -89,6 +104,7 @@ export async function stopsRoutes(app: FastifyInstance) {
   });
 
   // GET /api/v1/stops/nearby/:lat/:lng
+  // Uses Haversine formula (no PostGIS dependency)
   app.get("/nearby/:lat/:lng", async (
     request: FastifyRequest<{ Params: { lat: string; lng: string } }>,
     reply: FastifyReply
@@ -100,26 +116,18 @@ export async function stopsRoutes(app: FastifyInstance) {
       return reply.status(400).send({ error: "InvalidCoordinates", message: "إحداثيات غير صحيحة" });
     }
 
-    // FIX 3: الـ proximity query كانت تستخدم stops.lng و stops.lat
-    // كـ column references داخل sql`` وهذا يُنتج اسم العمود كـ string
-    // مش قيمته — يجب استخدام sql.raw أو cast صريح
-    const result = await db.execute(sql`
-      SELECT *,
-        ST_Distance(
-          ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326)::geography,
-          geog
-        ) AS distance_m
-      FROM stops
-      WHERE ST_DWithin(
-        ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326)::geography,
-        geog,
-        2000
-      )
-      ORDER BY distance_m ASC
-      LIMIT 30
-    `);
+    // Fetch all stops and calculate Haversine distance
+    const allStops = await db.select().from(stops).limit(500);
+    const nearby = allStops
+      .map((s) => ({
+        ...s,
+        distance_m: haversineDistance(lat, lng, s.lat, s.lng),
+      }))
+      .filter((s) => s.distance_m <= 2000)
+      .sort((a, b) => a.distance_m - b.distance_m)
+      .slice(0, 30);
 
-    return reply.send(Array.isArray(result) ? result : ((result as any).rows ?? []));
+    return reply.send(nearby);
   });
 
   // GET /api/v1/stops — List with optional proximity filter
@@ -131,32 +139,37 @@ export async function stopsRoutes(app: FastifyInstance) {
       const cached = await cacheGet(cacheKey);
       if (cached) return reply.send(cached);
 
-      // FIX 3 (same): إذا فيه lat/lng، استخدم raw SQL بدل Drizzle ORM
-      // لأن Drizzle لا يدعم PostGIS functions بشكل native
+      // Use Haversine for proximity queries (no PostGIS on Railway)
       if (query.lat !== undefined && query.lng !== undefined) {
-        const searchCondition = query.q ? `%${query.q}%` : null;
-        const govCondition = query.governorate ?? null;
+        let allStops = await db.select().from(stops).limit(500);
 
-        const result = await db.execute(sql`
-          SELECT *,
-            ST_Distance(
-              ST_SetSRID(ST_MakePoint(${query.lng}, ${query.lat}), 4326)::geography,
-              geog
-            ) AS distance_m
-          FROM stops
-          WHERE ST_DWithin(
-            ST_SetSRID(ST_MakePoint(${query.lng}, ${query.lat}), 4326)::geography,
-            geog,
-            ${query.radius}
-          )
-          ${searchCondition ? sql`AND (name_ar ILIKE ${searchCondition} OR name_en ILIKE ${searchCondition})` : sql``}
-          ${govCondition ? sql`AND governorate = ${govCondition}` : sql``}
-          ORDER BY distance_m ASC
-          LIMIT ${Math.min(query.limit, 200)}
-          OFFSET ${query.offset}
-        `);
+        // Filter by governorate if specified
+        if (query.governorate) {
+          allStops = allStops.filter((s) => s.governorate === query.governorate);
+        }
 
-        const rows = Array.isArray(result) ? result : ((result as any).rows ?? []);
+        // Filter by search term
+        if (query.q) {
+          const q = query.q.toLowerCase();
+          allStops = allStops.filter(
+            (s) =>
+              s.name_ar?.toLowerCase().includes(q) ||
+              s.name_en?.toLowerCase().includes(q) ||
+              s.code?.toLowerCase().includes(q)
+          );
+        }
+
+        // Calculate distance and filter
+        const withDistance = allStops
+          .map((s) => ({
+            ...s,
+            distance_m: haversineDistance(query.lat!, query.lng!, s.lat, s.lng),
+          }))
+          .filter((s) => s.distance_m <= query.radius!)
+          .sort((a, b) => a.distance_m - b.distance_m);
+
+        const paginated = withDistance.slice(query.offset, query.offset + Math.min(query.limit, 200));
+        const rows = paginated;
         await cacheSet(cacheKey, rows, 300);
         return reply.send(rows);
       }
@@ -221,8 +234,8 @@ export async function stopsRoutes(app: FastifyInstance) {
     return reply.send(stop);
   });
 
-  // POST /api/v1/stops
-  app.post("/", async (request: FastifyRequest, reply: FastifyReply) => {
+  // POST /api/v1/stops — requires authentication
+  app.post("/", { preHandler: [app.authenticate] }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const body = stopCreateSchema.parse(request.body);
 
@@ -243,8 +256,8 @@ export async function stopsRoutes(app: FastifyInstance) {
     }
   });
 
-  // PATCH /api/v1/stops/:id
-  app.patch("/:id", async (
+  // PATCH /api/v1/stops/:id — requires authentication
+  app.patch("/:id", { preHandler: [app.authenticate] }, async (
     request: FastifyRequest<{ Params: { id: string } }>,
     reply: FastifyReply
   ) => {

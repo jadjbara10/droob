@@ -7,6 +7,8 @@ import fastifyIO from "fastify-socket.io";
 import { Server } from "socket.io";
 import { redis } from "./redis/index.js";
 import jwt from "jsonwebtoken";
+import { migrate } from "drizzle-orm/postgres-js/migrator";
+import { db } from "./db/index.js";
 
 // Routes
 import { stopsRoutes } from "./routes/stops.js";
@@ -19,15 +21,13 @@ import { reportsRoutes } from "./routes/reports.js";
 import { authRoutes } from "./routes/auth.js";
 import { adminRoutes } from "./routes/admin.js";
 import { dashboardRoutes } from "./routes/dashboard.js";
+import { adsRoutes } from "./routes/ads.js";
 
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) {
-  if (process.env.NODE_ENV === "production") {
-    throw new Error("FATAL: JWT_SECRET env var is required in production");
-  }
-  console.warn("⚠️  Using dev JWT secret — NOT FOR PRODUCTION");
+  throw new Error("FATAL: JWT_SECRET environment variable is required. Set it in your .env file.");
 }
-const JWT_SECRET_FINAL = JWT_SECRET || "droob-jordan-dev-secret-do-not-use-in-prod";
+const JWT_SECRET_FINAL = JWT_SECRET;
 const PORT = parseInt(process.env.PORT || "3000", 10);
 const HOST = process.env.HOST || "0.0.0.0";
 
@@ -40,6 +40,15 @@ declare module "fastify" {
 }
 
 async function buildApp() {
+  // ──── Auto-migrate on startup ────
+  try {
+    await migrate(db, { migrationsFolder: "./drizzle/migrations" });
+    console.log("✅ Database migrations applied successfully");
+  } catch (err: any) {
+    console.error("⚠️ Migration warning:", err.message);
+    // Continue anyway — migrations might already be applied
+  }
+
   const app = Fastify({
     logger: {
       level: process.env.LOG_LEVEL || "info",
@@ -134,6 +143,7 @@ async function buildApp() {
       v1.register(departuresRoutes, { prefix: "/departures" });
       v1.register(alertsRoutes, { prefix: "/alerts" });
       v1.register(reportsRoutes, { prefix: "/reports" });
+      v1.register(adsRoutes, { prefix: "/ads" });
 
       // Auth-protected
       v1.register(async (authScope) => {
@@ -155,9 +165,20 @@ async function buildApp() {
         authScope.register(authRoutes, { prefix: "/auth" });
       });
 
-      // Admin + Dashboard routes (auth-protected)
+      // Admin + Dashboard routes (auth-protected + role check)
       v1.register(async (adminScope) => {
         adminScope.addHook("preHandler", app.authenticate);
+        // Role-based access: only admin, editor, operator, super_admin can access
+        adminScope.addHook("preHandler", async (request: any, reply: any) => {
+          const allowedRoles = ["super_admin", "admin", "editor", "operator"];
+          const userRole = request.userRole || request.user?.role;
+          if (!userRole || !allowedRoles.includes(userRole)) {
+            return reply.status(403).send({
+              error: "Forbidden",
+              message: "صلاحيات غير كافية. هذا القسم مخصص للمشرفين والمحررين فقط."
+            });
+          }
+        });
         adminScope.register(adminRoutes, { prefix: "/admin" });
         adminScope.register(dashboardRoutes, { prefix: "/dashboard" });
       });
