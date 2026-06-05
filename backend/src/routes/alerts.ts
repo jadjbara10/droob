@@ -6,6 +6,7 @@ import { eq, and, lte, desc, sql } from "drizzle-orm";
 import { cacheGet, cacheSet, cacheDel } from "../redis/index.js";
 import { toCamelCase } from "../utils/case-transform.js";
 import { sendError, sendSuccess, sendNotFound, sendValidationError } from "../utils/api-error.js";
+import { logActivity } from "../services/activity-logger.js";
 
 const alertsQuerySchema = z.object({
   severity: z.enum(["info", "warning", "critical"]).optional(),
@@ -85,6 +86,15 @@ export async function alertsRoutes(app: FastifyInstance) {
         is_active: body.isActive,
       }).returning();
       await cacheDel("alerts:*");
+      // Log activity
+      await logActivity(
+        (request as any).userId,
+        "create",
+        "alert",
+        newAlert.id,
+        { severity: newAlert.severity, type: newAlert.type, title_ar: newAlert.title_ar },
+        request.ip
+      );
       return sendSuccess(reply, toCamelCase(newAlert), 201);
     } catch (err: any) {
       if (err instanceof z.ZodError) return sendValidationError(reply, err.errors);

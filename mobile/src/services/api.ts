@@ -56,6 +56,14 @@ import {
   clearRecentStops,
 } from './storage';
 
+import {
+  cacheData,
+  getCachedData,
+  queueOfflineAction,
+} from './offline-cache';
+
+import NetInfo from '@react-native-community/netinfo';
+
 export type { RecentStop } from './storage';
 
 // ─── Re-exports (from api-client) ──────────────────────────────────────────
@@ -973,9 +981,14 @@ export async function searchStops(query: string): Promise<Stop[]> {
  * Radius is in meters, defaults to 500m.
  */
 export async function getNearbyStops(lat: number, lng: number, radius = 500): Promise<Stop[]> {
+  const cacheKey = `nearby_stops_${lat.toFixed(4)}_${lng.toFixed(4)}_${radius}`;
+  const cached = getCachedData<Stop[]>(cacheKey, 60_000); // 1-min cache for nearby
+  if (cached) return cached;
+
   return withOfflineFallback(async () => {
     const response = await stopsApi.list({ lat, lng, radius });
     const results = unwrapList<Stop>(response);
+    cacheData(cacheKey, results);
     return results;
   }, MOCK_STOPS.map((s) => ({
     ...s,
@@ -1003,13 +1016,19 @@ export async function getStopById(id: string): Promise<Stop> {
  * GET /api/v1/routes
  */
 export async function getRoutes(filters?: RouteFilters): Promise<Route[]> {
+  const cacheKey = `routes_${JSON.stringify(filters ?? {})}`;
+  const cached = getCachedData<Route[]>(cacheKey, 300_000); // 5-min expiry
+  if (cached) return cached;
+
   return withOfflineFallback(async () => {
     const response = await routesApi.list({
       mode: filters?.mode,
       governorate: filters?.governorate,
       isActive: filters?.isActive,
     });
-    return unwrapList<Route>(response);
+    const results = unwrapList<Route>(response);
+    cacheData(cacheKey, results);
+    return results;
   }, MOCK_ROUTES.filter((r) => {
     if (filters?.mode && r.mode !== filters.mode) return false;
     if (filters?.governorate && r.governorate !== filters.governorate) return false;
@@ -1048,9 +1067,15 @@ export async function getRouteStops(id: string): Promise<Stop[]> {
  * GET /api/v1/departures?stopId=
  */
 export async function getDepartures(stopId: string): Promise<DepartureBoardResponse> {
+  const cacheKey = `departures_${stopId}`;
+  const cached = getCachedData<DepartureBoardResponse>(cacheKey, 120_000); // 2-min expiry
+  if (cached) return cached;
+
   return withOfflineFallback(async () => {
     const response = await departuresApi.getForStop(stopId);
-    return response as DepartureBoardResponse;
+    const data = response as DepartureBoardResponse;
+    cacheData(cacheKey, data);
+    return data;
   }, {
     stop: MOCK_STOPS.find((s) => s.id === stopId) ?? MOCK_STOPS[0],
     departures: MOCK_DEPARTURES,
@@ -1096,12 +1121,18 @@ export async function planJourney(
  * GET /api/v1/alerts
  */
 export async function getAlerts(filters?: AlertFilters): Promise<TransitAlert[]> {
+  const cacheKey = `alerts_${JSON.stringify(filters ?? {})}`;
+  const cached = getCachedData<TransitAlert[]>(cacheKey, 60_000); // 1-min expiry
+  if (cached) return cached;
+
   return withOfflineFallback(async () => {
     const response = await alertsApi.list({
       isActive: filters?.isActive,
       governorate: filters?.governorate,
     });
-    return unwrapList<TransitAlert>(response);
+    const results = unwrapList<TransitAlert>(response);
+    cacheData(cacheKey, results);
+    return results;
   }, MOCK_ALERTS.filter((a) => {
     if (filters?.isActive !== undefined && a.isActive !== filters.isActive) return false;
     if (filters?.governorate && !a.governorates.includes(filters.governorate)) return false;
@@ -1223,8 +1254,30 @@ export async function getReports(filters?: ReportFilters): Promise<CommunityRepo
 /**
  * Submit a new community report (crowding, delay, etc.).
  * POST /api/v1/reports
+ * If offline, queues the action for later sync.
  */
 export async function createReport(data: CreateReportData): Promise<CommunityReport> {
+  const netState = await NetInfo.fetch();
+  if (!netState.isConnected || netState.isInternetReachable === false) {
+    queueOfflineAction({
+      type: 'report',
+      endpoint: '/reports',
+      body: data,
+    });
+    // Return a local placeholder so the UI can show it immediately
+    return {
+      id: `offline-${Date.now()}`,
+      type: data.type,
+      stopId: data.stopId ?? null,
+      routeId: data.routeId ?? null,
+      lat: data.lat,
+      lng: data.lng,
+      message: data.message,
+      expiresAt: new Date(Date.now() + 3600000).toISOString(),
+      reporterId: 'offline',
+      createdAt: new Date().toISOString(),
+    } as CommunityReport;
+  }
   const response = await reportsApi.create(data) as CommunityReport;
   return response;
 }

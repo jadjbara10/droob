@@ -1,7 +1,10 @@
 // ============================================================================
 // دروب (Droob) — Offline Store
-// Manages pending operations queue for offline→online sync
+// Manages pending operations queue for offline→online sync, connectivity state.
 // ============================================================================
+
+import NetInfo from '@react-native-community/netinfo';
+import { getPendingActions } from '../services/offline-cache';
 
 interface PendingOperation {
   id: string;
@@ -12,6 +15,41 @@ interface PendingOperation {
 
 class OfflineStore {
   private pending: PendingOperation[] = [];
+  private _isOnline = true;
+  private _lastSyncTime: number | null = null;
+  private unsubscribeNetInfo: (() => void) | null = null;
+
+  constructor() {
+    this.initNetListener();
+  }
+
+  private initNetListener(): void {
+    // Fetch initial state
+    NetInfo.fetch().then((state) => {
+      this._isOnline = state.isConnected === true && state.isInternetReachable !== false;
+    });
+
+    // Listen for changes
+    this.unsubscribeNetInfo = NetInfo.addEventListener((state) => {
+      const wasOffline = !this._isOnline;
+      this._isOnline = state.isConnected === true && state.isInternetReachable !== false;
+      if (wasOffline && this._isOnline) {
+        this._lastSyncTime = Date.now();
+      }
+    });
+  }
+
+  get isOnline(): boolean {
+    return this._isOnline;
+  }
+
+  get lastSyncTime(): number | null {
+    return this._lastSyncTime;
+  }
+
+  get pendingActions(): number {
+    return getPendingActions().length + this.pending.length;
+  }
 
   /** Queue an operation to be synced when back online */
   addPending(op: Omit<PendingOperation, 'id' | 'timestamp'>): void {
@@ -38,10 +76,20 @@ class OfflineStore {
         this.pending.push(op);
       }
     }
+
+    this._lastSyncTime = Date.now();
   }
 
   get pendingCount(): number {
     return this.pending.length;
+  }
+
+  /** Cleanup NetInfo listener */
+  destroy(): void {
+    if (this.unsubscribeNetInfo) {
+      this.unsubscribeNetInfo();
+      this.unsubscribeNetInfo = null;
+    }
   }
 }
 

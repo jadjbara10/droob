@@ -89,7 +89,7 @@ export function isNetworkError(error: unknown): boolean {
 
 // ─── Core Fetch with Timeout ──────────────────────────────────────────────
 
-async function apiFetch<T>(endpoint: string, options: FetchOptions = {}): Promise<T> {
+export async function apiFetch<T>(endpoint: string, options: FetchOptions = {}): Promise<T> {
   const { body, params, schema, ...fetchOptions } = options;
 
   // Build URL with query params

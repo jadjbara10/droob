@@ -6,6 +6,7 @@ import { eq, ilike, and, or, asc } from "drizzle-orm";
 import { cacheGet, cacheSet, cacheDel } from "../redis/index.js";
 import { toCamelCase } from "../utils/case-transform.js";
 import { sendError, sendSuccess, sendNotFound, sendValidationError } from "../utils/api-error.js";
+import { logActivity } from "../services/activity-logger.js";
 
 const routesQuerySchema = z.object({
   q: z.string().optional(),
@@ -177,6 +178,15 @@ export async function routesRoutes(app: FastifyInstance) {
       const [newRoute] = await db.insert(routes).values(insertValues as any).returning();
 
       await cacheDel("routes:*");
+      // Log activity
+      await logActivity(
+        (request as any).userId,
+        "create",
+        "route",
+        newRoute.id,
+        { code: newRoute.code, name_ar: newRoute.name_ar },
+        request.ip
+      );
       return sendSuccess(reply, toCamelCase(newRoute), 201);
     } catch (err: any) {
       if (err instanceof z.ZodError) {

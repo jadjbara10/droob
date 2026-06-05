@@ -16,6 +16,7 @@ import { ErrorBoundary } from '../components/ErrorBoundary';
 import { AMMAN_CENTER } from '../config/transport.config';
 import { stopsApi } from '@/services/api-client';
 import { saveRecentStop, getRecentStops } from '@/services/storage';
+import { analytics } from '@/services/analytics';
 import type { Stop, Governorate } from '../types/transit.types';
 
 // ============================================================================
@@ -76,8 +77,10 @@ function SearchScreenContent(): React.ReactElement {
       .then((response: any) => {
         if (cancelled) return;
         const data = response?.data ?? (Array.isArray(response) ? response : []);
-        setResults(data as Stop[]);
+        const results = data as Stop[];
+        setResults(results);
         setIsSearching(false);
+        analytics.trackSearch(debouncedQuery.trim(), results.length);
       })
       .catch((err: any) => {
         if (cancelled) return;

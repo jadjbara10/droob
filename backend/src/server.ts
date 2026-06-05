@@ -22,6 +22,10 @@ import { authRoutes } from "./routes/auth.js";
 import { adminRoutes } from "./routes/admin.js";
 import { dashboardRoutes } from "./routes/dashboard.js";
 import { adsRoutes } from "./routes/ads.js";
+import { faresRoutes } from "./routes/fares.js";
+import { prayerTimesRoutes } from "./routes/prayer-times.js";
+import { activityRoutes } from "./routes/activity.js";
+import { startPrayerTimesCron } from "./cron/prayer-times-cron.js";
 
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) {
@@ -150,6 +154,8 @@ async function buildApp() {
       v1.register(alertsRoutes, { prefix: "/alerts" });
       v1.register(reportsRoutes, { prefix: "/reports" });
       v1.register(adsRoutes, { prefix: "/ads" });
+      v1.register(faresRoutes, { prefix: "/fares" }); // GET routes are public
+      v1.register(prayerTimesRoutes, { prefix: "/prayer-times" }); // GET route is public
 
       // Auth-protected
       v1.register(async (authScope) => {
@@ -187,6 +193,7 @@ async function buildApp() {
         });
         adminScope.register(adminRoutes, { prefix: "/admin" });
         adminScope.register(dashboardRoutes, { prefix: "/dashboard" });
+        adminScope.register(activityRoutes, { prefix: "/activity" });
       });
     }, { prefix: "/api/v1" });
   });
@@ -252,6 +259,11 @@ async function buildApp() {
     });
 
     app.log.info(`Socket.io initialized with rooms: vehicle, line, stop, alerts`);
+
+    // Start prayer times cron for daily sync at 2 AM
+    startPrayerTimesCron().catch((err) => {
+      app.log.error(`Failed to start prayer times cron: ${err.message}`);
+    });
   });
 
   return app;

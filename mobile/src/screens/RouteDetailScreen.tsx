@@ -51,6 +51,7 @@ import { OccupancyIndicator } from "@components/OccupancyIndicator";
 import { ErrorBoundary } from "@components/ErrorBoundary";
 import { FARE } from "@/config/transport.config";
 import { routesApi } from "@/services/api-client";
+import { analytics } from "@/services/analytics";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 //  CONSTANTS
@@ -923,6 +924,12 @@ const RouteDetailScreen: React.FC = () => {
   }, [routeId]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
+
+  // ── Track route view on mount ──────────────────────────────────────────
+  useEffect(() => {
+    const { routeId: rid } = route.params;
+    analytics.trackRouteView(rid, '');
+  }, [route.params]);
 
   // ── Pull-to-refresh ───────────────────────────────────────────────────
   const onRefresh = useCallback(async () => {

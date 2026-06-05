@@ -66,23 +66,23 @@ const DividerIcon: React.FC = () => (
 // ─── Custom Hook ────────────────────────────────────────────────────────────
 
 function useDarkMode() {
-  const [dark, setDark] = React.useState(false);
+  const [light, setLight] = React.useState(false);
 
   React.useEffect(() => {
     const stored = localStorage.getItem("droob-theme");
-    if (stored === "dark" || (!stored && window.matchMedia("(prefers-color-scheme: dark)").matches)) {
-      document.documentElement.classList.add("dark");
-      setDark(true);
+    if (stored === "light") {
+      document.documentElement.classList.add("light");
+      setLight(true);
     }
   }, []);
 
   const toggle = React.useCallback(() => {
-    const isDark = document.documentElement.classList.toggle("dark");
-    localStorage.setItem("droob-theme", isDark ? "dark" : "light");
-    setDark(isDark);
+    const isLight = document.documentElement.classList.toggle("light");
+    localStorage.setItem("droob-theme", isLight ? "light" : "dark");
+    setLight(isLight);
   }, []);
 
-  return { dark, toggle };
+  return { light, toggle };
 }
 
 // ─── Breadcrumbs Component ──────────────────────────────────────────────────
@@ -125,7 +125,7 @@ const PAGE_TITLES: Record<string, string> = {
 
 export default function Header({ title, breadcrumbs, actions }: HeaderProps) {
   const pathname = usePathname();
-  const { dark, toggle } = useDarkMode();
+  const { light, toggle } = useDarkMode();
 
   const pageTitle = title || PAGE_TITLES[pathname] || "";
 
@@ -163,9 +163,9 @@ export default function Header({ title, breadcrumbs, actions }: HeaderProps) {
         <button
           onClick={toggle}
           className="w-9 h-9 rounded-input flex items-center justify-center text-text-tertiary hover:text-text-primary hover:bg-surface-2 transition-all"
-          title={dark ? "الوضع النهاري" : "الوضع الليلي"}
+          title={light ? "الوضع الليلي" : "الوضع النهاري"}
         >
-          {dark ? <SunIcon className="w-4 h-4" /> : <MoonIcon className="w-4 h-4" />}
+          {light ? <MoonIcon className="w-4 h-4" /> : <SunIcon className="w-4 h-4" />}
         </button>
 
         {/* Notifications */}

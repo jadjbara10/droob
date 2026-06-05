@@ -9,7 +9,7 @@ import { useRewardedAd } from "@components/AdRewarded";
 import { AD_INTERSTITIAL_TRIP, AD_REWARDED_EXTRA_TRIPS, MAX_FREE_TRIPS_PER_DAY } from "@config/ads";
 // ============================================================================
 
-import React, { useState, useCallback, useMemo } from "react";
+import React, { useState, useCallback, useMemo, useRef } from "react";
 import {
   View,
   Text,
@@ -46,6 +46,7 @@ import LeafletMap from "@components/LeafletMap";
 import { useTransitStore } from "@stores/transit.store";
 import { useAppStore } from "@stores/app.store";
 import { canonicalJourneyToDisplay } from "@/services/api";
+import { analytics } from "@/services/analytics";
 import type { Journey, TransitStop } from "@/types/transit";
 import {
   transportConfig,
@@ -670,6 +671,15 @@ const TripPlannerScreen: React.FC = () => {
       j.modes.some((m) => selectedModes.includes(m))
     );
   }, [sortedJourneys, selectedModes]);
+
+  // ── Track analytics when journey results are shown ──────────────────────
+  const prevJourneyCount = useRef(0);
+  React.useEffect(() => {
+    if (filteredJourneys.length > 0 && prevJourneyCount.current === 0) {
+      analytics.trackTripPlan(fromLabel || 'موقعي', toLabel || 'وجهة', filteredJourneys.length);
+    }
+    prevJourneyCount.current = filteredJourneys.length;
+  }, [filteredJourneys, fromLabel, toLabel]);
 
   // ── Handlers ───────────────────────────────────────────────────────────
   const handleSwap = useCallback(() => {

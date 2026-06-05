@@ -10,6 +10,7 @@ import { useNavigation } from "@react-navigation/native";
 import { ErrorBoundary } from "@components/ErrorBoundary";
 import { colors, radius, spacing, fontSize, fontWeight, shadows, layout } from "@theme/tokens";
 import { reportsApi } from "@/services/api-client";
+import { analytics } from "@/services/analytics";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 type ReportType = "delay" | "crowding" | "ended_route" | "closed_stop" | "data_correction";
@@ -86,6 +87,7 @@ export default function CommunityScreen() {
       // Submission failed silently — report is already in local list
     }
 
+    analytics.trackReportSubmit(selectedType);
     Alert.alert("تم", "تم إرسال بلاغك. شكراً لمساهمتك!");
   }, [message, selectedType]);
 

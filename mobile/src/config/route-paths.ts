@@ -245,3 +245,12 @@ export const WALKING_DASH = "8,8";
 // ─── Generated data available as standalone imports ─────────────────────────
 // import { SERV_COASTER_ROUTES } from "./serveece-routes";  // 306 routes
 // import { BUS_STOPS } from "./bus-stops";                    // 454 stops
+//
+// ─── Generated route paths from unified GIS data ───────────────────────────
+// Run `npx tsx scripts/generate-route-paths.ts` from the droob root to regenerate.
+// Import the generated JSON for all routes (242+ paths including real GeoJSON):
+//
+//   import generatedPaths from "./generated-route-paths.json";
+//
+// The generated file contains paths for all 23 seed routes plus all 219 unified
+// routes with real GeoJSON polylines from the Amman GIS portal.

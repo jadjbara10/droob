@@ -5,6 +5,7 @@ import { stops } from "../../drizzle/schema.js";
 import { eq, ilike, and, or, between } from "drizzle-orm";
 import { cacheGet, cacheSet, cacheDel } from "../redis/index.js";
 import { sendError, sendSuccess, sendNotFound, sendValidationError } from "../utils/api-error.js";
+import { logActivity } from "../services/activity-logger.js";
 
 // ──── Haversine Distance (meters) ────
 function haversineDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
@@ -256,6 +257,15 @@ export async function stopsRoutes(app: FastifyInstance) {
       }).returning();
 
       await cacheDel("stops:*");
+      // Log activity
+      await logActivity(
+        (request as any).userId,
+        "create",
+        "stop",
+        newStop.id,
+        { code: newStop.code, name_ar: newStop.name_ar },
+        request.ip
+      );
       return sendSuccess(reply, newStop, 201);
     } catch (err: any) {
       if (err instanceof z.ZodError) {

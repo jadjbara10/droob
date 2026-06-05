@@ -41,6 +41,7 @@ import { OccupancyIndicator } from "@components/OccupancyIndicator";
 import { ErrorBoundary } from "@components/ErrorBoundary";
 import { useTransitStore } from "@stores/transit.store";
 import { canonicalDepartureToDisplay } from "@/services/api";
+import { analytics } from "@/services/analytics";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -350,6 +351,11 @@ const DeparturesScreen: React.FC = () => {
         .filter((d) => selectedFilter === "all" || d.mode === selectedFilter),
     [displayDepartures, tick, selectedFilter],
   );
+
+  // ── Track departure view on mount ──────────────────────────────────────
+  useEffect(() => {
+    analytics.trackDepartureView(stopId, stopName);
+  }, [stopId, stopName]);
 
   // ── Fetch on mount ──────────────────────────────────────────────────────
   useEffect(() => {
