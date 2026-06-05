@@ -61,10 +61,16 @@ async function buildApp() {
   });
 
   // ──── Plugins ────
+  // CORS: @fastify/cors expects origin as string | string[] | RegExp.
+  // The env var CORS_ORIGIN can be a comma-separated list for multiple origins.
+  // We split on comma and trim so "https://app.droob.jo,https://admin.droob.jo"
+  // becomes ["https://app.droob.jo", "https://admin.droob.jo"].
   await app.register(cors, {
-    origin: process.env.NODE_ENV === "production"
-      ? (process.env.CORS_ORIGIN || "https://app.droob.jo,https://admin.droob.jo")
-      : (process.env.CORS_ORIGIN || "*"),
+    origin: process.env.CORS_ORIGIN
+      ? process.env.CORS_ORIGIN.split(",").map((s) => s.trim())
+      : process.env.NODE_ENV === "production"
+        ? ["https://app.droob.jo", "https://admin.droob.jo"]
+        : ["*"],
     methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
     credentials: true,
   });

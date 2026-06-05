@@ -235,7 +235,7 @@ export const MODE_PATH_COLOR: Record<string, string> = {
   walking: "#16A34A",     // أخضر
   brt: "#E60026",         // أحمر
   city_bus: "#0066CC",    // أزرق
-  serveece: "#FF8C00",    // برتقالي
+  serveece: "#E07B00",    // برتقالي
   intercity: "#6B21A8",   // بنفسجي
 };
 

@@ -2,8 +2,16 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
 import { z } from "zod";
 import { db } from "../db/index.js";
 import { routes, routeStops, stops } from "../../drizzle/schema.js";
-import { eq, asc, and, sql } from "drizzle-orm";
+import { eq, asc, and, sql, between } from "drizzle-orm";
 import { cacheGet, cacheSet } from "../redis/index.js";
+
+function haversineMeters(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371000;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
 
 // Trip planning request schema
 const tripPlanSchema = z.object({
@@ -94,24 +102,12 @@ export async function tripPlannerRoutes(app: FastifyInstance) {
       const cached = await cacheGet(cacheKey);
       if (cached) return reply.send(cached);
 
-      // Step 1: Find nearby origin and destination stops
-      const nearOrigin = await db.query.stops.findMany({
-        where: sql`ST_DWithin(
-          ST_SetSRID(ST_MakePoint(${params.fromLng}, ${params.fromLat}), 4326)::geography,
-          ST_SetSRID(ST_MakePoint(${stops.lng}, ${stops.lat}), 4326)::geography,
-          ${params.maxWalkingMeters}
-        )`,
-        limit: 5,
-      });
+      // Step 1: Find nearby origin stops (bounding-box pre-filter + Haversine, no PostGIS)
+      const BBOX_DEG = 0.03; // ~3km box — wider than maxWalkingMeters to catch edge cases
+      const nearOrigin = await findNearbyStops(params.fromLat, params.fromLng, params.maxWalkingMeters, BBOX_DEG, 5);
 
-      const nearDest = await db.query.stops.findMany({
-        where: sql`ST_DWithin(
-          ST_SetSRID(ST_MakePoint(${params.toLng}, ${params.toLat}), 4326)::geography,
-          ST_SetSRID(ST_MakePoint(${stops.lng}, ${stops.lat}), 4326)::geography,
-          ${params.maxWalkingMeters}
-        )`,
-        limit: 5,
-      });
+      // Step 2: Find nearby destination stops (bounding-box pre-filter + Haversine)
+      const nearDest = await findNearbyStops(params.toLat, params.toLng, params.maxWalkingMeters, BBOX_DEG, 5);
 
       const journeys: Journey[] = [];
 
@@ -394,6 +390,35 @@ function buildTransitInstructionAr(
     routeData.mode === "serveece" ? "السرفيس" :
     routeData.mode === "intercity" ? "باص بين المدن" : "الباص";
   return `اركب ${modeLabel} خط ${routeData.code} من ${originStop.name_ar} إلى ${destStop.name_ar}`;
+}
+
+/**
+ * Find stops near a given lat/lng using a bounding-box SQL pre-filter
+ * followed by in-memory Haversine distance. Avoids fetching all stops.
+ */
+async function findNearbyStops(
+  lat: number,
+  lng: number,
+  maxMeters: number,
+  bboxDeg: number,
+  maxResults: number,
+): Promise<Array<typeof stops.$inferSelect & { dist: number }>> {
+  const candidates = await db
+    .select()
+    .from(stops)
+    .where(
+      and(
+        between(stops.lat, lat - bboxDeg, lat + bboxDeg),
+        between(stops.lng, lng - bboxDeg, lng + bboxDeg),
+      ),
+    )
+    .limit(500);
+
+  return candidates
+    .map((s) => ({ ...s, dist: haversineMeters(lat, lng, s.lat, s.lng) }))
+    .filter((s) => s.dist <= maxMeters)
+    .sort((a, b) => a.dist - b.dist)
+    .slice(0, maxResults);
 }
 
 function buildTransitInstructionEn(

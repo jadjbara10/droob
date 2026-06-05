@@ -5,6 +5,7 @@ import { alerts } from "../../drizzle/schema.js";
 import { eq, and, lte, desc, sql } from "drizzle-orm";
 import { cacheGet, cacheSet, cacheDel } from "../redis/index.js";
 import { toCamelCase } from "../utils/case-transform.js";
+import { sendError, sendSuccess, sendNotFound, sendValidationError } from "../utils/api-error.js";
 
 const alertsQuerySchema = z.object({
   severity: z.enum(["info", "warning", "critical"]).optional(),
@@ -53,17 +54,17 @@ export async function alertsRoutes(app: FastifyInstance) {
 
       const wrapped = { data: result };
       await cacheSet(cacheKey, wrapped, 60);
-      return reply.send(wrapped);
+      return sendSuccess(reply, wrapped);
     } catch (err: any) {
-      if (err instanceof z.ZodError) return reply.status(400).send({ error: "ValidationError", details: err.errors });
+      if (err instanceof z.ZodError) return sendValidationError(reply, err.errors);
       throw err;
     }
   });
 
   app.get("/:id", async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
     const [alert] = await db.select().from(alerts).where(eq(alerts.id, request.params.id)).limit(1);
-    if (!alert) return reply.status(404).send({ error: "NotFound", message: "التنبيه غير موجود" });
-    return reply.send(toCamelCase(alert));
+    if (!alert) return sendNotFound(reply, "التنبيه", "Alert");
+    return sendSuccess(reply, toCamelCase(alert));
   });
 
   // POST /api/v1/alerts — Create alert (requires auth)
@@ -84,9 +85,9 @@ export async function alertsRoutes(app: FastifyInstance) {
         is_active: body.isActive,
       }).returning();
       await cacheDel("alerts:*");
-      return reply.status(201).send(toCamelCase(newAlert));
+      return sendSuccess(reply, toCamelCase(newAlert), 201);
     } catch (err: any) {
-      if (err instanceof z.ZodError) return reply.status(400).send({ error: "ValidationError", details: err.errors });
+      if (err instanceof z.ZodError) return sendValidationError(reply, err.errors);
       throw err;
     }
   });
@@ -109,11 +110,11 @@ export async function alertsRoutes(app: FastifyInstance) {
       if (body.isActive !== undefined) updateData.is_active = body.isActive;
 
       const [updated] = await db.update(alerts).set(updateData).where(eq(alerts.id, request.params.id)).returning();
-      if (!updated) return reply.status(404).send({ error: "NotFound" });
+      if (!updated) return sendNotFound(reply, "التنبيه", "Alert");
       await cacheDel("alerts:*");
-      return reply.send(toCamelCase(updated));
+      return sendSuccess(reply, toCamelCase(updated));
     } catch (err: any) {
-      if (err instanceof z.ZodError) return reply.status(400).send({ error: "ValidationError", details: err.errors });
+      if (err instanceof z.ZodError) return sendValidationError(reply, err.errors);
       throw err;
     }
   });
@@ -124,10 +125,7 @@ export async function alertsRoutes(app: FastifyInstance) {
     const allowedRoles = ["super_admin", "admin", "editor", "operator"];
     const userRole = (request as any).userRole;
     if (!userRole || !allowedRoles.includes(userRole)) {
-      return reply.status(403).send({
-        error: "Forbidden",
-        message: "صلاحيات غير كافية. مطلوب دور مشرف أو محرر لبث تنبيه طارئ."
-      });
+      return sendError(reply, 403, "Forbidden", "صلاحيات غير كافية. مطلوب دور مشرف أو محرر لبث تنبيه طارئ.", "Insufficient permissions to broadcast an emergency alert");
     }
     try {
       const body = z.object({
@@ -156,9 +154,9 @@ export async function alertsRoutes(app: FastifyInstance) {
       }
 
       await cacheDel("alerts:*");
-      return reply.status(201).send(toCamelCase(emergency));
+      return sendSuccess(reply, toCamelCase(emergency), 201);
     } catch (err: any) {
-      if (err instanceof z.ZodError) return reply.status(400).send({ error: "ValidationError", details: err.errors });
+      if (err instanceof z.ZodError) return sendValidationError(reply, err.errors);
       throw err;
     }
   });

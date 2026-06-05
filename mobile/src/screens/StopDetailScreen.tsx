@@ -35,13 +35,13 @@ import type { OccupancyLevel } from "@/types/transit";
 import type { Departure, TransportMode } from "@/types/transit.types";
 import { OccupancyIndicator } from "@components/OccupancyIndicator";
 import { ErrorBoundary } from "@components/ErrorBoundary";
+import { departuresApi } from "@/services/api-client";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 //  CONSTANTS
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const COUNTDOWN_INTERVAL_MS = 30_000; // refresh countdown every 30s
-const SIMULATED_FETCH_MS = 800;       // mock network delay for pull-to-refresh
 
 const AMMENITIES = [
   { key: "hasAccessibility", icon: "wheelchair-accessibility", label: "ذوي الاحتياجات" },
@@ -85,33 +85,6 @@ interface StopDeparture {
 }
 
 type LoadState = "loading" | "loaded" | "error";
-
-// ═══════════════════════════════════════════════════════════════════════════════
-//  MOCK DATA
-// ═══════════════════════════════════════════════════════════════════════════════
-
-const MOCK_STOP: StopDetail = {
-  id: "stop-004",
-  code: "AMM-4TH-004",
-  nameAr: "دوار الداخلية",
-  nameEn: "Interior Circle",
-  lat: 31.958,
-  lng: 35.912,
-  distanceM: 120,
-  hasAccessibility: true,
-  hasShelter: true,
-  hasLighting: true,
-  hasTicketMachine: false,
-  hasAc: false,
-};
-
-const MOCK_DEPARTURES: StopDeparture[] = [
-  { routeId: "BRT1", code: "BRT1", nameAr: "صويلح", nameEn: "Sweileh", mode: "brt", color: transitColorMap.brt, waitMinutes: 3,  occupancy: "partial", status: "on_time",   fare: 0.5 },
-  { routeId: "2",    code: "2",    nameAr: "المطار", nameEn: "Airport",  mode: "city_bus", color: transitColorMap.city_bus, waitMinutes: 8,  occupancy: "full",    status: "delayed",  fare: 0.35 },
-  { routeId: "BRT1", code: "BRT1", nameAr: "صويلح", nameEn: "Sweileh",  mode: "brt", color: transitColorMap.brt, waitMinutes: 15, occupancy: "empty",   status: "on_time",   fare: 0.5 },
-  { routeId: "23",   code: "23",   nameAr: "الزرقاء", nameEn: "Zarqa",  mode: "city_bus", color: transitColorMap.city_bus, waitMinutes: 22, occupancy: "partial", status: "on_time",   fare: 0.35 },
-  { routeId: "SERV-SW", code: "س-ص", nameAr: "صويلح", nameEn: "Sweileh", mode: "serveece", color: transitColorMap.serveece, waitMinutes: 5,  occupancy: "empty",   status: "on_time",   fare: { min: 0.3, max: 0.4 } },
-];
 
 // ═══════════════════════════════════════════════════════════════════════════════
 //  HELPERS
@@ -294,20 +267,68 @@ function StopDetailContent() {
     };
   }, []);
 
-  // ─── Data Fetching ───────────────────────────────────────────────────────
+  // ─── Data Fetching from API ───────────────────────────────────────────────
 
   const fetchData = useCallback(async () => {
     setLoadState("loading");
     try {
-      // Simulate API call
-      await new Promise((r) => setTimeout(r, SIMULATED_FETCH_MS));
-      setStopDetail(MOCK_STOP);
-      setDepartures(MOCK_DEPARTURES);
+      const response = await departuresApi.getForStop(stopId) as any;
+      const apiStop = response?.stop ?? response?.data?.stop;
+      const apiDepartures = response?.departures ?? response?.data?.departures ?? [];
+
+      if (apiStop) {
+        setStopDetail({
+          id: apiStop.id,
+          code: apiStop.code || "",
+          nameAr: apiStop.name_ar || stopName,
+          nameEn: apiStop.name_en || "",
+          lat: apiStop.lat || 0,
+          lng: apiStop.lng || 0,
+          distanceM: apiStop.distance_m ?? 0,
+          hasAccessibility: apiStop.hasAccessibility ?? false,
+          hasShelter: apiStop.hasShelter ?? false,
+          hasLighting: apiStop.hasLighting ?? false,
+          hasTicketMachine: apiStop.hasTicketMachine ?? false,
+          hasAc: apiStop.hasAc ?? false,
+        });
+      } else {
+        // Fallback minimal stop info from route params
+        setStopDetail({
+          id: stopId,
+          code: "",
+          nameAr: stopName,
+          nameEn: "",
+          lat: 0,
+          lng: 0,
+          distanceM: 0,
+          hasAccessibility: false,
+          hasShelter: false,
+          hasLighting: false,
+          hasTicketMachine: false,
+          hasAc: false,
+        });
+      }
+
+      const mapped: StopDeparture[] = (Array.isArray(apiDepartures) ? apiDepartures : []).map((d: any) => ({
+        routeId: d.routeId || d.route_id || "",
+        code: d.code || d.lineCode || "",
+        nameAr: d.name_ar || d.destinationAr || "",
+        nameEn: d.name_en || d.destinationEn || "",
+        mode: d.mode as TransportMode,
+        color: d.color || colors.brand_blue,
+        waitMinutes: d.waitMinutes ?? d.countdownMinutes ?? 0,
+        occupancy: (d.occupancy || "partial") as OccupancyLevel,
+        status: (d.status || "on_time") as "on_time" | "delayed" | "cancelled",
+        fare: d.fare ?? 0,
+        tripId: d.tripId,
+      }));
+
+      setDepartures(mapped);
       setLoadState("loaded");
     } catch {
       setLoadState("error");
     }
-  }, []);
+  }, [stopId, stopName]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 

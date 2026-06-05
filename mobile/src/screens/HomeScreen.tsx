@@ -52,6 +52,9 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { RootStackParamList } from "../navigation/AppNavigator";
 import { canonicalStopToDisplay } from "@/services/api";
+import { AMMAN_CENTER } from "@/config/transport.config";
+import * as Location from "expo-location";
+import { useTranslation } from "react-i18next";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -99,11 +102,12 @@ type SheetTab = "near_me" | "stations";
 // ─── Offline Banner ───────────────────────────────────────────────────────────
 
 const OfflineBanner: React.FC<{ visible: boolean }> = React.memo(({ visible }) => {
+  const { t } = useTranslation();
   if (!visible) return null;
   return (
     <Animated.View entering={SlideInDown.duration(400)} exiting={SlideOutUp.duration(300)} style={styles.offlineBanner}>
       <Text style={styles.offlineIcon}>📡</Text>
-      <Text style={styles.offlineText}>تم تحميل بيانات غير مباشرة</Text>
+      <Text style={styles.offlineText}>{t('errors.noInternet')}</Text>
     </Animated.View>
   );
 });
@@ -119,30 +123,33 @@ interface SearchBarProps {
   onProfilePress?: () => void;
 }
 
-const SearchBar: React.FC<SearchBarProps> = React.memo(({ onFocus, value, onClear, onProfilePress }) => (
-  <Animated.View entering={SlideInDown.duration(400).springify()} style={styles.searchOuter}>
-    <View style={styles.searchBar}>
-      <TouchableOpacity onPress={onClear} style={styles.searchIconBox} activeOpacity={0.6}>
-        <Text style={styles.searchIcon}>{value ? "✕" : "🔍"}</Text>
-      </TouchableOpacity>
-      <TextInput
-        style={styles.searchInput}
-        placeholder="إلى أين؟"
-        placeholderTextColor={colors.text_tertiary}
-        onFocus={onFocus}
-        value={value}
-        onChangeText={() => {}}
-        textAlign="right"
-        returnKeyType="search"
-        accessibilityLabel="بحث عن وجهة"
-        accessibilityHint="اضغط للبحث عن محطة أو وجهة"
-      />
-      <TouchableOpacity style={styles.searchAvatar} onPress={onProfilePress} activeOpacity={0.7} accessibilityLabel="الملف الشخصي">
-        <Text style={styles.avatarText}>ع</Text>
-      </TouchableOpacity>
-    </View>
-  </Animated.View>
-));
+const SearchBar: React.FC<SearchBarProps> = React.memo(({ onFocus, value, onClear, onProfilePress }) => {
+  const { t } = useTranslation();
+  return (
+    <Animated.View entering={SlideInDown.duration(400).springify()} style={styles.searchOuter}>
+      <View style={styles.searchBar}>
+        <TouchableOpacity onPress={onClear} style={styles.searchIconBox} activeOpacity={0.6}>
+          <Text style={styles.searchIcon}>{value ? "✕" : "🔍"}</Text>
+        </TouchableOpacity>
+        <TextInput
+          style={styles.searchInput}
+          placeholder={t('map.searchPlaceholder')}
+          placeholderTextColor={colors.text_tertiary}
+          onFocus={onFocus}
+          value={value}
+          onChangeText={() => {}}
+          textAlign="right"
+          returnKeyType="search"
+          accessibilityLabel={t('map.searchLabel')}
+          accessibilityHint="اضغط للبحث عن محطة أو وجهة"
+        />
+        <TouchableOpacity style={styles.searchAvatar} onPress={onProfilePress} activeOpacity={0.7} accessibilityLabel="الملف الشخصي">
+          <Text style={styles.avatarText}>ع</Text>
+        </TouchableOpacity>
+      </View>
+    </Animated.View>
+  );
+});
 
 SearchBar.displayName = "SearchBar";
 
@@ -153,37 +160,40 @@ interface QuickChipsRowProps {
   onSelect: (chip: QuickChip) => void;
 }
 
-const QuickChipsRow: React.FC<QuickChipsRowProps> = React.memo(({ chips, onSelect }) => (
-  <ScrollView
-    horizontal
-    showsHorizontalScrollIndicator={false}
-    contentContainerStyle={styles.chipsRow}
-    style={{ flexDirection: "row-reverse" as const }}
-  >
-    {chips.map((chip) => (
+const QuickChipsRow: React.FC<QuickChipsRowProps> = React.memo(({ chips, onSelect }) => {
+  const { t } = useTranslation();
+  return (
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={styles.chipsRow}
+      style={{ flexDirection: "row-reverse" as const }}
+    >
+      {chips.map((chip) => (
+        <TouchableOpacity
+          key={chip.id}
+          style={styles.chip}
+          onPress={() => onSelect(chip)}
+          activeOpacity={0.7}
+          accessibilityLabel={`${chip.labelAr} — ${chip.labelEn}`}
+          accessibilityRole="button"
+        >
+          <Text style={styles.chipIcon}>{chip.icon}</Text>
+          <Text style={styles.chipLabel}>{chip.labelAr}</Text>
+        </TouchableOpacity>
+      ))}
       <TouchableOpacity
-        key={chip.id}
-        style={styles.chip}
-        onPress={() => onSelect(chip)}
+        style={[styles.chip, styles.chipAdd]}
         activeOpacity={0.7}
-        accessibilityLabel={`${chip.labelAr} — ${chip.labelEn}`}
+        accessibilityLabel="إضافة وجهة"
         accessibilityRole="button"
       >
-        <Text style={styles.chipIcon}>{chip.icon}</Text>
-        <Text style={styles.chipLabel}>{chip.labelAr}</Text>
+        <Text style={styles.chipAddIcon}>+</Text>
+        <Text style={[styles.chipLabel, { color: colors.text_secondary }]}>{t('common.add') || 'إضافة'}</Text>
       </TouchableOpacity>
-    ))}
-    <TouchableOpacity
-      style={[styles.chip, styles.chipAdd]}
-      activeOpacity={0.7}
-      accessibilityLabel="إضافة وجهة"
-      accessibilityRole="button"
-    >
-      <Text style={styles.chipAddIcon}>+</Text>
-      <Text style={[styles.chipLabel, { color: colors.text_secondary }]}>إضافة</Text>
-    </TouchableOpacity>
-  </ScrollView>
-));
+    </ScrollView>
+  );
+});
 
 QuickChipsRow.displayName = "QuickChipsRow";
 
@@ -232,10 +242,13 @@ interface NearbyStopsSectionProps {
 const NearbyStopsSection: React.FC<NearbyStopsSectionProps> = React.memo(({
   stops,
   onStopPress,
-  title = "محطات قريبة",
-}) => (
+  title,
+}) => {
+  const { t } = useTranslation();
+  const sectionTitle = title || t('map.nearbyStops');
+  return (
   <View style={styles.section}>
-    <Text style={styles.sectionTitle}>{title}</Text>
+    <Text style={styles.sectionTitle}>{sectionTitle}</Text>
     <ScrollView
       horizontal
       showsHorizontalScrollIndicator={false}
@@ -247,7 +260,8 @@ const NearbyStopsSection: React.FC<NearbyStopsSectionProps> = React.memo(({
       ))}
     </ScrollView>
   </View>
-));
+  );
+});
 
 NearbyStopsSection.displayName = "NearbyStopsSection";
 
@@ -337,39 +351,42 @@ interface TabsHeaderProps {
   onTabChange: (tab: SheetTab) => void;
 }
 
-const TabsHeader: React.FC<TabsHeaderProps> = React.memo(({ activeTab, onTabChange }) => (
-  <View style={styles.tabBar}>
-    <TouchableOpacity
-      style={[styles.tabItem, activeTab === "near_me" && styles.tabItemActive]}
-      onPress={() => onTabChange("near_me")}
-      activeOpacity={0.7}
-      accessibilityLabel="قريب مني"
-      accessibilityRole="tab"
-      accessibilityState={{ selected: activeTab === "near_me" }}
-    >
-      <Text style={[styles.tabIcon]}>📍</Text>
-      <Text style={[styles.tabLabel, activeTab === "near_me" && styles.tabLabelActive]}>
-        قريب مني
-      </Text>
-    </TouchableOpacity>
+const TabsHeader: React.FC<TabsHeaderProps> = React.memo(({ activeTab, onTabChange }) => {
+  const { t } = useTranslation();
+  return (
+    <View style={styles.tabBar}>
+      <TouchableOpacity
+        style={[styles.tabItem, activeTab === "near_me" && styles.tabItemActive]}
+        onPress={() => onTabChange("near_me")}
+        activeOpacity={0.7}
+        accessibilityLabel="قريب مني"
+        accessibilityRole="tab"
+        accessibilityState={{ selected: activeTab === "near_me" }}
+      >
+        <Text style={[styles.tabIcon]}>📍</Text>
+        <Text style={[styles.tabLabel, activeTab === "near_me" && styles.tabLabelActive]}>
+          {t('map.nearbyStops')}
+        </Text>
+      </TouchableOpacity>
 
-    <View style={styles.tabDivider} />
+      <View style={styles.tabDivider} />
 
-    <TouchableOpacity
-      style={[styles.tabItem, activeTab === "stations" && styles.tabItemActive]}
-      onPress={() => onTabChange("stations")}
-      activeOpacity={0.7}
-      accessibilityLabel="المحطات"
-      accessibilityRole="tab"
-      accessibilityState={{ selected: activeTab === "stations" }}
-    >
-      <Text style={styles.tabIcon}>🚌</Text>
-      <Text style={[styles.tabLabel, activeTab === "stations" && styles.tabLabelActive]}>
-        محطات
-      </Text>
-    </TouchableOpacity>
-  </View>
-));
+      <TouchableOpacity
+        style={[styles.tabItem, activeTab === "stations" && styles.tabItemActive]}
+        onPress={() => onTabChange("stations")}
+        activeOpacity={0.7}
+        accessibilityLabel="المحطات"
+        accessibilityRole="tab"
+        accessibilityState={{ selected: activeTab === "stations" }}
+      >
+        <Text style={styles.tabIcon}>🚌</Text>
+        <Text style={[styles.tabLabel, activeTab === "stations" && styles.tabLabelActive]}>
+          {t('stops.title')}
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
+});
 
 TabsHeader.displayName = "TabsHeader";
 
@@ -400,12 +417,13 @@ const SheetContent: React.FC<SheetContentProps> = React.memo(({
   isRefreshing,
   onRefresh,
 }) => {
+  const { t } = useTranslation();
   // When fully expanded, show the full search screen instead
   if (snapIndex === 2) {
     return (
       <View style={styles.sheetPad}>
         <TouchableOpacity style={styles.searchFieldLarge} onPress={onSearchFocus} activeOpacity={0.7}>
-          <Text style={styles.searchFieldPlaceholder}>ابحث عن محطة أو خط...</Text>
+          <Text style={styles.searchFieldPlaceholder}>{t('map.searchPlaceholder')}</Text>
         </TouchableOpacity>
         <Text style={styles.emptyHint}>جاري تجربة البحث المتقدم</Text>
       </View>
@@ -440,12 +458,12 @@ const SheetContent: React.FC<SheetContentProps> = React.memo(({
           {!compact && (
             <>
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>الرحلات الأخيرة</Text>
-                <Text style={styles.emptyHint}>لا توجد رحلات سابقة</Text>
+                <Text style={styles.sectionTitle}>{t('nav.saved')}</Text>
+                <Text style={styles.emptyHint}>{t('tripPlanner.noResultsHint')}</Text>
               </View>
               <View style={styles.section}>
                 <Text style={styles.sectionTitle}>مقترحات</Text>
-                <Text style={styles.emptyHint}>اختر وجهة لبدء التخطيط</Text>
+                <Text style={styles.emptyHint}>{t('map.noNearbyStops')}</Text>
               </View>
             </>
           )}
@@ -456,7 +474,7 @@ const SheetContent: React.FC<SheetContentProps> = React.memo(({
           <NearbyStopsSection stops={displayStops} onStopPress={onStop} />
           {!compact && (
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>جميع المحطات</Text>
+              <Text style={styles.sectionTitle}>{t('stops.title')}</Text>
               <View style={styles.allStopsList}>
                 {stops.map((s) => (
                   <TouchableOpacity
@@ -501,6 +519,7 @@ const HomeScreen: React.FC = () => {
   const bsRef = useRef<BottomSheetRef>(null);
   const mapRef = useRef<LeafletMapRef>(null);
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const { t } = useTranslation();
 
   // Real state from store
   const storedStops = useTransitStore((s) => s.stops);
@@ -510,6 +529,7 @@ const HomeScreen: React.FC = () => {
   const fetchNearbyStops = useTransitStore((s) => s.fetchNearbyStops);
   const fetchAlerts = useTransitStore((s) => s.fetchAlerts);
   const storedAlerts = useTransitStore((s) => s.alerts);
+  const setUserLocation = useTransitStore((s) => s.setUserLocation);
 
   const [snapIdx, setSnapIdx] = useState(0);
   const [alert, setAlert] = useState<ServiceAlert | null>(null);
@@ -517,12 +537,28 @@ const HomeScreen: React.FC = () => {
   const [activeTab, setActiveTab] = useState<SheetTab>("near_me");
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // ── Fetch real data on mount ───────────────────────────────────────────
+  // ── Request GPS location and fetch nearby stops ──────────────────────────
   useEffect(() => {
-    // Use Amman center as default until real GPS is available
-    fetchNearbyStops(31.9539, 35.9106);
+    const initLocation = async () => {
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status === "granted") {
+          const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+          const lat = pos.coords.latitude;
+          const lng = pos.coords.longitude;
+          setUserLocation({ lat, lng });
+          fetchNearbyStops(lat, lng);
+        } else {
+          // Fall back to Amman center
+          fetchNearbyStops(AMMAN_CENTER.lat, AMMAN_CENTER.lng);
+        }
+      } catch {
+        fetchNearbyStops(AMMAN_CENTER.lat, AMMAN_CENTER.lng);
+      }
+    };
+    initLocation();
     fetchAlerts();
-  }, [fetchNearbyStops, fetchAlerts]);
+  }, [fetchNearbyStops, fetchAlerts, setUserLocation]);
 
   // ── Derive display data from store ─────────────────────────────────────
   const displayStops: TransitStop[] = useMemo(
@@ -591,13 +627,17 @@ const HomeScreen: React.FC = () => {
     setActiveTab(tab);
   }, []);
 
-  const handleRefresh = useCallback(() => {
+  const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
-    // Simulate data refresh
-    setTimeout(() => {
-      setIsRefreshing(false);
-    }, 1500);
-  }, []);
+    try {
+      const loc = userLocation || { lat: AMMAN_CENTER.lat, lng: AMMAN_CENTER.lng };
+      await Promise.all([
+        fetchNearbyStops(loc.lat, loc.lng),
+        fetchAlerts(),
+      ]);
+    } catch { /* noop */ }
+    setIsRefreshing(false);
+  }, [userLocation, fetchNearbyStops, fetchAlerts]);
 
   const handleDismissAlert = useCallback(() => {
     setAlert(null);

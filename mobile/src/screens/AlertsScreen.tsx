@@ -3,36 +3,18 @@
 // Live transit alerts with severity levels, filtering, and mark-as-read
 // ============================================================================
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect, useMemo } from "react";
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { ErrorBoundary } from "@components/ErrorBoundary";
 import { colors, radius, spacing, fontSize, fontWeight, shadows, layout } from "@theme/tokens";
+import { useTransitStore } from "@stores/transit.store";
+import type { TransitAlert } from "@/types/transit.types";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
-type Severity = "info" | "warning" | "critical";
+type Severity = "info" | "warning" | "critical" | "emergency";
 type FilterKey = "all" | "unread" | "critical";
-
-interface Alert {
-  id: string;
-  severity: Severity;
-  titleAr: string;
-  messageAr: string;
-  affectedLines: string[];
-  affectedStops: string[];
-  startsAt: string;
-  isRead: boolean;
-}
-
-// ─── Mock Data ─────────────────────────────────────────────────────────────
-const MOCK_ALERTS: Alert[] = [
-  { id:"a1", severity:"critical", titleAr:"توقف باص عمّان السريع", messageAr:"توقف مؤقت لخط الباص السريع بين صويلح ووسط البلد بسبب حادث مروري. الحافلات البديلة متوفرة.", affectedLines:["BRT1"], affectedStops:["صويلح","الرياض","وسط البلد"], startsAt:"2026-05-30T08:00:00", isRead:false },
-  { id:"a2", severity:"warning", titleAr:"تأخير على خط 2", messageAr:"تأخير 15-20 دقيقة على خط 2 باتجاه الجامعة بسبب أعمال طرق.", affectedLines:["2"], affectedStops:["الجاردنز","الجامعة"], startsAt:"2026-05-30T09:30:00", isRead:false },
-  { id:"a3", severity:"info", titleAr:"تغيير مواعيد الجمعة", messageAr:"مواعيد جديدة ليوم الجمعة على جميع الخطوط. آخر تحديث من هيئة النقل.", affectedLines:["BRT1","2","3"], affectedStops:[], startsAt:"2026-05-29T12:00:00", isRead:true },
-  { id:"a4", severity:"warning", titleAr:"ازدحام سرفيس الصويفية", messageAr:"ازدحام شديد على خط سرفيس الصويفية — العبدلي. ينصح باستخدام خط بديل.", affectedLines:["SERV-ABD"], affectedStops:["الصويفية","العبدلي"], startsAt:"2026-05-30T10:00:00", isRead:false },
-  { id:"a5", severity:"critical", titleAr:"إغلاق محطة ماركا", messageAr:"إغلاق مؤقت لمجمع ماركا للصيانة. المحطات البديلة: طارق والرصيفة.", affectedLines:[], affectedStops:["مجمع ماركا"], startsAt:"2026-05-30T06:00:00", isRead:false },
-];
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 function formatRelativeTime(iso: string): string {
@@ -48,6 +30,7 @@ const SEVERITY_CONFIG: Record<Severity, { bg: string; border: string; icon: stri
   critical: { bg: colors.cancelled + "14", border: colors.cancelled, icon: "🚨", label: "حرج" },
   warning: { bg: colors.delayed + "14", border: colors.delayed, icon: "⚠️", label: "تحذير" },
   info: { bg: colors.brand_blue + "14", border: colors.brand_blue, icon: "ℹ️", label: "معلومة" },
+  emergency: { bg: colors.cancelled + "20", border: colors.cancelled, icon: "🆘", label: "طوارئ" },
 };
 
 const FILTERS: { key: FilterKey; label: string }[] = [
@@ -56,35 +39,81 @@ const FILTERS: { key: FilterKey; label: string }[] = [
   { key: "critical", label: "حرج" },
 ];
 
+// ─── Local display alert type ──────────────────────────────────────────────
+interface DisplayAlert {
+  id: string;
+  severity: Severity;
+  titleAr: string;
+  messageAr: string;
+  affectedLines: string[];
+  affectedStops: string[];
+  startsAt: string;
+  isRead: boolean;
+}
+
+function toDisplayAlert(a: TransitAlert): DisplayAlert {
+  return {
+    id: a.id,
+    severity: a.severity,
+    titleAr: a.title_ar,
+    messageAr: a.message_ar,
+    affectedLines: a.affectedRouteIds,
+    affectedStops: a.affectedStopIds,
+    startsAt: a.startsAt,
+    isRead: false,
+  };
+}
+
 // ─── MAIN SCREEN ───────────────────────────────────────────────────────────
 export default function AlertsScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
-  const [alerts, setAlerts] = useState<Alert[]>(MOCK_ALERTS);
   const [filter, setFilter] = useState<FilterKey>("all");
   const [refreshing, setRefreshing] = useState(false);
+  const [readIds, setReadIds] = useState<Set<string>>(new Set());
 
-  const filtered = alerts.filter((a) => {
-    if (filter === "unread") return !a.isRead;
-    if (filter === "critical") return a.severity === "critical";
-    return true;
-  });
+  // Store data
+  const storeAlerts = useTransitStore((s) => s.alerts);
+  const fetchAlerts = useTransitStore((s) => s.fetchAlerts);
+  const storeLoading = useTransitStore((s) => s.isLoading);
 
+  // Convert store alerts to display format
+  const alerts = useMemo(() => storeAlerts.map(toDisplayAlert), [storeAlerts]);
+
+  // Mark a single alert as read
   const markRead = useCallback((id: string) => {
-    setAlerts((prev) => prev.map((a) => (a.id === id ? { ...a, isRead: true } : a)));
+    setReadIds((prev) => {
+      const next = new Set(prev);
+      next.add(id);
+      return next;
+    });
   }, []);
 
   const markAllRead = useCallback(() => {
-    setAlerts((prev) => prev.map((a) => ({ ...a, isRead: true })));
-  }, []);
+    setReadIds(new Set(alerts.map((a) => a.id)));
+  }, [alerts]);
+
+  const filtered = alerts.filter((a) => {
+    const isRead = readIds.has(a.id);
+    if (filter === "unread") return !isRead;
+    if (filter === "critical") return a.severity === "critical" || a.severity === "emergency";
+    return true;
+  });
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await new Promise((r) => setTimeout(r, 1000));
+    try {
+      await fetchAlerts();
+    } catch { /* noop */ }
     setRefreshing(false);
-  }, []);
+  }, [fetchAlerts]);
 
-  const unreadCount = alerts.filter((a) => !a.isRead).length;
+  // Fetch on mount
+  useEffect(() => {
+    fetchAlerts();
+  }, [fetchAlerts]);
+
+  const unreadCount = alerts.filter((a) => !readIds.has(a.id)).length;
 
   return (
     <ErrorBoundary>
@@ -124,12 +153,19 @@ export default function AlertsScreen() {
           data={filtered}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.brand_blue]} />}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing || (storeLoading && alerts.length === 0)}
+              onRefresh={onRefresh}
+              colors={[colors.brand_blue]}
+            />
+          }
           renderItem={({ item }) => {
-            const cfg = SEVERITY_CONFIG[item.severity];
+            const cfg = SEVERITY_CONFIG[item.severity] || SEVERITY_CONFIG.info;
+            const isRead = readIds.has(item.id);
             return (
               <TouchableOpacity
-                style={[styles.card, { borderRightColor: cfg.border, borderRightWidth: item.isRead ? 0 : 4 }]}
+                style={[styles.card, { borderRightColor: cfg.border, borderRightWidth: isRead ? 0 : 4 }]}
                 onPress={() => markRead(item.id)}
                 activeOpacity={0.7}
               >
@@ -140,7 +176,7 @@ export default function AlertsScreen() {
                   </View>
                   <Text style={styles.time}>{formatRelativeTime(item.startsAt)}</Text>
                 </View>
-                <Text style={[styles.cardTitle, !item.isRead && styles.cardTitleBold]}>
+                <Text style={[styles.cardTitle, !isRead && styles.cardTitleBold]}>
                   {item.titleAr}
                 </Text>
                 <Text style={styles.cardMessage} numberOfLines={3}>{item.messageAr}</Text>
@@ -157,11 +193,13 @@ export default function AlertsScreen() {
             );
           }}
           ListEmptyComponent={
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyIcon}>✅</Text>
-              <Text style={styles.emptyTitle}>لا توجد تنبيهات</Text>
-              <Text style={styles.emptyHint}>جميع الخطوط تعمل بشكل طبيعي</Text>
-            </View>
+            storeLoading && alerts.length === 0 ? null : (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyIcon}>✅</Text>
+                <Text style={styles.emptyTitle}>لا توجد تنبيهات</Text>
+                <Text style={styles.emptyHint}>جميع الخطوط تعمل بشكل طبيعي</Text>
+              </View>
+            )
           }
         />
       </View>

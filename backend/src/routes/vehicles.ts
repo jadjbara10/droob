@@ -4,6 +4,7 @@ import { db } from "../db/index.js";
 import { vehicles } from "../../drizzle/schema.js";
 import { eq } from "drizzle-orm";
 import { cacheGet, cacheSet } from "../redis/index.js";
+import { sendSuccess, sendNotFound, sendValidationError } from "../utils/api-error.js";
 
 const vehiclesQuerySchema = z.object({
   routeCode: z.string().optional(),
@@ -32,17 +33,22 @@ export async function vehiclesRoutes(app: FastifyInstance) {
       let positions: Array<{ vehicleId: string; lat: number; lng: number; routeCode: string; mode: string }> = [];
       const activeIds = await app.redis.smembers("vehicles:active");
 
+      // Batch all Redis GET calls with Promise.all instead of sequential for-loop
+      const locationPromises = activeIds.map(async (vehicleId) => {
+        const pos = await cacheGet<{ lat: number; lng: number; routeCode: string; mode: string }>(`vehicle:location:${vehicleId}`);
+        return { vehicleId, pos };
+      });
+      const locationResults = await Promise.all(locationPromises);
+
       if (query.lat && query.lng) {
-        for (const vehicleId of activeIds) {
-          const pos = await cacheGet<{ lat: number; lng: number; routeCode: string; mode: string }>(`vehicle:location:${vehicleId}`);
+        for (const { vehicleId, pos } of locationResults) {
           if (pos) {
             const dist = haversine(query.lat, query.lng, pos.lat, pos.lng);
             if (dist <= query.radius) positions.push({ vehicleId, ...pos });
           }
         }
       } else {
-        for (const vehicleId of activeIds) {
-          const pos = await cacheGet<{ lat: number; lng: number; routeCode: string; mode: string }>(`vehicle:location:${vehicleId}`);
+        for (const { vehicleId, pos } of locationResults) {
           if (pos) positions.push({ vehicleId, ...pos } as any);
         }
       }
@@ -50,33 +56,33 @@ export async function vehiclesRoutes(app: FastifyInstance) {
       if (query.routeCode) positions = positions.filter((p: any) => p.routeCode === query.routeCode);
       if (query.mode) positions = positions.filter((p: any) => p.mode === query.mode);
 
-      return reply.send({ vehicles: positions.slice(0, query.limit), generatedAt: new Date().toISOString() });
+      return sendSuccess(reply, { vehicles: positions.slice(0, query.limit), generatedAt: new Date().toISOString() });
     } catch (err: any) {
-      if (err instanceof z.ZodError) return reply.status(400).send({ error: "ValidationError", details: err.errors });
+      if (err instanceof z.ZodError) return sendValidationError(reply, err.errors);
       throw err;
     }
   });
 
   app.get("/db", async (_request: FastifyRequest, reply: FastifyReply) => {
     const vehiclesList = await db.query.vehicles.findMany({ limit: 200, with: { agency: true, assignedRoute: true } });
-    return reply.send(vehiclesList);
+    return sendSuccess(reply, vehiclesList);
   });
 
   app.get("/:id", async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
     const [vehicle] = await db.select().from(vehicles).where(eq(vehicles.id, request.params.id)).limit(1);
-    if (!vehicle) return reply.status(404).send({ error: "NotFound", message: "المركبة غير موجودة" });
+    if (!vehicle) return sendNotFound(reply, "المركبة", "Vehicle");
 
     const livePos = await cacheGet(`vehicle:location:${request.params.id}`);
-    return reply.send({ ...vehicle, livePosition: livePos || null });
+    return sendSuccess(reply, { ...vehicle, livePosition: livePos || null });
   });
 
   app.post("/", async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const body = vehicleCreateSchema.parse(request.body);
       const [newVehicle] = await db.insert(vehicles).values(body).returning();
-      return reply.status(201).send(newVehicle);
+      return sendSuccess(reply, newVehicle, 201);
     } catch (err: any) {
-      if (err instanceof z.ZodError) return reply.status(400).send({ error: "ValidationError", details: err.errors });
+      if (err instanceof z.ZodError) return sendValidationError(reply, err.errors);
       throw err;
     }
   });
@@ -85,10 +91,10 @@ export async function vehiclesRoutes(app: FastifyInstance) {
     try {
       const body = vehicleCreateSchema.partial().parse(request.body);
       const [updated] = await db.update(vehicles).set({ ...body, updated_at: new Date() }).where(eq(vehicles.id, request.params.id)).returning();
-      if (!updated) return reply.status(404).send({ error: "NotFound" });
-      return reply.send(updated);
+      if (!updated) return sendNotFound(reply, "المركبة", "Vehicle");
+      return sendSuccess(reply, updated);
     } catch (err: any) {
-      if (err instanceof z.ZodError) return reply.status(400).send({ error: "ValidationError", details: err.errors });
+      if (err instanceof z.ZodError) return sendValidationError(reply, err.errors);
       throw err;
     }
   });
@@ -124,9 +130,9 @@ export async function vehiclesRoutes(app: FastifyInstance) {
         if (body.routeCode) app.io.to(`line:${body.routeCode}:jo`).emit("line:vehicle", { vehicleId: body.vehicleId, ...positionData });
       }
 
-      return reply.send({ ok: true });
+      return sendSuccess(reply, { ok: true });
     } catch (err: any) {
-      if (err instanceof z.ZodError) return reply.status(400).send({ error: "ValidationError", details: err.errors });
+      if (err instanceof z.ZodError) return sendValidationError(reply, err.errors);
       throw err;
     }
   });

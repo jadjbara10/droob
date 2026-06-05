@@ -55,10 +55,22 @@ export async function cacheDel(key: string): Promise<void> {
   }
 }
 
+/**
+ * Scan Redis for keys matching a pattern using SCAN (non-blocking).
+ * Unlike KEYS, SCAN is safe for production use as it iterates in chunks.
+ */
 export async function cacheKeys(pattern: string): Promise<string[]> {
+  const keys: string[] = [];
+  let cursor = "0";
   try {
-    return await redis.keys(pattern);
+    do {
+      // scan(cursor, "MATCH", pattern, "COUNT", count) — positional args for ioredis types
+      const [nextCursor, batch] = await redis.scan(cursor, "MATCH", pattern, "COUNT", 100);
+      keys.push(...batch);
+      cursor = nextCursor;
+    } while (cursor !== "0");
   } catch {
     return [];
   }
+  return keys;
 }

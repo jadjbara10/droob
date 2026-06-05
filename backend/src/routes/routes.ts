@@ -5,6 +5,7 @@ import { routes, routeStops, stops, agencies, schedules } from "../../drizzle/sc
 import { eq, ilike, and, or, asc } from "drizzle-orm";
 import { cacheGet, cacheSet, cacheDel } from "../redis/index.js";
 import { toCamelCase } from "../utils/case-transform.js";
+import { sendError, sendSuccess, sendNotFound, sendValidationError } from "../utils/api-error.js";
 
 const routesQuerySchema = z.object({
   q: z.string().optional(),
@@ -88,10 +89,10 @@ export async function routesRoutes(app: FastifyInstance) {
 
       const wrapped = { data: result, total: result.length };
       await cacheSet(cacheKey, wrapped, 300);
-      return reply.send(wrapped);
+      return sendSuccess(reply, wrapped);
     } catch (err: any) {
       if (err instanceof z.ZodError) {
-        return reply.status(400).send({ error: "ValidationError", details: err.errors });
+        return sendValidationError(reply, err.errors);
       }
       throw err;
     }
@@ -108,7 +109,7 @@ export async function routesRoutes(app: FastifyInstance) {
     const [route] = await db.select().from(routes).where(eq(routes.id, id)).limit(1);
 
     if (!route) {
-      return reply.status(404).send({ error: "NotFound", message: "الخط غير موجود" });
+      return sendNotFound(reply, "الخط", "Route");
     }
 
     const agency = await (route.agency_id
@@ -133,7 +134,7 @@ export async function routesRoutes(app: FastifyInstance) {
       };
 
       await cacheSet(cacheKey, response, 600);
-      return reply.send(response);
+      return sendSuccess(reply, response);
   });
 
   // POST /api/v1/routes — Create route (requires auth)
@@ -146,7 +147,7 @@ export async function routesRoutes(app: FastifyInstance) {
       const [dest] = await db.select({ id: stops.id }).from(stops).where(eq(stops.id, body.destinationStopId)).limit(1);
 
       if (!origin || !dest) {
-        return reply.status(400).send({ error: "InvalidStop", message: "محطة الانطلاق أو الوصول غير موجودة" });
+        return sendError(reply, 400, "InvalidStop", "محطة الانطلاق أو الوصول غير موجودة", "Origin or destination stop not found");
       }
 
       // Map camelCase test fields → snake_case DB columns
@@ -176,13 +177,13 @@ export async function routesRoutes(app: FastifyInstance) {
       const [newRoute] = await db.insert(routes).values(insertValues as any).returning();
 
       await cacheDel("routes:*");
-      return reply.status(201).send(toCamelCase(newRoute));
+      return sendSuccess(reply, toCamelCase(newRoute), 201);
     } catch (err: any) {
       if (err instanceof z.ZodError) {
-        return reply.status(400).send({ error: "ValidationError", details: err.errors });
+        return sendValidationError(reply, err.errors);
       }
       if (err.code === "23505") {
-        return reply.status(409).send({ error: "DuplicateRoute", message: "الخط موجود مسبقاً" });
+        return sendError(reply, 409, "DuplicateRoute", "الخط موجود مسبقاً", "Duplicate route");
       }
       throw err;
     }
@@ -223,15 +224,15 @@ export async function routesRoutes(app: FastifyInstance) {
         .returning();
       
       if (!updated) {
-        return reply.status(404).send({ error: "NotFound", message: "الخط غير موجود" });
+        return sendNotFound(reply, "الخط", "Route");
       }
-      
+
       await cacheDel(`routes:${id}`);
       await cacheDel("routes:*");
-      return reply.send(toCamelCase(updated));
+      return sendSuccess(reply, toCamelCase(updated));
     } catch (err: any) {
       if (err instanceof z.ZodError) {
-        return reply.status(400).send({ error: "ValidationError", details: err.errors });
+        return sendValidationError(reply, err.errors);
       }
       throw err;
     }
@@ -243,7 +244,7 @@ export async function routesRoutes(app: FastifyInstance) {
 
     const [route] = await db.select({ id: routes.id }).from(routes).where(eq(routes.id, id)).limit(1);
     if (!route) {
-      return reply.status(404).send({ error: "NotFound", message: "الخط غير موجود" });
+      return sendNotFound(reply, "الخط", "Route");
     }
 
     const stopsData = await db
@@ -257,7 +258,7 @@ export async function routesRoutes(app: FastifyInstance) {
       .where(eq(routeStops.route_id, id))
       .orderBy(asc(routeStops.seq));
 
-    return reply.send({ stops: stopsData });
+    return sendSuccess(reply, { stops: stopsData });
   });
 
   // POST /api/v1/routes/:id/stops — Add stop to route (requires auth)
@@ -273,7 +274,7 @@ export async function routesRoutes(app: FastifyInstance) {
       // Verify route exists
       const [route] = await db.select({ id: routes.id }).from(routes).where(eq(routes.id, id)).limit(1);
       if (!route) {
-        return reply.status(404).send({ error: "NotFound", message: "الخط غير موجود" });
+        return sendNotFound(reply, "الخط", "Route");
       }
 
       const [newStop] = await db.insert(routeStops).values({
@@ -284,13 +285,13 @@ export async function routesRoutes(app: FastifyInstance) {
       }).returning();
 
       await cacheDel(`routes:${id}`);
-      return reply.status(201).send(newStop);
+      return sendSuccess(reply, newStop, 201);
     } catch (err: any) {
       if (err instanceof z.ZodError) {
-        return reply.status(400).send({ error: "ValidationError", details: err.errors });
+        return sendValidationError(reply, err.errors);
       }
       if (err.code === "23505") {
-        return reply.status(409).send({ error: "DuplicateSequence", message: "الترتيب مكرر" });
+        return sendError(reply, 409, "DuplicateSequence", "الترتيب مكرر", "Duplicate sequence");
       }
       throw err;
     }
@@ -304,12 +305,12 @@ export async function routesRoutes(app: FastifyInstance) {
       .where(and(eq(routeStops.route_id, id), eq(routeStops.stop_id, stopId)))
       .returning();
 
-    if (!deleted) {
-      return reply.status(404).send({ error: "NotFound" });
+    if (!deleted || deleted.length === 0) {
+      return sendNotFound(reply, "محطة المسار", "Route stop");
     }
 
     await cacheDel(`routes:${id}`);
-    return reply.send({ deleted: true });
+    return sendSuccess(reply, { deleted: true });
   });
 
   // GET /api/v1/routes/:id/schedule — Get timetable for a route
@@ -330,6 +331,31 @@ export async function routesRoutes(app: FastifyInstance) {
       .orderBy(schedules.day_of_week, schedules.arrival_time);
 
     await cacheSet(cacheKey, scheduleData, 600);
-    return reply.send(scheduleData);
+    return sendSuccess(reply, scheduleData);
+  });
+
+  // DELETE /api/v1/routes/:id — Soft-delete (set is_active=false)
+  app.delete("/:id", { preHandler: [app.authenticate] }, async (
+    request: FastifyRequest<{ Params: { id: string } }>,
+    reply: FastifyReply
+  ) => {
+    try {
+      const { id } = request.params;
+
+      const [updated] = await db.update(routes)
+        .set({ is_active: false, updated_at: new Date() })
+        .where(eq(routes.id, id))
+        .returning();
+
+      if (!updated) {
+        return sendNotFound(reply, "الخط", "Route");
+      }
+
+      await cacheDel(`routes:${id}`);
+      await cacheDel("routes:*");
+      return sendSuccess(reply, { deleted: true, id });
+    } catch (err: any) {
+      throw err;
+    }
   });
 }

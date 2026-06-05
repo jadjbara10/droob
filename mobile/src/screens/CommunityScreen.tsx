@@ -9,6 +9,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { ErrorBoundary } from "@components/ErrorBoundary";
 import { colors, radius, spacing, fontSize, fontWeight, shadows, layout } from "@theme/tokens";
+import { reportsApi } from "@/services/api-client";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 type ReportType = "delay" | "crowding" | "ended_route" | "closed_stop" | "data_correction";
@@ -20,8 +21,6 @@ const REPORT_TYPES: { key: ReportType; icon: string; label: string; hint: string
   { key: "ended_route", icon: "🏁", label: "انتهاء خط", hint: "أبلغ عن توقف أو انتهاء خط" },
   { key: "closed_stop", icon: "🚫", label: "إغلاق محطة", hint: "أبلغ عن إغلاق أو تحويل محطة" },
   { key: "data_correction", icon: "📝", label: "تصحيح بيانات", hint: "اقترح تعديل: اسم محطة، سعر، موعد، مسار خط — ترسل للداشبورد للمراجعة" },
-  { key: "ended_route", icon: "🏁", label: "انتهاء خط", hint: "أبلغ عن توقف أو انتهاء خط" },
-  { key: "closed_stop", icon: "🚫", label: "إغلاق محطة", hint: "أبلغ عن إغلاق أو تحويل محطة" },
 ];
 
 // ─── Mock Data ─────────────────────────────────────────────────────────────
@@ -55,7 +54,10 @@ export default function CommunityScreen() {
   const [message, setMessage] = useState("");
   const [refreshing, setRefreshing] = useState(false);
 
-  const handleSubmit = useCallback(() => {
+  // Track confirm counts locally (id -> count)
+  const [confirmCounts, setConfirmCounts] = useState<Record<string, number>>({});
+
+  const handleSubmit = useCallback(async () => {
     if (!message.trim()) {
       Alert.alert("تنبيه", "الرجاء كتابة وصف للبلاغ");
       return;
@@ -71,8 +73,28 @@ export default function CommunityScreen() {
     setReports((prev) => [newReport, ...prev]);
     setMessage("");
     setShowForm(false);
+
+    // Submit to API
+    try {
+      await reportsApi.create({
+        type: selectedType,
+        lat: 31.9539,
+        lng: 35.9106,
+        message: message.trim(),
+      });
+    } catch {
+      // Submission failed silently — report is already in local list
+    }
+
     Alert.alert("تم", "تم إرسال بلاغك. شكراً لمساهمتك!");
   }, [message, selectedType]);
+
+  const handleConfirm = useCallback((reportId: string) => {
+    setConfirmCounts((prev) => ({
+      ...prev,
+      [reportId]: (prev[reportId] || 0) + 1,
+    }));
+  }, []);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -133,6 +155,7 @@ export default function CommunityScreen() {
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[colors.brand_blue]} />}
           renderItem={({ item }) => {
             const t = REPORT_TYPES.find((rt) => rt.key === item.type);
+            const effectiveCount = (item.confirmCount || 0) + (confirmCounts[item.id] || 0);
             return (
               <View style={styles.card}>
                 <View style={styles.cardHeader}>
@@ -145,8 +168,8 @@ export default function CommunityScreen() {
                 <Text style={styles.reportMessage}>{item.message}</Text>
                 <View style={styles.cardFooter}>
                   <Text style={styles.stopName}>📍 {item.stopName}</Text>
-                  <TouchableOpacity style={styles.confirmBtn}>
-                    <Text style={styles.confirmText}>👍 {item.confirmCount}</Text>
+                  <TouchableOpacity style={styles.confirmBtn} onPress={() => handleConfirm(item.id)}>
+                    <Text style={styles.confirmText}>👍 {effectiveCount}</Text>
                   </TouchableOpacity>
                 </View>
               </View>

@@ -6,14 +6,17 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import {
   fetchKpis, fetchHourlyTrips, fetchTopStops,
   fetchRoutes, updateRoute, importGtfs,
-  fetchStops, createStop, importStopsCsv,
+  fetchStops, createStop, importStopsCsv, updateStop, deleteStop,
   fetchVehicles, addVehicle,
   fetchAlerts, createAlert, broadcastAlert,
   fetchDailyStats, fetchRetentionCohorts,
   fetchUsers, createUser, updateUser, deleteUser,
   fetchSettings, updateSettings,
+  fetchDrivers,
+  fetchReports, resolveReport,
+  generateInviteCode, listInviteCodes, revokeInviteCode,
   KpiResponse, TripHour, TopStop, RouteListItem,
-  StopItem, VehicleItem, AlertItem, DailyStat, UserItem,
+  StopItem, VehicleItem, AlertItem, DailyStat, UserItem, ReportItem, InviteCode,
 } from "./api";
 
 // ─── Generic useApi Hook ──────────────────────────────────────────────
@@ -153,6 +156,14 @@ export function useImportStopsCsv() {
   return useMutation((file: File) => importStopsCsv(file));
 }
 
+export function useUpdateStop() {
+  return useMutation((id: string, data: Partial<StopItem>) => updateStop(id, data));
+}
+
+export function useDeleteStop() {
+  return useMutation((id: string) => deleteStop(id));
+}
+
 // Fleet
 export function useVehicles() {
   return useApiPolling(fetchVehicles, 15000);
@@ -208,4 +219,31 @@ export function useSettings() {
 
 export function useUpdateSettings() {
   return useMutation((data: Record<string, unknown>) => updateSettings(data));
+}
+
+// Drivers (from vehicles endpoint)
+export function useDrivers() {
+  return useApi(fetchDrivers);
+}
+
+// Reports (Community Corrections)
+export function useReports() {
+  return useApi(fetchReports);
+}
+
+export function useResolveReport() {
+  return useMutation((id: string, action: "approve" | "reject") => resolveReport(id, action));
+}
+
+// Beta Invite Codes
+export function useInviteCodes() {
+  return useApi(listInviteCodes);
+}
+
+export function useGenerateInviteCode() {
+  return useMutation(() => generateInviteCode());
+}
+
+export function useRevokeInviteCode() {
+  return useMutation((code: string) => revokeInviteCode(code));
 }

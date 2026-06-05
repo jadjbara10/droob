@@ -31,7 +31,8 @@ import Animated, {
 import * as Haptics from "expo-haptics";
 import { colors, radius, spacing, fontSize, fontWeight, layout as layoutTokens } from "@theme/tokens";
 import type { TransitMode } from "@theme/tokens";
-import type { Departure, TransportMode } from "@/types/transit.types";
+import type { TransportMode } from "@/types/transit.types";
+import type { Departure as DisplayDeparture } from "@/types/transit";
 import type { MainTabParamList, RootStackParamList } from "@/navigation/AppNavigator";
 import { TransitBadge } from "@components/TransitBadge";
 import { StatusPill } from "@components/StatusPill";
@@ -39,6 +40,7 @@ import { CountdownTimer } from "@components/CountdownTimer";
 import { OccupancyIndicator } from "@components/OccupancyIndicator";
 import { ErrorBoundary } from "@components/ErrorBoundary";
 import { useTransitStore } from "@stores/transit.store";
+import { canonicalDepartureToDisplay } from "@/services/api";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -61,17 +63,6 @@ const FILTER_CHIPS: FilterChip[] = [
   { key: "brt", label: "سريع", icon: "⚡" },
   { key: "serveece", label: "سرفيس", icon: "🚐" },
   { key: "intercity", label: "بين", icon: "🚍" },
-];
-
-// ─── Mock Data ───────────────────────────────────────────────────────────────
-
-const MOCK_DEPARTURES: Departure[] = [
-  { routeId:"r1", code:"2",   name_ar:"صويلح", name_en:"Sweileh",         mode:"city_bus", color:"#0066CC", fare:0.45, departureTime:new Date(Date.now() + 3*60000).toISOString(),  waitMinutes:3,  occupancy:"partial" as const, status:"on_time" as const, tripId:"t1" },
-  { routeId:"r2", code:"BRT1",name_ar:"المدينة الرياضية", name_en:"Sports City", mode:"brt",    color:"#E60026", fare:0.50, departureTime:new Date(Date.now() + 5*60000).toISOString(),  waitMinutes:5,  occupancy:"empty" as const,   status:"delayed" as const, tripId:"t2" },
-  { routeId:"r3", code:"SERV",name_ar:"الصويفية", name_en:"Sweifieh",      mode:"serveece",  color:"#FF8C00", fare:{min:0.20,max:0.40}, departureTime:new Date(Date.now() + 12*60000).toISOString(), waitMinutes:12, occupancy:"empty" as const,   status:"on_time" as const, tripId:"t3" },
-  { routeId:"r4", code:"6",   name_ar:"ماركا", name_en:"Marka",           mode:"city_bus", color:"#0066CC", fare:0.45, departureTime:new Date(Date.now() + 25*60000).toISOString(), waitMinutes:25, occupancy:"full" as const,   status:"on_time" as const, tripId:"t4" },
-  { routeId:"r5", code:"BRT2",name_ar:"مجمع رغدان", name_en:"Raghadan",    mode:"brt",    color:"#E60026", fare:0.50, departureTime:new Date(Date.now() + 8*60000).toISOString(),  waitMinutes:8,  occupancy:"partial" as const, status:"cancelled" as const, tripId:"t5" },
-  { routeId:"r6", code:"105", name_ar:"اربد", name_en:"Irbid",            mode:"intercity", color:"#6B21A8", fare:1.50, departureTime:new Date(Date.now() + 35*60000).toISOString(), waitMinutes:35, occupancy:"partial" as const, status:"on_time" as const, tripId:"t6" },
 ];
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -221,34 +212,34 @@ const pill = StyleSheet.create({
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
-//  DEPARTURE ROW
+//  DEPARTURE ROW — uses the UI display Departure type (from @/types/transit)
 // ═══════════════════════════════════════════════════════════════════════════════
 
-interface DepartureRowProps { item: Departure; onPress: () => void; onBell: () => void; }
+interface DepartureRowProps { item: DisplayDeparture; onPress: () => void; onBell: () => void; }
 
 const DepartureRow: React.FC<DepartureRowProps> = React.memo(({ item, onPress, onBell }) => (
   <Animated.View entering={FadeInRight.duration(300)} layout={ReLayout.springify()}>
     <TouchableOpacity style={row.base} onPress={onPress} activeOpacity={0.7}>
       {/* Route badge: mode icon + line code */}
-      <TransitBadge mode={item.mode} code={item.code} size="md" />
+      <TransitBadge mode={item.mode as any} code={item.lineCode} size="md" />
 
       {/* Destination column */}
       <View style={row.info}>
         <Text style={row.destination} numberOfLines={1}>
-          {item.name_ar}
+          {item.destinationAr}
         </Text>
         <View style={row.meta}>
           <Text style={row.lineCode} numberOfLines={1}>
-            {item.code}
+            {item.lineCode}
           </Text>
-          <OccupancyIndicator level={item.occupancy} size="sm" showLabel={false} />
+          <OccupancyIndicator level={item.occupancy as any} size="sm" showLabel={false} />
         </View>
       </View>
 
       {/* Countdown + status column */}
       <View style={row.timeCol}>
-        <CountdownTimer minutes={item.waitMinutes} size="sm" />
-        <StatusPill status={item.status} size="sm" />
+        <CountdownTimer minutes={item.countdownMinutes} size="sm" />
+        <StatusPill status={item.status as any} size="sm" />
       </View>
 
       {/* Alert bell */}
@@ -259,7 +250,7 @@ const DepartureRow: React.FC<DepartureRowProps> = React.memo(({ item, onPress, o
         accessibilityRole="button"
         accessibilityLabel="تعيين تنبيه"
       >
-        <Text style={row.bellIcon}>{item.tripId ? "🔔" : "🔕"}</Text>
+        <Text style={row.bellIcon}>{item.hasAlert ? "🔔" : "🔕"}</Text>
       </TouchableOpacity>
     </TouchableOpacity>
   </Animated.View>
@@ -333,29 +324,31 @@ const DeparturesScreen: React.FC = () => {
   const fetchDepartures = useTransitStore((s) => s.fetchDepartures);
   const selectedStop = useTransitStore((s) => s.selectedStop);
 
-  const allDepartures = useMemo(
-    () => (storeDepartures.length > 0 ? storeDepartures : MOCK_DEPARTURES),
-    [storeDepartures],
-  );
-
   const displayName = selectedStop?.name_ar || stopName;
   const displayCode = selectedStop?.code || "G01";
 
-  // ── Countdown tick — decrement waitMinutes every 30s ────────────────────
+  // ── Countdown tick — decrement countdownMinutes every 30s ────────────────
   useEffect(() => {
     const interval = setInterval(() => setTick((p) => p + 1), TICK_INTERVAL_MS);
     return () => clearInterval(interval);
   }, []);
 
+  // ── Map canonical departures to display format ───────────────────────────
+  const displayDepartures = useMemo(
+    () => storeDepartures.map((d) => canonicalDepartureToDisplay(d as any)),
+    [storeDepartures],
+  );
+
+  // ── Filter + countdown tick ─────────────────────────────────────────────
   const departures = useMemo(
     () =>
-      allDepartures
+      displayDepartures
         .map((d) => ({
           ...d,
-          waitMinutes: Math.max(0, d.waitMinutes - tick * 0.5),
+          countdownMinutes: Math.max(0, d.countdownMinutes - tick * 0.5),
         }))
         .filter((d) => selectedFilter === "all" || d.mode === selectedFilter),
-    [allDepartures, tick, selectedFilter],
+    [displayDepartures, tick, selectedFilter],
   );
 
   // ── Fetch on mount ──────────────────────────────────────────────────────
@@ -385,16 +378,16 @@ const DeparturesScreen: React.FC = () => {
 
   // ── Handlers ────────────────────────────────────────────────────────────
   const handleRowPress = useCallback(
-    (item: Departure) => {
+    (item: DisplayDeparture) => {
       navigation.navigate("RouteDetail", {
-        routeId: item.routeId,
-        routeName: item.name_ar,
+        routeId: item.id,
+        routeName: item.destinationAr,
       });
     },
     [navigation],
   );
 
-  const handleBell = useCallback((_item: Departure) => {
+  const handleBell = useCallback((_item: DisplayDeparture) => {
     if (Platform.OS !== "web") {
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }
@@ -411,7 +404,7 @@ const DeparturesScreen: React.FC = () => {
   }, [stopId, fetchDepartures]);
 
   // ── FlatList helpers ────────────────────────────────────────────────────
-  const keyExtractor = useCallback((item: Departure) => item.tripId || item.routeId, []);
+  const keyExtractor = useCallback((item: DisplayDeparture) => item.id, []);
 
   const getItemLayout = useCallback(
     (_: any, index: number) => ({
@@ -423,7 +416,7 @@ const DeparturesScreen: React.FC = () => {
   );
 
   const renderItem = useCallback(
-    ({ item }: { item: Departure }) => (
+    ({ item }: { item: DisplayDeparture }) => (
       <DepartureRow
         item={item}
         onPress={() => handleRowPress(item)}

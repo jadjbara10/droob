@@ -6,6 +6,7 @@ import { eq, and, gt } from "drizzle-orm";
 import bcrypt from "bcrypt";
 import { signToken, signRefreshToken, verifyRefreshToken } from "../plugins/auth.js";
 import { sendVerificationCode, generateVerificationCode } from "../services/email.js";
+import { sendError, sendSuccess, sendNotFound, sendValidationError } from "../utils/api-error.js";
 
 // ──── Schemas ────
 const registerSchema = z.object({
@@ -55,10 +56,7 @@ export async function authRoutes(app: FastifyInstance) {
           )
         );
       if (recentCodes.length >= 5) {
-        return reply.status(429).send({
-          error: "TooManyRequests",
-          message: "تم إرسال عدد كبير من الرموز. الرجاء الانتظار 15 دقيقة.",
-        });
+        return sendError(reply, 429, "TooManyRequests", "تم إرسال عدد كبير من الرموز. الرجاء الانتظار 15 دقيقة.", "Too many requests. Please wait 15 minutes.");
       }
 
       // For LOGIN: verify that the email exists
@@ -69,10 +67,7 @@ export async function authRoutes(app: FastifyInstance) {
           .where(eq(users.email, body.email))
           .limit(1);
         if (!existingUser) {
-          return reply.status(404).send({
-            error: "NotFound",
-            message: "لا يوجد حساب بهذا البريد الإلكتروني. الرجاء إنشاء حساب أولاً.",
-          });
+          return sendError(reply, 404, "NotFound", "لا يوجد حساب بهذا البريد الإلكتروني. الرجاء إنشاء حساب أولاً.", "No account with this email. Please register first.");
         }
       }
 
@@ -84,10 +79,7 @@ export async function authRoutes(app: FastifyInstance) {
           .where(eq(users.email, body.email))
           .limit(1);
         if (existingUser) {
-          return reply.status(409).send({
-            error: "Conflict",
-            message: "البريد الإلكتروني مسجل مسبقاً. الرجاء تسجيل الدخول.",
-          });
+          return sendError(reply, 409, "Conflict", "البريد الإلكتروني مسجل مسبقاً. الرجاء تسجيل الدخول.", "Email already registered. Please log in.");
         }
       }
 
@@ -106,10 +98,7 @@ export async function authRoutes(app: FastifyInstance) {
       const result = await sendVerificationCode(body.email, code, body.lang);
 
       if (!result.success && process.env.NODE_ENV === "production") {
-        return reply.status(500).send({
-          error: "EmailError",
-          message: "تعذر إرسال رمز التحقق. الرجاء المحاولة لاحقاً.",
-        });
+        return sendError(reply, 500, "EmailError", "تعذر إرسال رمز التحقق. الرجاء المحاولة لاحقاً.", "Failed to send verification code. Please try again later.");
       }
 
       // In dev mode, return the code for testing
@@ -121,9 +110,9 @@ export async function authRoutes(app: FastifyInstance) {
         response.devCode = code; // Only in dev!
       }
 
-      return reply.send(response);
+      return sendSuccess(reply, response);
     } catch (err: any) {
-      if (err instanceof z.ZodError) return reply.status(400).send({ error: "ValidationError", details: err.errors });
+      if (err instanceof z.ZodError) return sendValidationError(reply, err.errors);
       throw err;
     }
   });
@@ -150,10 +139,7 @@ export async function authRoutes(app: FastifyInstance) {
         .limit(1);
 
       if (!verification) {
-        return reply.status(400).send({
-          error: "InvalidCode",
-          message: "الرمز غير صحيح أو منتهي الصلاحية. الرجاء المحاولة مجدداً.",
-        });
+        return sendError(reply, 400, "InvalidCode", "الرمز غير صحيح أو منتهي الصلاحية. الرجاء المحاولة مجدداً.", "Invalid or expired code. Please try again.");
       }
 
       // Mark code as used
@@ -162,13 +148,13 @@ export async function authRoutes(app: FastifyInstance) {
         .set({ used: true })
         .where(eq(emailVerificationCodes.id, verification.id));
 
-      return reply.send({
+      return sendSuccess(reply, {
         verified: true,
         email: body.email,
         purpose: body.purpose,
       });
     } catch (err: any) {
-      if (err instanceof z.ZodError) return reply.status(400).send({ error: "ValidationError", details: err.errors });
+      if (err instanceof z.ZodError) return sendValidationError(reply, err.errors);
       throw err;
     }
   });
@@ -185,10 +171,7 @@ export async function authRoutes(app: FastifyInstance) {
         .where(eq(users.email, body.email))
         .limit(1);
       if (existing.length) {
-        return reply.status(409).send({
-          error: "Conflict",
-          message: "البريد الإلكتروني مسجل مسبقاً",
-        });
+        return sendError(reply, 409, "Conflict", "البريد الإلكتروني مسجل مسبقاً", "Email already registered");
       }
 
       const hashedPassword = await bcrypt.hash(body.password, 12);
@@ -218,10 +201,10 @@ export async function authRoutes(app: FastifyInstance) {
         expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       });
 
-      return reply.status(201).send({ user, ...tokens });
+      return sendSuccess(reply, { user, ...tokens }, 201);
     } catch (err: any) {
       if (err instanceof z.ZodError)
-        return reply.status(400).send({ error: "ValidationError", details: err.errors });
+        return sendValidationError(reply, err.errors);
       throw err;
     }
   });
@@ -238,18 +221,12 @@ export async function authRoutes(app: FastifyInstance) {
         .limit(1);
 
       if (!user) {
-        return reply.status(401).send({
-          error: "Unauthorized",
-          message: "بريد إلكتروني أو كلمة مرور غير صحيحة",
-        });
+        return sendError(reply, 401, "Unauthorized", "بريد إلكتروني أو كلمة مرور غير صحيحة", "Invalid email or password");
       }
 
       const valid = await bcrypt.compare(body.password, user.password_hash);
       if (!valid) {
-        return reply.status(401).send({
-          error: "Unauthorized",
-          message: "بريد إلكتروني أو كلمة مرور غير صحيحة",
-        });
+        return sendError(reply, 401, "Unauthorized", "بريد إلكتروني أو كلمة مرور غير صحيحة", "Invalid email or password");
       }
 
       await db
@@ -266,7 +243,7 @@ export async function authRoutes(app: FastifyInstance) {
         expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
       });
 
-      return reply.send({
+      return sendSuccess(reply, {
         user: {
           id: user.id,
           email: user.email,
@@ -278,7 +255,7 @@ export async function authRoutes(app: FastifyInstance) {
       });
     } catch (err: any) {
       if (err instanceof z.ZodError)
-        return reply.status(400).send({ error: "ValidationError", details: err.errors });
+        return sendValidationError(reply, err.errors);
       throw err;
     }
   });
@@ -303,7 +280,7 @@ export async function authRoutes(app: FastifyInstance) {
         .limit(1);
 
       if (!storedToken) {
-        return reply.status(401).send({ error: "TokenRevoked", message: "انتهت الجلسة، الرجاء تسجيل الدخول مجدداً" });
+        return sendError(reply, 401, "TokenRevoked", "انتهت الجلسة، الرجاء تسجيل الدخول مجدداً", "Session expired, please log in again");
       }
 
       // Revoke old token (rotation)
@@ -312,7 +289,7 @@ export async function authRoutes(app: FastifyInstance) {
         .where(eq(refreshTokens.id, storedToken.id));
 
       const [user] = await db.select({ id: users.id, role: users.role }).from(users).where(eq(users.id, payload.sub)).limit(1);
-      if (!user) return reply.status(401).send({ error: "Unauthorized" });
+      if (!user) return sendError(reply, 401, "Unauthorized", "غير مصرح", "Unauthorized");
 
       const tokens = generateTokens({ sub: user.id, role: user.role });
 
@@ -323,10 +300,10 @@ export async function authRoutes(app: FastifyInstance) {
         expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       });
 
-      return reply.send(tokens);
+      return sendSuccess(reply, tokens);
     } catch (err: any) {
-      if (err instanceof z.ZodError) return reply.status(400).send({ error: "ValidationError", details: err.errors });
-      return reply.status(401).send({ error: "TokenExpired", message: "انتهت الجلسة، الرجاء تسجيل الدخول مجدداً" });
+      if (err instanceof z.ZodError) return sendValidationError(reply, err.errors);
+      return sendError(reply, 401, "TokenExpired", "انتهت الجلسة، الرجاء تسجيل الدخول مجدداً", "Session expired, please log in again");
     }
   });
 
@@ -337,8 +314,8 @@ export async function authRoutes(app: FastifyInstance) {
       role: users.role, preferredLang: users.preferred_lang, created_at: users.created_at,
     }).from(users).where(eq(users.id, (request as any).userId)).limit(1);
 
-    if (!user) return reply.status(404).send({ error: "NotFound" });
-    return reply.send(user);
+    if (!user) return sendNotFound(reply, "المستخدم", "User");
+    return sendSuccess(reply, user);
   });
 
   // GET /api/v1/auth/profile (alias for /me - used by dashboard)
@@ -348,8 +325,8 @@ export async function authRoutes(app: FastifyInstance) {
       role: users.role, preferredLang: users.preferred_lang, created_at: users.created_at,
     }).from(users).where(eq(users.id, (request as any).userId)).limit(1);
 
-    if (!user) return reply.status(404).send({ error: "NotFound" });
-    return reply.send(user);
+    if (!user) return sendNotFound(reply, "المستخدم", "User");
+    return sendSuccess(reply, user);
   });
 
   // POST /api/v1/auth/logout — Revoke refresh token
@@ -364,7 +341,126 @@ export async function authRoutes(app: FastifyInstance) {
         .execute()
         .catch(() => {}); // Silent — token might not be in DB
     }
-    return reply.send({ message: "تم تسجيل الخروج بنجاح" });
+    return sendSuccess(reply, { message: "تم تسجيل الخروج بنجاح" });
+  });
+
+  // ──── PATCH /api/v1/auth/me — Update profile (name, phone, home/work, preferred language) ────
+  const profileUpdateSchema = z.object({
+    name: z.string().min(1).max(100).optional(),
+    phone: z.string().optional(),
+    preferredLang: z.enum(["ar", "en"]).optional(),
+    homeLat: z.number().optional(),
+    homeLng: z.number().optional(),
+    homeLabelAr: z.string().max(255).optional(),
+    homeLabelEn: z.string().max(255).optional(),
+    workLat: z.number().optional(),
+    workLng: z.number().optional(),
+    workLabelAr: z.string().max(255).optional(),
+    workLabelEn: z.string().max(255).optional(),
+  });
+
+  app.patch("/me", { preHandler: [app.authenticate] }, async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const body = profileUpdateSchema.parse(request.body);
+      const userId = (request as any).userId;
+
+      const updateData: Record<string, unknown> = { updated_at: new Date() };
+      if (body.name !== undefined) updateData.name = body.name;
+      if (body.phone !== undefined) updateData.phone = body.phone;
+      if (body.preferredLang !== undefined) updateData.preferred_lang = body.preferredLang;
+      if (body.homeLat !== undefined) updateData.home_lat = body.homeLat;
+      if (body.homeLng !== undefined) updateData.home_lng = body.homeLng;
+      if (body.homeLabelAr !== undefined) updateData.home_label_ar = body.homeLabelAr;
+      if (body.homeLabelEn !== undefined) updateData.home_label_en = body.homeLabelEn;
+      if (body.workLat !== undefined) updateData.work_lat = body.workLat;
+      if (body.workLng !== undefined) updateData.work_lng = body.workLng;
+      if (body.workLabelAr !== undefined) updateData.work_label_ar = body.workLabelAr;
+      if (body.workLabelEn !== undefined) updateData.work_label_en = body.workLabelEn;
+
+      const [updated] = await db.update(users)
+        .set(updateData)
+        .where(eq(users.id, userId))
+        .returning({
+          id: users.id,
+          email: users.email,
+          phone: users.phone,
+          name: users.name,
+          role: users.role,
+          preferredLang: users.preferred_lang,
+          homeLat: users.home_lat,
+          homeLng: users.home_lng,
+          homeLabelAr: users.home_label_ar,
+          homeLabelEn: users.home_label_en,
+          workLat: users.work_lat,
+          workLng: users.work_lng,
+          workLabelAr: users.work_label_ar,
+          workLabelEn: users.work_label_en,
+        });
+
+      if (!updated) return sendNotFound(reply, "المستخدم", "User");
+      return sendSuccess(reply, updated);
+    } catch (err: any) {
+      if (err instanceof z.ZodError) return sendValidationError(reply, err.errors);
+      throw err;
+    }
+  });
+
+  // ──── POST /api/v1/auth/reset-password — Email + verification code + new password ────
+  const resetPasswordSchema = z.object({
+    email: z.string().email("بريد إلكتروني غير صالح"),
+    code: z.string().length(6, "الرمز يجب أن يكون 6 أرقام"),
+    newPassword: z.string().min(8, "كلمة المرور يجب أن تكون 8 أحرف على الأقل"),
+  });
+
+  app.post("/reset-password", async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const body = resetPasswordSchema.parse(request.body);
+
+      // Verify the code
+      const [verification] = await db
+        .select()
+        .from(emailVerificationCodes)
+        .where(
+          and(
+            eq(emailVerificationCodes.email, body.email),
+            eq(emailVerificationCodes.code, body.code),
+            eq(emailVerificationCodes.purpose, "reset_password"),
+            eq(emailVerificationCodes.used, false),
+            gt(emailVerificationCodes.expires_at, new Date()),
+          ),
+        )
+        .limit(1);
+
+      if (!verification) {
+        return sendError(reply, 400, "InvalidCode", "الرمز غير صحيح أو منتهي الصلاحية", "Invalid or expired code");
+      }
+
+      // Mark code as used
+      await db.update(emailVerificationCodes)
+        .set({ used: true })
+        .where(eq(emailVerificationCodes.id, verification.id));
+
+      // Hash new password and update user
+      const hashedPassword = await bcrypt.hash(body.newPassword, 12);
+      const [updated] = await db.update(users)
+        .set({ password_hash: hashedPassword, updated_at: new Date() })
+        .where(eq(users.email, body.email))
+        .returning({ id: users.id, email: users.email });
+
+      if (!updated) {
+        return sendError(reply, 404, "NotFound", "لا يوجد حساب بهذا البريد الإلكتروني", "No account with this email");
+      }
+
+      // Revoke all refresh tokens for this user
+      await db.update(refreshTokens)
+        .set({ revoked: true })
+        .where(eq(refreshTokens.user_id, updated.id));
+
+      return sendSuccess(reply, { message: "تم إعادة تعيين كلمة المرور بنجاح" });
+    } catch (err: any) {
+      if (err instanceof z.ZodError) return sendValidationError(reply, err.errors);
+      throw err;
+    }
   });
 }
 

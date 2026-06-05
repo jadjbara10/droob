@@ -153,22 +153,32 @@ function MainTabs() {
           fontSize: 11,
           fontWeight: fontWeight.bold,
         },
-        tabBarIcon: ({ focused }: { focused: boolean; color: string; size: number }) => {
-          const icons: Record<string, string> = {
-            Home: "🗺️", TripPlanner: "🧭", Routes: "🛣️", Profile: "👤",
-          };
-          return (
-            <Text style={{ fontSize: focused ? 22 : 18 }}>
-              {icons[route.name] ?? "📍"}
-            </Text>
-          );
-        },
       }}
     >
-      <Tab.Screen name="Home" component={HomeScreen} options={{ tabBarLabel: t("nav.map") }} />
-      <Tab.Screen name="TripPlanner" component={TripPlannerScreen} options={{ tabBarLabel: t("nav.planner") }} />
-      <Tab.Screen name="Routes" component={RoutesScreen} options={{ tabBarLabel: t("nav.routes") }} />
-      <Tab.Screen name="Profile" component={ProfileScreen} options={{ tabBarLabel: t("nav.profile") }} />
+      <Tab.Screen name="Home" component={HomeScreen} options={{
+        tabBarLabel: t("nav.map"),
+        tabBarIcon: ({ focused }: { focused: boolean; color: string; size: number }) => (
+          <Text style={{ fontSize: focused ? 22 : 18 }}>🗺️</Text>
+        ),
+      }} />
+      <Tab.Screen name="TripPlanner" component={TripPlannerScreen} options={{
+        tabBarLabel: t("nav.planner"),
+        tabBarIcon: ({ focused }: { focused: boolean; color: string; size: number }) => (
+          <Text style={{ fontSize: focused ? 22 : 18 }}>🧭</Text>
+        ),
+      }} />
+      <Tab.Screen name="Routes" component={RoutesScreen} options={{
+        tabBarLabel: t("nav.routes"),
+        tabBarIcon: ({ focused }: { focused: boolean; color: string; size: number }) => (
+          <Text style={{ fontSize: focused ? 22 : 18 }}>🛣️</Text>
+        ),
+      }} />
+      <Tab.Screen name="Profile" component={ProfileScreen} options={{
+        tabBarLabel: t("nav.profile"),
+        tabBarIcon: ({ focused }: { focused: boolean; color: string; size: number }) => (
+          <Text style={{ fontSize: focused ? 22 : 18 }}>👤</Text>
+        ),
+      }} />
     </Tab.Navigator>
   );
 }

@@ -14,13 +14,13 @@ export const colors = {
   // Transit Modes
   bus_city: "#0066CC",
   bus_brt: "#E60026",
-  serveece: "#FF8C00",
+  serveece: "#E07B00",
   intercity: "#6B21A8",
   walking: "#6B7280",
 
   // Status
   on_time: "#16A34A",
-  delayed: "#EAB308",
+  delayed: "#CA8A04",
   cancelled: "#DC2626",
 
   // Surfaces
@@ -39,6 +39,44 @@ export const colors = {
   black: "#000000",
   transparent: "transparent",
 } as const;
+
+// ─── Dark Mode Colors ─────────────────────────────────────────────────────────
+
+export const darkColors = {
+  // Surfaces
+  surface: "#0F172A",
+  surface_2: "#1E293B",
+  surface_3: "#334155",
+  border: "#475569",
+
+  // Text
+  text_primary: "#F1F5F9",
+  text_secondary: "#94A3B8",
+  text_tertiary: "#64748B",
+
+  // Brand and transit colors carry over (sufficient contrast on dark)
+  brand_blue: colors.brand_blue,
+  brand_green: colors.brand_green,
+  gold_accent: colors.gold_accent,
+  bus_city: colors.bus_city,
+  bus_brt: colors.bus_brt,
+  serveece: colors.serveece,
+  intercity: colors.intercity,
+  walking: colors.walking,
+  on_time: colors.on_time,
+  delayed: colors.delayed,
+  cancelled: colors.cancelled,
+  white: colors.white,
+  black: colors.black,
+  transparent: colors.transparent,
+} as const;
+
+/**
+ * Return the correct color palette based on the current theme mode.
+ */
+export function getColors(themeMode: "light" | "dark") {
+  return themeMode === "dark" ? darkColors : colors;
+}
 
 // ─── Transit Color Map ───────────────────────────────────────────────────────
 

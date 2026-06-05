@@ -4,6 +4,10 @@
 // tab switcher (Stops Timeline | Live Vehicles), pull-to-refresh,
 // loading/error/empty states, RTL Arabic, ErrorBoundary.
 // ============================================================================
+import { useInterstitialAd } from "@components/AdInterstitial";
+import { useRewardedAd } from "@components/AdRewarded";
+import { AD_INTERSTITIAL_ROUTE, AD_REWARDED_ROUTE_DETAILS } from "@config/ads";
+// ============================================================================
 
 import React, { useState, useCallback, useEffect, useMemo } from "react";
 import {
@@ -42,10 +46,11 @@ import {
 } from "@theme/tokens";
 import type { TransitMode } from "@theme/tokens";
 import type { OccupancyLevel } from "@/types/transit";
-import type { TransportMode } from "@/types/transit.types";
+import type { TransportMode, Stop } from "@/types/transit.types";
 import { OccupancyIndicator } from "@components/OccupancyIndicator";
 import { ErrorBoundary } from "@components/ErrorBoundary";
 import { FARE } from "@/config/transport.config";
+import { routesApi } from "@/services/api-client";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 //  CONSTANTS
@@ -106,46 +111,6 @@ interface RouteInfo {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-//  MOCK DATA
-// ═══════════════════════════════════════════════════════════════════════════════
-
-const MOCK_ROUTE: RouteInfo = {
-  id: "BRT1",
-  code: "BRT1",
-  nameAr: "الباص السريع — خط صويلح",
-  nameEn: "BRT Line 1 — Sweileh",
-  mode: "brt",
-  color: "#E60026",
-  operator: "أمانة عمان الكبرى — قسم الباص السريع",
-  fromNameAr: "شارع القدس",
-  toNameAr: "صويلح",
-  distanceKm: 22.5,
-  durationMin: 35,
-  fareJod: 0.5,
-  headwayMin: 12,
-  schedule: "٥:٣٠ صباحاً — ١١:٠٠ مساءً",
-  fridaySchedule: "٥:٣٠ ص — ١١:٠٠ ص | ١:٣٠ م — ١٠:٠٠ م",
-  hasFridaySchedule: true,
-  features: ["مسار مخصص", "محطات مكيفة", "شاشات إلكترونية", "آلة تذاكر", "إنترنت مجاني"],
-};
-
-const MOCK_STOPS: RouteStop[] = [
-  { id: "s1", nameAr: "شارع القدس", sequence: 1, arrival: "٥:٣٠ ص", isTerminal: true, hasShelter: true, hasLighting: true, hasAccessibility: true },
-  { id: "s2", nameAr: "وسط البلد", sequence: 2, arrival: "٥:٣٥ ص", isTerminal: false, hasShelter: true, hasLighting: true, hasAccessibility: true },
-  { id: "s3", nameAr: "العبدلي", sequence: 3, arrival: "٥:٤٠ ص", isTerminal: false, hasShelter: true, hasLighting: true, hasAccessibility: true },
-  { id: "s4", nameAr: "دوار الداخلية", sequence: 4, arrival: "٥:٤٨ ص", isTerminal: false, hasShelter: true, hasLighting: false, hasAccessibility: true },
-  { id: "s5", nameAr: "الجامعة الأردنية", sequence: 5, arrival: "٥:٥٥ ص", isTerminal: false, hasShelter: true, hasLighting: true, hasAccessibility: false },
-  { id: "s6", nameAr: "صويلح", sequence: 6, arrival: "٦:٠٥ ص", isTerminal: true, hasShelter: true, hasLighting: true, hasAccessibility: true },
-];
-
-const MOCK_VEHICLES: LiveVehicle[] = [
-  { id: "v1", vehicleId: "VH-4235", plateNumber: "٩-٤٢٣٥", lat: 31.956, lng: 35.906, speedKmh: 45, heading: 320, occupancy: "partial", status: "active", nextStopAr: "وسط البلد", lastSeen: new Date().toISOString() },
-  { id: "v2", vehicleId: "VH-8912", plateNumber: "٧-٨٩١٢", lat: 31.962, lng: 35.918, speedKmh: 30, heading: 310, occupancy: "empty", status: "active", nextStopAr: "العبدلي", lastSeen: new Date().toISOString() },
-  { id: "v3", vehicleId: "VH-5678", plateNumber: "٣-٥٦٧٨", lat: 31.972, lng: 35.921, speedKmh: 52, heading: 330, occupancy: "full", status: "active", nextStopAr: "الجامعة الأردنية", lastSeen: new Date().toISOString() },
-  { id: "v4", vehicleId: "VH-1122", plateNumber: "٦-١١٢٢", lat: 31.948, lng: 35.935, speedKmh: 0, heading: 0, occupancy: "empty", status: "idle", nextStopAr: "شارع القدس", lastSeen: new Date(Date.now() - 10 * 60000).toISOString() },
-];
-
-// ═══════════════════════════════════════════════════════════════════════════════
 //  HELPERS
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -171,6 +136,43 @@ function formatFare(baseFare: number): { base: string; transferNote: string } {
   return {
     base: `${baseFare.toFixed(3)} ${FARE.CURRENCY}`,
     transferNote: `خصم التحويل: ${discounted} ${FARE.CURRENCY} (خصم ${Math.round(discount * 100)}% ضمن ${windowMin} دقيقة)`,
+  };
+}
+
+/** Map a canonical Stop to a RouteStop */
+function stopToRouteStop(s: Stop, index: number): RouteStop {
+  return {
+    id: s.id,
+    nameAr: s.name_ar,
+    sequence: index + 1,
+    arrival: undefined,
+    isTerminal: s.isTerminal,
+    hasShelter: s.hasShelter,
+    hasLighting: s.hasLighting,
+    hasAccessibility: s.hasAccessibility,
+  };
+}
+
+/** Map a canonical Route to a RouteInfo */
+function routeToRouteInfo(r: any): RouteInfo {
+  return {
+    id: r.id,
+    code: r.code,
+    nameAr: r.name_ar,
+    nameEn: r.name_en,
+    mode: r.mode,
+    color: r.color,
+    operator: r.agencyId || "أمانة عمان الكبرى",
+    fromNameAr: r.originName_ar || "",
+    toNameAr: r.destinationName_ar || "",
+    distanceKm: r.distance_km || 0,
+    durationMin: r.duration_min || 0,
+    fareJod: r.fare_jod || 0,
+    headwayMin: r.headway_min || null,
+    schedule: "٥:٣٠ صباحاً — ١١:٠٠ مساءً",
+    fridaySchedule: "٥:٣٠ ص — ١١:٠٠ ص | ١:٣٠ م — ١٠:٠٠ م",
+    hasFridaySchedule: r.hasFridaySchedule ?? true,
+    features: ["مسار مخصص", "محطات مكيفة", "شاشات إلكترونية"],
   };
 }
 
@@ -426,7 +428,7 @@ const header = StyleSheet.create({
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
-//  QUICK STATS ROW
+//  QUICK STATS ROW (unchanged)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 interface StatTileProps {
@@ -892,52 +894,58 @@ const RouteDetailScreen: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // ── Data (mock-backed, swappable with apiClient) ───────────────────────
-  const routeInfo = useMemo(() => MOCK_ROUTE, []);
-  const stops = useMemo(() => MOCK_STOPS, []);
-  const vehicles = useMemo(() => MOCK_VEHICLES, []);
+  // ── Data state ─────────────────────────────────────────────────────────
+  const [routeInfo, setRouteInfo] = useState<RouteInfo | null>(null);
+  const [stops, setStops] = useState<RouteStop[]>([]);
+  const [vehicles] = useState<LiveVehicle[]>([]);
 
-  const modeColor = useMemo(
-    () => transitColorMap[routeInfo.mode as TransitMode] || routeInfo.color,
-    [routeInfo],
-  );
+  // ── Ad hooks ───────────────────────────────────────────────────────────
+  const interstitialRoute = useInterstitialAd(AD_INTERSTITIAL_ROUTE, "route");
+  const rewardedDetails = useRewardedAd(AD_REWARDED_ROUTE_DETAILS, "route_details");
 
-  const fareInfo = useMemo(() => formatFare(routeInfo.fareJod), [routeInfo.fareJod]);
-
-  // ── Initial load simulation ────────────────────────────────────────────
-  useEffect(() => {
-    const load = async () => {
-      setIsLoading(true);
-      setError(null);
-      try {
-        // TODO: Replace with real apiClient calls:
-        // const [routeData, stopsData, vehiclesData] = await Promise.all([
-        //   apiClient.getRouteById(routeId),
-        //   apiClient.getRouteStops(routeId),
-        //   apiClient.getVehicles({ routeId }),
-        // ]);
-        await new Promise((r) => setTimeout(r, 500));
-      } catch (e: any) {
-        setError(e?.message || "فشل تحميل بيانات الخط");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    load();
+  // ── Fetch data from API ────────────────────────────────────────────────
+  const fetchData = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const [routeData, stopsData] = await Promise.all([
+        routesApi.getById(routeId),
+        routesApi.getStops(routeId),
+      ]);
+      setRouteInfo(routeToRouteInfo(routeData));
+      const apiStops = (stopsData as any)?.data ?? (Array.isArray(stopsData) ? stopsData : []);
+      setStops(apiStops.map((s: Stop, i: number) => stopToRouteStop(s, i)));
+    } catch (e: any) {
+      setError(e?.message || "فشل تحميل بيانات الخط");
+    } finally {
+      setIsLoading(false);
+    }
   }, [routeId]);
+
+  useEffect(() => { fetchData(); }, [fetchData]);
 
   // ── Pull-to-refresh ───────────────────────────────────────────────────
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     setError(null);
     try {
-      // TODO: Refresh data from API
-      await new Promise((r) => setTimeout(r, 600));
+      await fetchData();
     } catch (e: any) {
       setError(e?.message || "فشل التحديث");
     }
     setRefreshing(false);
-  }, []);
+  }, [fetchData]);
+
+  // ── Derived values ────────────────────────────────────────────────────
+  const modeColor = useMemo(
+    () => (routeInfo ? transitColorMap[routeInfo.mode as TransitMode] || routeInfo.color : colors.brand_blue),
+    [routeInfo],
+  );
+
+  const fareInfo = useMemo(
+    () => (routeInfo ? formatFare(routeInfo.fareJod) : { base: "", transferNote: "" }),
+    [routeInfo],
+  );
 
   // ── Handlers ──────────────────────────────────────────────────────────
   const handleStopPress = useCallback(
@@ -953,65 +961,68 @@ const RouteDetailScreen: React.FC = () => {
 
   // ── Header component (shared between both tabs) ────────────────────────
   const listHeader = useMemo(
-    () => (
-      <View>
-        {/* Route header */}
-        <RouteHeader route={routeInfo} />
+    () => {
+      if (!routeInfo) return null;
+      return (
+        <View>
+          {/* Route header */}
+          <RouteHeader route={routeInfo} />
 
-        {/* Quick stats */}
-        <View style={main.statsRow}>
-          <StatTile
-            icon={<MaterialCommunityIcons name="clock-outline" size={18} color={modeColor} />}
-            label="المدة"
-            value={`${routeInfo.durationMin} د`}
-            color={modeColor}
+          {/* Quick stats */}
+          <View style={main.statsRow}>
+            <StatTile
+              icon={<MaterialCommunityIcons name="clock-outline" size={18} color={modeColor} />}
+              label="المدة"
+              value={`${routeInfo.durationMin} د`}
+              color={modeColor}
+            />
+            <StatTile
+              icon={<MaterialCommunityIcons name="map-marker-distance" size={18} color={modeColor} />}
+              label="المسافة"
+              value={`${routeInfo.distanceKm} كم`}
+              color={modeColor}
+            />
+            <StatTile
+              icon={<MaterialCommunityIcons name="cash-multiple" size={18} color={modeColor} />}
+              label="الأجرة"
+              value={fareInfo.base}
+              color={modeColor}
+            />
+            <StatTile
+              icon={<MaterialCommunityIcons name="sync" size={18} color={modeColor} />}
+              label="التكرار"
+              value={routeInfo.headwayMin ? `كل ${routeInfo.headwayMin} د` : "—"}
+              color={modeColor}
+            />
+          </View>
+
+          {/* Fare detail card */}
+          <FareCard fareJod={routeInfo.fareJod} color={modeColor} />
+
+          {/* Schedule */}
+          <ScheduleCard
+            schedule={routeInfo.schedule}
+            fridaySchedule={routeInfo.fridaySchedule}
+            hasFriday={routeInfo.hasFridaySchedule}
+            headwayMin={routeInfo.headwayMin}
           />
-          <StatTile
-            icon={<MaterialCommunityIcons name="map-marker-distance" size={18} color={modeColor} />}
-            label="المسافة"
-            value={`${routeInfo.distanceKm} كم`}
-            color={modeColor}
-          />
-          <StatTile
-            icon={<MaterialCommunityIcons name="cash-multiple" size={18} color={modeColor} />}
-            label="الأجرة"
-            value={fareInfo.base}
-            color={modeColor}
-          />
-          <StatTile
-            icon={<MaterialCommunityIcons name="sync" size={18} color={modeColor} />}
-            label="التكرار"
-            value={routeInfo.headwayMin ? `كل ${routeInfo.headwayMin} د` : "—"}
+
+          {/* Features */}
+          {routeInfo.features.length > 0 && (
+            <FeaturesRow features={routeInfo.features} color={modeColor} />
+          )}
+
+          {/* Tab Switcher */}
+          <TabSwitcher
+            activeTab={activeTab}
+            onTabChange={handleTabChange}
+            stopCount={stops.length}
+            vehicleCount={vehicles.length}
             color={modeColor}
           />
         </View>
-
-        {/* Fare detail card */}
-        <FareCard fareJod={routeInfo.fareJod} color={modeColor} />
-
-        {/* Schedule */}
-        <ScheduleCard
-          schedule={routeInfo.schedule}
-          fridaySchedule={routeInfo.fridaySchedule}
-          hasFriday={routeInfo.hasFridaySchedule}
-          headwayMin={routeInfo.headwayMin}
-        />
-
-        {/* Features */}
-        {routeInfo.features.length > 0 && (
-          <FeaturesRow features={routeInfo.features} color={modeColor} />
-        )}
-
-        {/* Tab Switcher */}
-        <TabSwitcher
-          activeTab={activeTab}
-          onTabChange={handleTabChange}
-          stopCount={stops.length}
-          vehicleCount={vehicles.length}
-          color={modeColor}
-        />
-      </View>
-    ),
+      );
+    },
     [routeInfo, modeColor, fareInfo, activeTab, handleTabChange, stops.length, vehicles.length],
   );
 

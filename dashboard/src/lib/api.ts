@@ -23,14 +23,20 @@ export interface RouteListItem {
   id: string;
   code: string;
   name_ar: string;
+  name_en?: string;
   mode: string;
-  origin_ar: string;
-  dest_ar: string;
-  duration: number;
-  fare: number;
-  status: string;
-  headway: number | null;
-  vehicles: number;
+  is_active: boolean;
+  base_fare: string;
+  fare_min?: string;
+  fare_max?: string;
+  headway_peak: number | null;
+  headway_offpeak: number | null;
+  color?: string;
+  path_geojson?: any;
+  distance?: number | null;
+  originStop?: { name_ar: string; lat: number; lng: number };
+  destinationStop?: { name_ar: string; lat: number; lng: number };
+  agency?: { name_ar: string };
 }
 
 export interface StopItem {
@@ -133,8 +139,9 @@ export function fetchTopStops(): Promise<TopStop[]> {
 }
 
 // Routes
-export function fetchRoutes(): Promise<RouteListItem[]> {
-  return apiFetch<RouteListItem[]>("/routes");
+export async function fetchRoutes(): Promise<RouteListItem[]> {
+  const res = await apiFetch<{ data: RouteListItem[]; total: number }>("/routes");
+  return res.data || [];
 }
 
 export function updateRoute(id: string, data: Partial<RouteListItem>): Promise<RouteListItem> {
@@ -160,6 +167,14 @@ export function importStopsCsv(file: File): Promise<{ imported: number }> {
   const form = new FormData();
   form.append("csv", file);
   return fetch(`${API_BASE}/stops/import-csv`, { method: "POST", body: form }).then((r) => r.json());
+}
+
+export function updateStop(id: string, data: Partial<StopItem>): Promise<StopItem> {
+  return apiFetch<StopItem>(`/stops/${id}`, { method: "PATCH", body: JSON.stringify(data) });
+}
+
+export function deleteStop(id: string): Promise<void> {
+  return apiFetch<void>(`/stops/${id}`, { method: "DELETE" });
 }
 
 // Fleet
@@ -220,6 +235,50 @@ export function updateUser(id: string, data: Partial<UserItem>): Promise<UserIte
 
 export function deleteUser(id: string): Promise<void> {
   return apiFetch<void>(`/users/${id}`, { method: "DELETE" });
+}
+
+// ─── Reports (Community Corrections) ──────────────────────────────────
+export interface ReportItem {
+  id: string;
+  type: string;
+  original_data: Record<string, unknown>;
+  proposed_data: Record<string, unknown>;
+  status: "pending" | "resolved" | "rejected";
+  submitted_by?: string;
+  created_at: string;
+}
+
+export function fetchReports(): Promise<ReportItem[]> {
+  return apiFetch<ReportItem[]>("/reports");
+}
+
+export function resolveReport(id: string, action: "approve" | "reject"): Promise<void> {
+  return apiFetch<void>(`/reports/${id}/resolve`, { method: "PATCH", body: JSON.stringify({ action }) });
+}
+
+// ─── Beta Invite Codes ────────────────────────────────────────────────
+export interface InviteCode {
+  code: string;
+  status: "active" | "used" | "revoked";
+  created_at: string;
+  used_by?: string;
+}
+
+export function generateInviteCode(): Promise<InviteCode> {
+  return apiFetch<InviteCode>("/admin/invite-codes", { method: "POST" });
+}
+
+export function listInviteCodes(): Promise<InviteCode[]> {
+  return apiFetch<InviteCode[]>("/admin/invite-codes");
+}
+
+export function revokeInviteCode(code: string): Promise<void> {
+  return apiFetch<void>(`/admin/invite-codes/${code}`, { method: "DELETE" });
+}
+
+// ─── Drivers (aliased from vehicles) ──────────────────────────────────
+export function fetchDrivers(): Promise<VehicleItem[]> {
+  return apiFetch<VehicleItem[]>("/vehicles");
 }
 
 // Reports

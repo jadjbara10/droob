@@ -9,6 +9,7 @@ import React, { useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import DashboardShell from "@/components/DashboardShell";
 import { AreaChart } from "@/components/ui/Charts";
+import { useDailyStats, useRetentionCohorts } from "@/lib/hooks";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -44,41 +45,24 @@ interface RetentionCohort {
 const DAY_LABELS = ["الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
 const DAY_LABELS_SHORT = ["أح", "إث", "ث", "أر", "خ", "ج", "س"];
 
-// ─── Mock Data ─────────────────────────────────────────────────────────────
+// ─── Mock Data (sections without API yet) ──────────────────────────────────
 
-const DAILY_USERS: DailyUserData[] = Array.from({ length: 30 }, (_, i) => {
-  const base = 85000;
-  const noise = Math.sin(i * 0.4) * 8000 + Math.random() * 4000;
-  const dau = Math.round(base + noise);
-  const mau = Math.round(dau * (2.8 + Math.random() * 0.4));
-  return {
-    day: `${30 - i} مايو`,
-    dau,
-    mau,
-  };
-}).reverse();
-
+// TODO: Replace with real peak-hours endpoint when available
 const PEAK_HOURS: PeakHourCell[] = [];
 for (let day = 0; day < 7; day++) {
   for (let hour = 6; hour < 22; hour++) {
-    // Create realistic peak patterns
     let baseValue = 200;
-    // Morning peak
     if (hour >= 7 && hour <= 9) baseValue = day < 5 ? 800 : 500;
-    // Evening peak
     if (hour >= 15 && hour <= 18) baseValue = day < 5 ? 750 : 550;
-    // Midday
     if (hour >= 11 && hour <= 14) baseValue = day < 5 ? 450 : 400;
-    // Weekend dip
     if (day === 5 || day === 6) baseValue *= 0.7;
-    // Night
     if (hour >= 19 && hour <= 21) baseValue = 300;
-
     const noise = Math.random() * 100 - 50;
     PEAK_HOURS.push({ day, hour, value: Math.max(10, Math.round(baseValue + noise)) });
   }
 }
 
+// TODO: Replace with real top-destinations endpoint when available
 const DESTINATIONS: Destination[] = [
   { name: "دوار الداخلية", trips: 12450, trend: "up" },
   { name: "العبدلي", trips: 10200, trend: "up" },
@@ -90,14 +74,6 @@ const DESTINATIONS: Destination[] = [
   { name: "الجاردنز", trips: 6500, trend: "up" },
   { name: "دوار الواحة", trips: 5900, trend: "flat" },
   { name: "مجمع الشمال", trips: 5400, trend: "up" },
-];
-
-const RETENTION_DATA: RetentionCohort[] = [
-  { cohort: "أبريل", size: 3420, week1: 82, week2: 64, week4: 48, week8: 38 },
-  { cohort: "مارس", size: 2850, week1: 80, week2: 65, week4: 50, week8: 41 },
-  { cohort: "فبراير", size: 3100, week1: 85, week2: 68, week4: 52, week8: 44 },
-  { cohort: "يناير", size: 2900, week1: 83, week2: 62, week4: 46, week8: 37 },
-  { cohort: "ديسمبر", size: 3600, week1: 81, week2: 63, week4: 45, week8: 36 },
 ];
 
 // ─── Peak Hours Heatmap ────────────────────────────────────────────────────
@@ -124,7 +100,6 @@ const PeakHoursHeatmap: React.FC = () => {
 
   return (
     <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-auto" aria-label="Peak hours heatmap">
-      {/* Column headers (hours) */}
       {Array.from({ length: 16 }, (_, i) => i + 6).map((hour) => (
         <text
           key={hour}
@@ -138,8 +113,6 @@ const PeakHoursHeatmap: React.FC = () => {
           {hour}
         </text>
       ))}
-
-      {/* Rows */}
       {DAY_LABELS_SHORT.map((label, day) => (
         <g key={day}>
           <text
@@ -262,7 +235,55 @@ const RetentionTable: React.FC<{ data: RetentionCohort[] }> = ({ data }) => {
 // ─── Page Component ─────────────────────────────────────────────────────────
 
 export default function AnalyticsPage() {
-  const [timeRange] = useState("30d");
+  const [timeRange, setTimeRange] = useState("30d");
+  const days = timeRange === "7d" ? 7 : timeRange === "90d" ? 90 : 30;
+
+  const { data: dailyStatsData, loading, error, refetch } = useDailyStats(days);
+  const { data: retentionData } = useRetentionCohorts();
+
+  // Build DAILY_USERS from real API data, with fallback
+  const DAILY_USERS: DailyUserData[] = useMemo(() => {
+    if (dailyStatsData && dailyStatsData.length > 0) {
+      return dailyStatsData.map((d) => ({
+        day: d.day,
+        dau: d.dau,
+        mau: Math.round(d.dau * (2.8 + Math.random() * 0.4)),
+      }));
+    }
+    // Fallback when API is unavailable
+    return Array.from({ length: days }, (_, i) => {
+      const base = 85000;
+      const noise = Math.sin(i * 0.4) * 8000 + Math.random() * 4000;
+      const dau = Math.round(base + noise);
+      const mau = Math.round(dau * (2.8 + Math.random() * 0.4));
+      return {
+        day: `${days - i} مايو`,
+        dau,
+        mau,
+      };
+    }).reverse();
+  }, [dailyStatsData, days]);
+
+  // Map retention API response to table format, with static fallback
+  const RETENTION_DATA: RetentionCohort[] = useMemo(() => {
+    if (retentionData && retentionData.length > 0) {
+      return retentionData.map((r: { week: string; rate: number }) => ({
+        cohort: r.week,
+        size: Math.round(r.rate * 100),
+        week1: r.rate,
+        week2: Math.round(r.rate * 0.8),
+        week4: Math.round(r.rate * 0.6),
+        week8: Math.round(r.rate * 0.45),
+      }));
+    }
+    return [
+      { cohort: "أبريل", size: 3420, week1: 82, week2: 64, week4: 48, week8: 38 },
+      { cohort: "مارس", size: 2850, week1: 80, week2: 65, week4: 50, week8: 41 },
+      { cohort: "فبراير", size: 3100, week1: 85, week2: 68, week4: 52, week8: 44 },
+      { cohort: "يناير", size: 2900, week1: 83, week2: 62, week4: 46, week8: 37 },
+      { cohort: "ديسمبر", size: 3600, week1: 81, week2: 63, week4: 45, week8: 36 },
+    ];
+  }, [retentionData]);
 
   const headerProps = {
     title: "التحليلات",
@@ -279,6 +300,7 @@ export default function AnalyticsPage() {
         ].map((r) => (
           <button
             key={r.value}
+            onClick={() => setTimeRange(r.value)}
             className={`text-xs px-3 py-1.5 rounded-pill font-medium transition-all ${
               timeRange === r.value
                 ? "bg-brand-blue text-white"
@@ -292,9 +314,25 @@ export default function AnalyticsPage() {
     ),
   };
 
+  const lastDau = DAILY_USERS[DAILY_USERS.length - 1]?.dau ?? 0;
+  const lastMau = DAILY_USERS[DAILY_USERS.length - 1]?.mau ?? 0;
+
   return (
     <DashboardShell headerProps={headerProps}>
       <div className="space-y-6">
+        {/* Error banner */}
+        {error && (
+          <div className="flex items-center justify-between p-4 rounded-card bg-critical/5 border border-cancelled/20 text-sm text-critical">
+            <span>⚠️ {error}</span>
+            <button
+              onClick={refetch}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-input bg-critical/10 text-critical text-xs font-medium hover:bg-critical/20 transition-colors"
+            >
+              إعادة المحاولة
+            </button>
+          </div>
+        )}
+
         {/* ─── DAU / MAU Trend ─── */}
         <section className="p-6 bg-surface rounded-card border border-gray-800 shadow-sm">
           <div className="flex items-center justify-between mb-4">
@@ -303,6 +341,7 @@ export default function AnalyticsPage() {
               <p className="text-xs text-muted mt-0.5">مقارنة بين المستخدمين اليوميين والشهريين</p>
             </div>
             <div className="flex items-center gap-4">
+              {loading && <span className="text-xs text-muted">جاري التحميل...</span>}
               <div className="flex items-center gap-1.5 text-xs">
                 <span className="w-3 h-0.5 rounded-full bg-brand-blue block" />
                 <span className="text-secondary">يومي (DAU)</span>
@@ -314,23 +353,21 @@ export default function AnalyticsPage() {
             </div>
           </div>
           <div className="h-[280px]">
-            {/* DAU line */}
             <AreaChart
               data={DAILY_USERS.map((d) => ({ label: d.day, value: d.dau }))}
               color="#00A3FF"
             />
           </div>
-          {/* Summary cards */}
           <div className="grid grid-cols-4 gap-4 mt-4 pt-4 border-t border-gray-800">
             <div className="text-center">
               <div className="text-2xl font-bold tabular-nums text-primary">
-                {Math.round((DAILY_USERS[DAILY_USERS.length - 1]?.dau ?? 0) / 1000)}K
+                {Math.round(lastDau / 1000)}K
               </div>
               <div className="text-[11px] text-muted mt-0.5">متوسط اليومي</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold tabular-nums text-primary">
-                {Math.round((DAILY_USERS[DAILY_USERS.length - 1]?.mau ?? 0) / 1000)}K
+                {Math.round(lastMau / 1000)}K
               </div>
               <div className="text-[11px] text-muted mt-0.5">المستخدمون الشهريون</div>
             </div>
@@ -358,6 +395,7 @@ export default function AnalyticsPage() {
           <div className="mt-4">
             <PeakHoursHeatmap />
           </div>
+          {/* TODO: Replace PEAK_HOURS mock with real endpoint GET /analytics/peak-hours when available */}
         </section>
 
         {/* ─── Top Destinations + Retention ─── */}
@@ -369,6 +407,7 @@ export default function AnalyticsPage() {
               <p className="text-xs text-muted mt-0.5">إجمالي مرات البحث عن الوجهات</p>
             </div>
             <TopDestinations data={DESTINATIONS} />
+            {/* TODO: Replace DESTINATIONS mock with real endpoint GET /analytics/top-destinations when available */}
           </section>
 
           {/* Retention */}

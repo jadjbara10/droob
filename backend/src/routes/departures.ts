@@ -4,6 +4,7 @@ import { db } from "../db/index.js";
 import { stops, routes, routeStops, trips } from "../../drizzle/schema.js";
 import { eq, and, gte, lte, asc, sql } from "drizzle-orm";
 import { cacheGet, cacheSet } from "../redis/index.js";
+import { sendSuccess, sendNotFound, sendValidationError } from "../utils/api-error.js";
 
 const departuresQuerySchema = z.object({
   stopId: z.string().uuid(),
@@ -26,7 +27,7 @@ export async function departuresRoutes(app: FastifyInstance) {
       // Get stop info
       const [stopData] = await db.select().from(stops).where(eq(stops.id, query.stopId)).limit(1);
       if (!stopData) {
-        return reply.status(404).send({ error: "NotFound", message: "المحطة غير موجودة" });
+        return sendNotFound(reply, "المحطة", "Stop");
       }
 
       // Find all routes that serve this stop
@@ -100,10 +101,10 @@ export async function departuresRoutes(app: FastifyInstance) {
       };
 
       await cacheSet(cacheKey, result, 30); // 30 sec cache (needs to be fresh)
-      return reply.send(result);
+      return sendSuccess(reply, result);
     } catch (err: any) {
       if (err instanceof z.ZodError) {
-        return reply.status(400).send({ error: "ValidationError", details: err.errors });
+        return sendValidationError(reply, err.errors);
       }
       throw err;
     }
@@ -119,7 +120,7 @@ export async function departuresRoutes(app: FastifyInstance) {
 
     const [routeData] = await db.select().from(routes).where(eq(routes.id, routeId)).limit(1);
     if (!routeData) {
-      return reply.status(404).send({ error: "NotFound", message: "الخط غير موجود" });
+      return sendNotFound(reply, "الخط", "Route");
     }
 
     // Get all today's departures
@@ -150,7 +151,7 @@ export async function departuresRoutes(app: FastifyInstance) {
     };
 
     await cacheSet(cacheKey, response, 60);
-    return reply.send(response);
+    return sendSuccess(reply, response);
   });
 }
 
@@ -167,10 +168,11 @@ function estimateNextDeparture(
   const isPeak = (hour >= 7 && hour <= 9) || (hour >= 16 && hour <= 19);
   const headway = isPeak ? (routeData.headwayPeak || 15) : (routeData.headwayOffpeak || 25);
 
-  // If serveece: departures are frequent / demand-based
+  // If serveece: departures are frequent / demand-based.
+  // Use a configurable default headway (15 min) instead of random jitter.
   if (routeData.mode === "serveece") {
-    // Simulate: next departure within 2-8 min
-    const waitMins = 2 + Math.floor(Math.random() * 6);
+    const serveeceHeadway = routeData.headwayPeak || routeData.headwayOffpeak || 15;
+    const waitMins = Math.max(2, Math.round(serveeceHeadway / 2));
     return new Date(now.getTime() + waitMins * 60000);
   }
 
@@ -219,14 +221,17 @@ async function estimateOccupancy(_routeId: string, _departureTime: Date): Promis
 }
 
 function getStatus(now: Date, departureTime: Date): "on_time" | "delayed" | "cancelled" {
-  // In a real system, this compares scheduled vs actual
-  // For now, random based on delay heuristics
+  // In a real system, this compares scheduled vs actual.
+  // Deterministic time-based heuristic: peak hours = higher delay probability.
+  // Uses the minute value as a pseudo-random seed so the result is consistent
+  // per departure but varies across the hour.
   const diffMin = (departureTime.getTime() - now.getTime()) / 60000;
   if (diffMin < 0) return "cancelled"; // time passed
   const hour = departureTime.getHours();
-  // More delays during peak
-  if ((hour >= 7 && hour <= 9) || (hour >= 16 && hour <= 19)) {
-    return Math.random() > 0.7 ? "delayed" : "on_time";
-  }
-  return Math.random() > 0.9 ? "delayed" : "on_time";
+  const minute = departureTime.getMinutes();
+  const isPeak = (hour >= 7 && hour <= 9) || (hour >= 16 && hour <= 19);
+  const threshold = isPeak ? 35 : 15; // 35% delay during peak, 15% off-peak
+  // Deterministic check: use minute as a pseudo-random seed
+  const pseudoRand = (minute * 7 + hour * 3) % 100;
+  return pseudoRand < threshold ? "delayed" : "on_time";
 }

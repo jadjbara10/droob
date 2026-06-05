@@ -96,13 +96,13 @@ export const COLORS = {
   // Transit mode colors
   cityBus: '#0066CC',
   brt: '#E60026',
-  serveece: '#FF8C00',
+  serveece: '#E07B00',
   intercity: '#6B21A8',
   walking: '#6B7280',
 
   // Status colors
   onTime: '#16A34A',             // Green — في الموعد
-  delayed: '#EAB308',           // Yellow — تأخير
+  delayed: '#CA8A04',           // Yellow — تأخير
   cancelled: '#DC2626',         // Red — ملغي
 
   // Occupancy colors

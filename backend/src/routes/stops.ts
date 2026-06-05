@@ -2,8 +2,9 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
 import { z } from "zod";
 import { db } from "../db/index.js";
 import { stops } from "../../drizzle/schema.js";
-import { eq, ilike, sql, and, or } from "drizzle-orm";
+import { eq, ilike, and, or, between } from "drizzle-orm";
 import { cacheGet, cacheSet, cacheDel } from "../redis/index.js";
+import { sendError, sendSuccess, sendNotFound, sendValidationError } from "../utils/api-error.js";
 
 // ──── Haversine Distance (meters) ────
 function haversineDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
@@ -94,17 +95,17 @@ export async function stopsRoutes(app: FastifyInstance) {
         orderBy: stops.name_ar,
       });
 
-      return reply.send(result);
+      return sendSuccess(reply, result);
     } catch (err: any) {
       if (err instanceof z.ZodError) {
-        return reply.status(400).send({ error: "ValidationError", details: err.errors });
+        return sendValidationError(reply, err.errors);
       }
       throw err;
     }
   });
 
   // GET /api/v1/stops/nearby/:lat/:lng
-  // Uses Haversine formula (no PostGIS dependency)
+  // Uses bounding-box pre-filter + Haversine (no PostGIS dependency)
   app.get("/nearby/:lat/:lng", async (
     request: FastifyRequest<{ Params: { lat: string; lng: string } }>,
     reply: FastifyReply
@@ -113,11 +114,22 @@ export async function stopsRoutes(app: FastifyInstance) {
     const lng = parseFloat(request.params.lng);
 
     if (isNaN(lat) || isNaN(lng)) {
-      return reply.status(400).send({ error: "InvalidCoordinates", message: "إحداثيات غير صحيحة" });
+      return sendError(reply, 400, "InvalidCoordinates", "إحداثيات غير صحيحة", "Invalid coordinates");
     }
 
-    // Fetch all stops and calculate Haversine distance
-    const allStops = await db.select().from(stops).limit(500);
+    // Bounding-box pre-filter: ±0.02 deg (~2km) reduces 500 rows → ~30-50
+    const BBOX_DEG = 0.02;
+    const allStops = await db
+      .select()
+      .from(stops)
+      .where(
+        and(
+          between(stops.lat, lat - BBOX_DEG, lat + BBOX_DEG),
+          between(stops.lng, lng - BBOX_DEG, lng + BBOX_DEG),
+        ),
+      )
+      .limit(500);
+
     const nearby = allStops
       .map((s) => ({
         ...s,
@@ -127,7 +139,7 @@ export async function stopsRoutes(app: FastifyInstance) {
       .sort((a, b) => a.distance_m - b.distance_m)
       .slice(0, 30);
 
-    return reply.send(nearby);
+    return sendSuccess(reply, nearby);
   });
 
   // GET /api/v1/stops — List with optional proximity filter
@@ -137,7 +149,7 @@ export async function stopsRoutes(app: FastifyInstance) {
 
       const cacheKey = `stops:list:${JSON.stringify(query)}`;
       const cached = await cacheGet(cacheKey);
-      if (cached) return reply.send(cached);
+      if (cached) return sendSuccess(reply, cached);
 
       // Use Haversine for proximity queries (no PostGIS on Railway)
       if (query.lat !== undefined && query.lng !== undefined) {
@@ -171,7 +183,7 @@ export async function stopsRoutes(app: FastifyInstance) {
         const paginated = withDistance.slice(query.offset, query.offset + Math.min(query.limit, 200));
         const rows = paginated;
         await cacheSet(cacheKey, rows, 300);
-        return reply.send(rows);
+        return sendSuccess(reply, rows);
       }
 
       // بدون geo filter — استخدم Drizzle ORM عادي
@@ -204,10 +216,10 @@ export async function stopsRoutes(app: FastifyInstance) {
       });
 
       await cacheSet(cacheKey, result, 300);
-      return reply.send(result);
+      return sendSuccess(reply, result);
     } catch (err: any) {
       if (err instanceof z.ZodError) {
-        return reply.status(400).send({ error: "ValidationError", details: err.errors });
+        return sendValidationError(reply, err.errors);
       }
       throw err;
     }
@@ -227,11 +239,11 @@ export async function stopsRoutes(app: FastifyInstance) {
     const [stop] = await db.select().from(stops).where(eq(stops.id, id)).limit(1);
 
     if (!stop) {
-      return reply.status(404).send({ error: "NotFound", message: "المحطة غير موجودة" });
+      return sendNotFound(reply, "المحطة", "Stop");
     }
 
     await cacheSet(cacheKey, stop, 600);
-    return reply.send(stop);
+    return sendSuccess(reply, stop);
   });
 
   // POST /api/v1/stops — requires authentication
@@ -244,13 +256,13 @@ export async function stopsRoutes(app: FastifyInstance) {
       }).returning();
 
       await cacheDel("stops:*");
-      return reply.status(201).send(newStop);
+      return sendSuccess(reply, newStop, 201);
     } catch (err: any) {
       if (err instanceof z.ZodError) {
-        return reply.status(400).send({ error: "ValidationError", details: err.errors });
+        return sendValidationError(reply, err.errors);
       }
       if (err.code === "23505") {
-        return reply.status(409).send({ error: "DuplicateStop", message: "رمز المحطة موجود مسبقاً" });
+        return sendError(reply, 409, "DuplicateStop", "رمز المحطة موجود مسبقاً", "Duplicate stop code");
       }
       throw err;
     }
@@ -271,16 +283,42 @@ export async function stopsRoutes(app: FastifyInstance) {
         .returning();
 
       if (!updated) {
-        return reply.status(404).send({ error: "NotFound", message: "المحطة غير موجودة" });
+        return sendNotFound(reply, "المحطة", "Stop");
       }
 
       await cacheDel(`stops:${id}`);
       await cacheDel("stops:*");
-      return reply.send(updated);
+      return sendSuccess(reply, updated);
     } catch (err: any) {
       if (err instanceof z.ZodError) {
-        return reply.status(400).send({ error: "ValidationError", details: err.errors });
+        return sendValidationError(reply, err.errors);
       }
+      throw err;
+    }
+  });
+
+  // DELETE /api/v1/stops/:id — Soft-delete (set is_terminal=false + mark inactive via is_terminal field)
+  // Uses is_terminal=false as a soft-delete marker; alternatively we could add a is_deleted column
+  app.delete("/:id", { preHandler: [app.authenticate] }, async (
+    request: FastifyRequest<{ Params: { id: string } }>,
+    reply: FastifyReply
+  ) => {
+    try {
+      const { id } = request.params;
+
+      const [updated] = await db.update(stops)
+        .set({ is_terminal: false, updated_at: new Date() })
+        .where(eq(stops.id, id))
+        .returning();
+
+      if (!updated) {
+        return sendNotFound(reply, "المحطة", "Stop");
+      }
+
+      await cacheDel(`stops:${id}`);
+      await cacheDel("stops:*");
+      return sendSuccess(reply, { deleted: true, id }, 200);
+    } catch (err: any) {
       throw err;
     }
   });

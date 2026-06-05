@@ -74,6 +74,17 @@ jobs:
         env:
           DATABASE_URL: postgresql://droob:test_password@localhost:5432/droob_test
           REDIS_URL: redis://localhost:6379
+          JWT_SECRET: ci-test-secret-do-not-use-in-prod
+
+      - name: Security audit (npm)
+        run: npm audit --audit-level=high
+        continue-on-error: true
+
+      - name: Run Semgrep SAST
+        uses: semgrep/semgrep-action@v1
+        with:
+          config: p/default
+        continue-on-error: true
 
   # â”€â”€â”€â”€ Dashboard â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   dashboard:
@@ -128,6 +139,6 @@ jobs:
         working-directory: mobile
         run: npm run lint
 
-      - name: Run tests
+      - name: Run tests with coverage
         working-directory: mobile
-        run: npm run test
+        run: npm run test -- --coverage
