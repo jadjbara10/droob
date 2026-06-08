@@ -7,6 +7,7 @@ import { cacheGet, cacheSet, cacheDel } from "../redis/index.js";
 import { toCamelCase } from "../utils/case-transform.js";
 import { sendError, sendSuccess, sendNotFound, sendValidationError } from "../utils/api-error.js";
 import { logActivity } from "../services/activity-logger.js";
+import { broadcastChange } from "../services/data-broadcast.js";
 
 const alertsQuerySchema = z.object({
   severity: z.enum(["info", "warning", "critical"]).optional(),
@@ -38,14 +39,15 @@ export async function alertsRoutes(app: FastifyInstance) {
       const cached = await cacheGet(cacheKey);
       if (cached) return reply.send(cached);
 
-      const now = new Date();
+      const nowDate = new Date();
+      const nowStr = nowDate.toISOString();
       const conditions = [eq(alerts.is_active, query.active)];
 
       if (query.severity) conditions.push(eq(alerts.severity, query.severity));
       if (query.governorate) conditions.push(eq(alerts.governorate, query.governorate));
       if (query.active) {
-        conditions.push(lte(alerts.start_at, now));
-        conditions.push(sql`(${alerts.end_at} IS NULL OR ${alerts.end_at} >= ${now})`);
+        conditions.push(lte(alerts.start_at, nowDate));
+        conditions.push(sql`(${alerts.end_at} IS NULL OR ${alerts.end_at} >= ${nowStr})`);
       }
 
       const result = await db.select().from(alerts)
@@ -86,6 +88,7 @@ export async function alertsRoutes(app: FastifyInstance) {
         is_active: body.isActive,
       }).returning();
       await cacheDel("alerts:*");
+      broadcastChange(app, "alert", "create", { id: newAlert.id, severity: newAlert.severity, title_ar: newAlert.title_ar });
       // Log activity
       await logActivity(
         (request as any).userId,
@@ -122,6 +125,7 @@ export async function alertsRoutes(app: FastifyInstance) {
       const [updated] = await db.update(alerts).set(updateData).where(eq(alerts.id, request.params.id)).returning();
       if (!updated) return sendNotFound(reply, "التنبيه", "Alert");
       await cacheDel("alerts:*");
+      broadcastChange(app, "alert", "update", { id: updated.id, severity: updated.severity, title_ar: updated.title_ar });
       return sendSuccess(reply, toCamelCase(updated));
     } catch (err: any) {
       if (err instanceof z.ZodError) return sendValidationError(reply, err.errors);
@@ -164,6 +168,7 @@ export async function alertsRoutes(app: FastifyInstance) {
       }
 
       await cacheDel("alerts:*");
+      broadcastChange(app, "alert", "create", { id: emergency.id, severity: "critical", title_ar: emergency.title_ar, emergency: true });
       return sendSuccess(reply, toCamelCase(emergency), 201);
     } catch (err: any) {
       if (err instanceof z.ZodError) return sendValidationError(reply, err.errors);

@@ -1309,42 +1309,181 @@ export async function updateSettings(_data: Partial<AppSettings>): Promise<{ ok:
 // This is the bridge that allows real API data to reach the UI.
 
 // Type transformation helpers: canonical (transit.types.ts) → display format.
-// Return types use `any` to avoid complex namespace import issues; shapes are
-// compatible with the UI components at runtime.
+// Handles BOTH canonical shape (duration_min, distance_km, fromStop/toStop)
+// AND backend response shape (durationMinutes, distanceMeters, from/to).
+// All fields guarded with null checks.
+// ============================================================================
+
+/** Create empty stop placeholder for missing data. */
+function emptyStop() {
+  return { id: "", nameAr: "", nameEn: "", code: "", lat: 0, lng: 0, modes: [], isLandmark: false, isAccessible: false };
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function canonicalStopToDisplay(s: Stop & { distance_m?: number }): any {
+  if (!s) return emptyStop();
   return {
-    id: s.id, nameAr: s.name_ar, nameEn: s.name_en, code: s.code,
-    lat: s.lat, lng: s.lng, modes: [],
+    id: s.id ?? "", nameAr: s.name_ar || s.name_en || "محطة", nameEn: s.name_en || s.name_ar || "Stop", code: s.code ?? "",
+    lat: s.lat ?? 0, lng: s.lng ?? 0, modes: [],
     isLandmark: s.isTerminal ?? false, isAccessible: s.hasAccessibility ?? false,
     distance: s.distance_m ?? undefined,
   };
 }
+
+/**
+ * Convert a backend-response leg (from trip planner POST /api/v1/planner)
+ * to the display RouteLeg format.
+ * Backend leg shape: { type, mode?, routeCode?, routeName_ar?, routeName_en?,
+ *   from: {name_ar,name_en,lat,lng}, to: {same}, departureTime, arrivalTime,
+ *   durationMinutes, distanceMeters, fare, instruction_ar, instruction_en }
+ */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function canonicalJourneyToDisplay(j: Journey): any {
+function backendLegToDisplay(leg: any): any {
+  if (!leg) {
+    return { mode: "walking", fromStop: emptyStop(), toStop: emptyStop(),
+      departureTime: new Date().toISOString(), arrivalTime: new Date().toISOString(),
+      durationMinutes: 0, intermediateStops: 0, polyline: [] };
+  }
+  const isWalk = leg.type === "walk";
+  const mode = isWalk ? "walking" : (leg.mode || "city_bus");
+  const from = leg.from || {};
+  const to = leg.to || {};
+
   return {
-    id: j.id, legs: j.legs.map(canonicalLegToDisplay),
-    totalDurationMinutes: j.duration_min,
-    walkingMinutes: Math.round(j.walkingDistance_km * 12),
-    transfers: Math.max(0, j.legs.filter((l: any) => l.mode !== "walking").length - 1),
-    fareAmount: j.totalFare_jod, fareCurrency: "د.أ",
-    departureTime: j.departureTime, arrivalTime: j.arrivalTime,
-    modes: [...new Set(j.legs.filter((l: any) => l.mode !== "walking").map((l: any) => l.mode))],
-  };
-}
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function canonicalLegToDisplay(leg: JourneyLeg): any {
-  return {
-    mode: leg.mode, lineCode: leg.routeCode ?? undefined,
-    lineNameAr: leg.routeName_ar ?? undefined, lineNameEn: leg.routeName_en ?? undefined,
-    fromStop: canonicalStopToDisplay({ ...leg.fromStop, distance_m: undefined } as any),
-    toStop: canonicalStopToDisplay({ ...leg.toStop, distance_m: undefined } as any),
-    departureTime: leg.departureTime, arrivalTime: leg.arrivalTime,
-    durationMinutes: leg.duration_min, intermediateStops: 0,
+    type: isWalk ? "walk" : "transit",
+    mode,
+    routeCode: leg.routeCode ?? undefined,
+    routeName_ar: leg.routeName_ar ?? undefined,
+    routeName_en: leg.routeName_en ?? undefined,
+    routeColor: leg.routeColor ?? undefined,
+    lineCode: leg.routeCode ?? undefined,
+    lineNameAr: leg.routeName_ar ?? undefined,
+    lineNameEn: leg.routeName_en ?? undefined,
+    from: { name_ar: from.name_ar ?? "", name_en: from.name_en ?? "", lat: from.lat ?? 0, lng: from.lng ?? 0 },
+    to: { name_ar: to.name_ar ?? "", name_en: to.name_en ?? "", lat: to.lat ?? 0, lng: to.lng ?? 0 },
+    fromStop: {
+      id: "", nameAr: from.name_ar ?? "", nameEn: from.name_en ?? "",
+      code: "", lat: from.lat ?? 0, lng: from.lng ?? 0,
+      modes: [], isLandmark: false, isAccessible: false,
+    },
+    toStop: {
+      id: "", nameAr: to.name_ar ?? "", nameEn: to.name_en ?? "",
+      code: "", lat: to.lat ?? 0, lng: to.lng ?? 0,
+      modes: [], isLandmark: false, isAccessible: false,
+    },
+    departureTime: leg.departureTime ?? new Date().toISOString(),
+    arrivalTime: leg.arrivalTime ?? new Date().toISOString(),
+    durationMinutes: leg.durationMinutes ?? 0,
+    headSignAr: undefined,
+    headSignEn: undefined,
+    intermediateStops: 0,
     polyline: leg.polyline ?? [],
-    walkingDistance: leg.mode === "walking" ? Math.round(leg.distance_km * 1000) : undefined,
+    walkingDistance: isWalk ? (leg.distanceMeters ?? 0) : undefined,
   };
 }
+
+/**
+ * Convert a canonical leg (transit.types.ts JourneyLeg) to display RouteLeg format.
+ * Canonical leg shape: { mode, routeCode?, routeName_ar?, routeName_en?, routeColor?,
+ *   fromStop: TransitStop, toStop: TransitStop, departureTime, arrivalTime,
+ *   duration_min, distance_km, polyline, fare_jod, ... }
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function canonicalLegToDisplay(leg: any): any {
+  if (!leg) {
+    return { mode: "walking", fromStop: emptyStop(), toStop: emptyStop(),
+      departureTime: new Date().toISOString(), arrivalTime: new Date().toISOString(),
+      durationMinutes: 0, intermediateStops: 0, polyline: [] };
+  }
+  const fromStop = leg.fromStop ? canonicalStopToDisplay({ ...leg.fromStop, distance_m: undefined } as any) : emptyStop();
+  const toStop = leg.toStop ? canonicalStopToDisplay({ ...leg.toStop, distance_m: undefined } as any) : emptyStop();
+
+  return {
+    mode: leg.mode || "walking",
+    lineCode: leg.routeCode ?? undefined,
+    lineNameAr: leg.routeName_ar ?? undefined,
+    lineNameEn: leg.routeName_en ?? undefined,
+    fromStop,
+    toStop,
+    departureTime: leg.departureTime ?? new Date().toISOString(),
+    arrivalTime: leg.arrivalTime ?? new Date().toISOString(),
+    durationMinutes: leg.duration_min ?? 0,
+    headSignAr: undefined,
+    headSignEn: undefined,
+    intermediateStops: 0,
+    polyline: leg.polyline ?? [],
+    walkingDistance: leg.mode === "walking" ? Math.round((leg.distance_km || 0) * 1000) : undefined,
+  };
+}
+
+/**
+ * Convert a backend-response or canonical Journey to the display format
+ * (the `Journey` type from @/types/transit used by JourneyCard).
+ *
+ * Handles BOTH shapes gracefully with null-checks on all fields:
+ *
+ * Backend response (from trip planner):
+ *   { legs: [{ type, durationMinutes, distanceMeters, from, to, ... }],
+ *     totalDuration, totalWalking, totalFare, totalTransfers, ... }
+ *
+ * Canonical shape (transit.types.ts):
+ *   { legs: [{ mode, duration_min, distance_km, fromStop, toStop, ... }],
+ *     duration_min, walkingDistance_km, totalFare_jod, ... }
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function canonicalJourneyToDisplay(j: any): any {
+  if (!j) {
+    return { id: "", legs: [], totalDurationMinutes: 0, walkingMinutes: 0,
+      transfers: 0, fareAmount: 0, fareCurrency: "د.أ",
+      departureTime: new Date().toISOString(), arrivalTime: new Date().toISOString(), modes: [] };
+  }
+
+  const legs = Array.isArray(j.legs) ? j.legs : [];
+
+  // Detect shape: backend response has totalDuration, canonical has duration_min
+  const isBackendShape = "totalDuration" in j;
+
+  const flatLegs = legs.map((leg: any) =>
+    isBackendShape ? backendLegToDisplay(leg) : canonicalLegToDisplay(leg)
+  );
+
+  const totalDurationMinutes = isBackendShape
+    ? (j.totalDuration ?? 0)
+    : (j.duration_min ?? 0);
+
+  const walkingMinutes = isBackendShape
+    ? Math.round((j.totalWalking ?? 0) / 80)
+    : Math.round((j.walkingDistance_km ?? 0) * 12);
+
+  const transfers = isBackendShape
+    ? (j.totalTransfers ?? Math.max(0, legs.filter((l: any) => l.type !== "walk").length - 1))
+    : Math.max(0, legs.filter((l: any) => l.mode !== "walking").length - 1);
+
+  const fareAmount = isBackendShape
+    ? (j.totalFare ?? 0)
+    : (j.totalFare_jod ?? 0);
+
+  return {
+    id: j.id ?? `j-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    legs: flatLegs,
+    totalDurationMinutes,
+    walkingMinutes,
+    transfers,
+    fareAmount,
+    fareCurrency: "د.أ",
+    departureTime: j.departureTime ?? new Date().toISOString(),
+    arrivalTime: j.arrivalTime ?? new Date().toISOString(),
+    modes: [...new Set(
+      legs
+        .filter((l: any) => {
+          const t = isBackendShape ? l.type : l.mode;
+          return t !== "walk" && t !== "walking";
+        })
+        .map((l: any) => isBackendShape ? (l.mode || l.type) : l.mode)
+    )],
+  };
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function canonicalDepartureToDisplay(d: Departure): any {
   const fare = typeof d.fare === "number" ? d.fare : ((d.fare as any)?.min ?? 0);

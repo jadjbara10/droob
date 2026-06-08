@@ -3,6 +3,8 @@
 // Inspired by real airport departure boards, but modern
 // Live countdown, mode badges, status pills, occupancy
 // ============================================================================
+import AdBanner from "@components/AdBanner";
+import { AD_BANNER_DEPARTURES } from "@config/ads";
 
 import React, { useState, useCallback, useRef } from "react";
 import {
@@ -183,6 +185,7 @@ const DeparturesBoardScreen: React.FC = () => {
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
       />
+      <AdBanner adUnitId={AD_BANNER_DEPARTURES} />
     </View>
   );
 };

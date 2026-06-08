@@ -132,8 +132,11 @@ export const useTransitStore = create<TransitState>((set, get) => ({
   fetchRoutes: async (params) => {
     set({ isLoading: true, error: null, usingMockData: false });
     try {
-      const data = await routesApi.list(params || {}) as { data: TransitRoute[] };
-      set({ routes: data.data, isLoading: false });
+      // Fetch all routes (pass limit: 500 to get everything, API caps safely)
+      const data = await routesApi.list({ limit: 500, ...params }) as any;
+      // Handle both response shapes: { data: [...] } or { data: { data: [...] } }
+      const routesList = Array.isArray(data?.data) ? data.data : (data?.data?.data || []);
+      set({ routes: routesList, isLoading: false });
     } catch (e) {
       set({ error: (e as Error).message, isLoading: false, usingMockData: true });
     }
@@ -159,12 +162,15 @@ export const useTransitStore = create<TransitState>((set, get) => ({
   planJourney: async (fromLat, fromLng, toLat, toLng, params) => {
     set({ isLoading: true, error: null, usingMockData: false });
     try {
-      const data = await tripPlannerApi.plan({
+      // Backend returns { from, to, journeys: Journey[], generatedAt }
+      const response = await tripPlannerApi.plan({
         fromLat, fromLng, toLat, toLng,
         ...params,
-      }) as { data: Journey[] };
-      set({ journeys: data.data, isLoading: false });
-      return data.data;
+      }) as any;
+      // Handle v2 response: { data: { journeys } } or direct: { journeys }
+      const journeysList = response?.data?.journeys || response?.journeys || response?.data || [];
+      set({ journeys: journeysList, isLoading: false });
+      return journeysList;
     } catch (e) {
       set({ error: (e as Error).message, isLoading: false, usingMockData: true });
       return [];

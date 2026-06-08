@@ -7,6 +7,7 @@ import { cacheGet, cacheSet, cacheDel } from "../redis/index.js";
 import { toCamelCase } from "../utils/case-transform.js";
 import { sendError, sendSuccess, sendNotFound, sendValidationError } from "../utils/api-error.js";
 import { logActivity } from "../services/activity-logger.js";
+import { broadcastChange } from "../services/data-broadcast.js";
 
 const routesQuerySchema = z.object({
   q: z.string().optional(),
@@ -16,6 +17,7 @@ const routesQuerySchema = z.object({
   isActive: z.coerce.boolean().optional(),
   limit: z.coerce.number().optional().default(50),
   offset: z.coerce.number().optional().default(0),
+  maxLimit: z.coerce.number().optional(),
 });
 
 const routeCreateSchema = z.object({
@@ -78,7 +80,7 @@ export async function routesRoutes(app: FastifyInstance) {
 
       const result = await db.query.routes.findMany({
         where: conditions.length > 0 ? and(...conditions) : undefined,
-        limit: Math.min(query.limit, 200),
+        limit: Math.min(query.limit, query.maxLimit || 500),
         offset: query.offset,
         orderBy: routes.code,
         with: {
@@ -178,6 +180,7 @@ export async function routesRoutes(app: FastifyInstance) {
       const [newRoute] = await db.insert(routes).values(insertValues as any).returning();
 
       await cacheDel("routes:*");
+      broadcastChange(app, "route", "create", { id: newRoute.id, code: newRoute.code, name_ar: newRoute.name_ar });
       // Log activity
       await logActivity(
         (request as any).userId,
@@ -239,6 +242,7 @@ export async function routesRoutes(app: FastifyInstance) {
 
       await cacheDel(`routes:${id}`);
       await cacheDel("routes:*");
+      broadcastChange(app, "route", "update", { id, code: updated.code, name_ar: updated.name_ar });
       return sendSuccess(reply, toCamelCase(updated));
     } catch (err: any) {
       if (err instanceof z.ZodError) {
@@ -363,6 +367,7 @@ export async function routesRoutes(app: FastifyInstance) {
 
       await cacheDel(`routes:${id}`);
       await cacheDel("routes:*");
+      broadcastChange(app, "route", "delete", { id });
       return sendSuccess(reply, { deleted: true, id });
     } catch (err: any) {
       throw err;

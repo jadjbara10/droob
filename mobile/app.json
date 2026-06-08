@@ -88,7 +88,7 @@
       "expo-font"
     ],
     "extra": {
-      "API_URL": "${API_URL:-http://localhost:3000}",
+      "API_URL": "${API_URL:-https://api.droob-jo.com}",
       "MAPBOX_ACCESS_TOKEN": "${MAPBOX_ACCESS_TOKEN:-pk.test}",
       "e2e": false,
       "eas": {

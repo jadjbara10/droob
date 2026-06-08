@@ -6,6 +6,7 @@ import { eq, ilike, and, or, between } from "drizzle-orm";
 import { cacheGet, cacheSet, cacheDel } from "../redis/index.js";
 import { sendError, sendSuccess, sendNotFound, sendValidationError } from "../utils/api-error.js";
 import { logActivity } from "../services/activity-logger.js";
+import { broadcastChange } from "../services/data-broadcast.js";
 
 // ──── Haversine Distance (meters) ────
 function haversineDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
@@ -257,6 +258,8 @@ export async function stopsRoutes(app: FastifyInstance) {
       }).returning();
 
       await cacheDel("stops:*");
+      // Broadcast to mobile clients
+      broadcastChange(app, "stop", "create", { id: newStop.id, code: newStop.code, name_ar: newStop.name_ar });
       // Log activity
       await logActivity(
         (request as any).userId,
@@ -298,6 +301,7 @@ export async function stopsRoutes(app: FastifyInstance) {
 
       await cacheDel(`stops:${id}`);
       await cacheDel("stops:*");
+      broadcastChange(app, "stop", "update", { id, code: updated.code, name_ar: updated.name_ar });
       return sendSuccess(reply, updated);
     } catch (err: any) {
       if (err instanceof z.ZodError) {
@@ -327,6 +331,7 @@ export async function stopsRoutes(app: FastifyInstance) {
 
       await cacheDel(`stops:${id}`);
       await cacheDel("stops:*");
+      broadcastChange(app, "stop", "delete", { id });
       return sendSuccess(reply, { deleted: true, id }, 200);
     } catch (err: any) {
       throw err;

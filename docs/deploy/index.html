@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>دروب Droob — النقل الذكي في الأردن</title>
+  <style>
+    :root {
+      --bg: #0B0F1A; --surface: #111827; --text: #F0F4FF;
+      --secondary: #8899BB; --accent: #3BB0FF; --accent2: #00E5A0;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: var(--bg); color: var(--text);
+      min-height: 100vh; display: flex; flex-direction: column;
+    }
+    .hero {
+      flex: 1; display: flex; flex-direction: column; align-items: center;
+      justify-content: center; text-align: center; padding: 40px 20px;
+    }
+    .logo {
+      width: 100px; height: 100px; border-radius: 24px;
+      background: linear-gradient(135deg, #1A4F8A, #3BB0FF);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 44px; margin-bottom: 24px; box-shadow: 0 8px 32px rgba(59,176,255,0.3);
+    }
+    h1 { font-size: 40px; margin-bottom: 8px; }
+    h2 { font-size: 18px; color: var(--secondary); font-weight: 400; margin-bottom: 32px; }
+    .badges { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; margin-bottom: 40px; }
+    .badge-btn {
+      display: inline-flex; align-items: center; gap: 10px;
+      padding: 14px 28px; border-radius: 14px;
+      background: var(--surface); border: 1px solid rgba(255,255,255,0.1);
+      color: var(--text); text-decoration: none; font-size: 16px;
+      font-weight: 600; transition: all 0.2s;
+    }
+    .badge-btn:hover { border-color: var(--accent); background: rgba(59,176,255,0.08); }
+    .badge-btn img { width: 28px; height: 28px; }
+    .features {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 16px; max-width: 600px; width: 100%;
+    }
+    .feature {
+      padding: 16px; border-radius: 12px; background: var(--surface);
+      border: 1px solid rgba(255,255,255,0.07); text-align: center;
+    }
+    .feature .icon { font-size: 28px; margin-bottom: 8px; }
+    .feature .label { font-size: 13px; color: var(--secondary); }
+    footer {
+      text-align: center; padding: 24px; font-size: 13px;
+      color: #445577; border-top: 1px solid rgba(255,255,255,0.05);
+    }
+    footer a { color: var(--accent); text-decoration: none; }
+  </style>
+</head>
+<body>
+  <div class="hero">
+    <div class="logo">🚌</div>
+    <h1>دروب</h1>
+    <h2>النقل الذكي في الأردن — باص، سرفيس، باص سريع</h2>
+
+    <div class="badges">
+      <a href="#" class="badge-btn">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/d/d0/Google_Play_Arrow_logo.svg" alt="">
+        Google Play
+      </a>
+    </div>
+
+    <div class="features">
+      <div class="feature">
+        <div class="icon">🗺️</div>
+        <div class="label">خريطة تفاعلية</div>
+      </div>
+      <div class="feature">
+        <div class="icon">🚏</div>
+        <div class="label">مواعيد الباصات</div>
+      </div>
+      <div class="feature">
+        <div class="icon">🧭</div>
+        <div class="label">تخطيط الرحلات</div>
+      </div>
+      <div class="feature">
+        <div class="icon">⚠️</div>
+        <div class="label">تنبيهات فورية</div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    © 2026 Droob — Jordan Transit Navigator &nbsp;|&nbsp;
+    <a href="/privacy">سياسة الخصوصية</a> &nbsp;|&nbsp;
+    <a href="mailto:privacy@droob-jo.com">privacy@droob-jo.com</a>
+  </footer>
+</body>
+</html>

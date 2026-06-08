@@ -4,11 +4,22 @@
 // ============================================================================
 
 import Constants from 'expo-constants';
+import { Platform } from 'react-native';
 import { z } from 'zod';
 
-const API_URL = Constants.expoConfig?.extra?.API_URL || 'http://localhost:3000';
+// Android emulator uses 10.0.2.2 to reach host machine's localhost
+const HOST = Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
+// Defensive: strip unresolved shell template syntax ${VAR:-default} from extra config
+const rawExtra = Constants.expoConfig?.extra?.API_URL;
+const sanitized = (rawExtra || '')
+  .replace(/^\$\{[^}]+\}\s*:?-?\s*/, '')  // strip ${VAR:- prefix
+  .replace(/}$/, '')                        // strip trailing }
+  .trim();
+const rawUrl = sanitized || `http://${HOST}:3000`;
+// Replace localhost with correct host for Android emulator
+const API_URL = rawUrl.replace('localhost', HOST).replace('127.0.0.1', HOST);
 const API_VERSION = '/api/v1';
-const TIMEOUT_MS = 10_000;
+const TIMEOUT_MS = 15_000;
 
 let authToken: string | null = null;
 
@@ -171,7 +182,9 @@ export async function apiFetch<T>(endpoint: string, options: FetchOptions = {}):
       return data as T;
     } catch (err) {
       // Map raw network / timeout errors to a typed OfflineError
-      if (err instanceof DOMException && err.name === 'AbortError') {
+      // React Native does not expose DOMException — check name property instead
+      const errAny = err as any;
+      if (errAny?.name === 'AbortError') {
         lastError = new OfflineError();
       } else if (err instanceof TypeError) {
         lastError = new OfflineError();
@@ -230,13 +243,20 @@ export const tripPlannerApi = {
   plan: (params: {
     fromLat: number; fromLng: number; toLat: number; toLng: number;
     time?: string; timeType?: 'depart' | 'arrive';
-    maxWalkMeters?: number; maxTransfers?: number;
-    preferredModes?: string[]; preference?: string;
-  }) => apiFetch('/trip-planner', {
-    params: {
-      ...params,
-      preferredModes: params.preferredModes?.join(','),
-    } as Record<string, string | number | boolean | undefined>,
+    maxWalkingMeters?: number; maxTransfers?: number;
+    preferredModes?: string; preference?: string;
+  }) => apiFetch('/planner', {
+    method: 'POST',
+    body: {
+      fromLat: params.fromLat,
+      fromLng: params.fromLng,
+      toLat: params.toLat,
+      toLng: params.toLng,
+      maxWalkingMeters: params.maxWalkingMeters ?? 1200,
+      maxTransfers: params.maxTransfers ?? 2,
+      modes: params.preferredModes || 'city_bus,brt,serveece,intercity',
+      preference: params.preference || 'fastest',
+    },
   }),
 };
 

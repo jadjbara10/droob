@@ -52,6 +52,7 @@ import { ErrorBoundary } from "@components/ErrorBoundary";
 import { FARE } from "@/config/transport.config";
 import { routesApi } from "@/services/api-client";
 import { analytics } from "@/services/analytics";
+import LeafletMap from "@components/LeafletMap";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 //  CONSTANTS
@@ -899,6 +900,7 @@ const RouteDetailScreen: React.FC = () => {
   const [routeInfo, setRouteInfo] = useState<RouteInfo | null>(null);
   const [stops, setStops] = useState<RouteStop[]>([]);
   const [vehicles] = useState<LiveVehicle[]>([]);
+  const [rawRouteData, setRawRouteData] = useState<any>(null);
 
   // ── Ad hooks ───────────────────────────────────────────────────────────
   const interstitialRoute = useInterstitialAd(AD_INTERSTITIAL_ROUTE, "route");
@@ -914,6 +916,7 @@ const RouteDetailScreen: React.FC = () => {
         routesApi.getStops(routeId),
       ]);
       setRouteInfo(routeToRouteInfo(routeData));
+      setRawRouteData(routeData);
       const apiStops = (stopsData as any)?.data ?? (Array.isArray(stopsData) ? stopsData : []);
       setStops(apiStops.map((s: Stop, i: number) => stopToRouteStop(s, i)));
     } catch (e: any) {
@@ -954,6 +957,34 @@ const RouteDetailScreen: React.FC = () => {
     [routeInfo],
   );
 
+  // ── Route map polylines from path_geojson ─────────────────────────────
+  const routePolylines = useMemo(() => {
+    if (!rawRouteData) return [];
+    const pg = rawRouteData.path_geojson;
+    if (pg?.type === "LineString" && Array.isArray(pg.coordinates) && pg.coordinates.length > 0) {
+      const coords = pg.coordinates.map(
+        ([lng, lat]: [number, number]) => [lat, lng] as [number, number],
+      );
+      return [
+        {
+          id: rawRouteData.id || routeId,
+          coords,
+          color: modeColor,
+          weight: 4,
+          opacity: 0.9,
+        },
+      ];
+    }
+    return [];
+  }, [rawRouteData, modeColor, routeId]);
+
+  const mapCenter = useMemo(() => {
+    if (routePolylines[0]?.coords?.length > 0) {
+      return { lat: routePolylines[0].coords[0][0], lng: routePolylines[0].coords[0][1] };
+    }
+    return { lat: 31.9539, lng: 35.9106 };
+  }, [routePolylines]);
+
   // ── Handlers ──────────────────────────────────────────────────────────
   const handleStopPress = useCallback(
     (stop: RouteStop) => {
@@ -974,6 +1005,19 @@ const RouteDetailScreen: React.FC = () => {
         <View>
           {/* Route header */}
           <RouteHeader route={routeInfo} />
+
+          {/* Route map with path_geojson */}
+          {routePolylines.length > 0 && (
+            <View style={detailMap.wrap}>
+              <LeafletMap
+                style={detailMap.map}
+                centerLat={mapCenter.lat}
+                centerLng={mapCenter.lng}
+                zoom={12}
+                polylines={routePolylines}
+              />
+            </View>
+          )}
 
           {/* Quick stats */}
           <View style={main.statsRow}>
@@ -1129,6 +1173,18 @@ const main = StyleSheet.create({
     paddingHorizontal: spacing[4],
     gap: spacing[2],
   },
+});
+
+const detailMap = StyleSheet.create({
+  wrap: {
+    height: 180,
+    marginHorizontal: spacing[4],
+    marginTop: spacing[2],
+    marginBottom: spacing[2],
+    borderRadius: radius.lg,
+    overflow: "hidden",
+  },
+  map: { flex: 1 },
 });
 
 export default RouteDetailScreen;

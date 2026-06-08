@@ -100,6 +100,11 @@ export interface AppState {
   mapCenter: [number, number]; // Default: Amman 4th Circle
   mapZoom: number;
   setMapView: (center: [number, number], zoom: number) => void;
+  // Map-to-TripPlanner coordinate relay
+  pendingMapCoords: { lat: number; lng: number } | null;
+  pendingMapTarget: "from" | "to" | null;
+  setPendingMapSelection: (coords: { lat: number; lng: number }, target: "from" | "to") => void;
+  clearPendingMapSelection: () => void;
   // Active trip tracking
   activeTrip: {
     tripId: string | null;
@@ -292,6 +297,11 @@ export const useAppStore = create<AppState>()(
 
       // ─── Map ─────────────────────────────────────────────────────
       setMapView: (center, zoom) => set({ mapCenter: center, mapZoom: zoom }),
+  // Map-to-TripPlanner relay
+  pendingMapCoords: null,
+  pendingMapTarget: null,
+  setPendingMapSelection: (coords, target) => set({ pendingMapCoords: coords, pendingMapTarget: target }),
+  clearPendingMapSelection: () => set({ pendingMapCoords: null, pendingMapTarget: null }),
       setActiveTrip: (trip) =>
         set((s) => ({ activeTrip: { ...s.activeTrip, ...trip } })),
       clearActiveTrip: () =>

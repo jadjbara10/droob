@@ -21,6 +21,7 @@ interface Props {
   zoom?: number;
   markers?: Array<{ id: string; lat: number; lng: number; label: string; color?: string }>;
   polylines?: Array<{ id: string; coords: Array<[number, number]>; color: string; weight?: number; opacity?: number; dashArray?: string }>;
+  onCenterChange?: (lat: number, lng: number) => void;
 }
 
 function buildHTML(centerLat: number, centerLng: number, zoom: number, markers: Props["markers"], polylines: Props["polylines"]): string {
@@ -44,13 +45,23 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).a
 ${polylineJS}
 ${markerJS}
 window.addEventListener('message',function(e){var d=JSON.parse(e.data);if(d.action==='flyTo')map.flyTo([d.lat,d.lng],d.zoom||14,{duration:0.8})});
+map.on('moveend',function(){var c=map.getCenter();var msg={action:'centerChange',lat:c.lat,lng:c.lng};window.ReactNativeWebView.postMessage(JSON.stringify(msg));});
 </script></body></html>`;
 }
 
-export const LeafletMap = forwardRef<LeafletMapRef, Props>(({ style, centerLat=31.9539, centerLng=35.9106, zoom=13, markers, polylines }, ref) => {
+export const LeafletMap = forwardRef<LeafletMapRef, Props>(({ style, centerLat=31.9539, centerLng=35.9106, zoom=13, markers, polylines, onCenterChange }, ref) => {
   const webViewRef = useRef<WebView>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
+
+  const handleMessage = useCallback((event: any) => {
+    try {
+      const msg = JSON.parse(event.nativeEvent.data);
+      if (msg.action === 'centerChange' && onCenterChange) {
+        onCenterChange(msg.lat, msg.lng);
+      }
+    } catch {}
+  }, [onCenterChange]);
 
   useImperativeHandle(ref, () => ({
     flyTo: (lng, lat, z=14) => {
@@ -88,6 +99,7 @@ export const LeafletMap = forwardRef<LeafletMapRef, Props>(({ style, centerLat=3
           geolocationEnabled={false}
           cacheEnabled={true}
           androidLayerType="hardware"
+          onMessage={handleMessage}
           onLoadEnd={() => setIsLoading(false)}
           onError={() => { setIsLoading(false); setHasError(true); }}
           renderError={() => { setIsLoading(false); setHasError(true); return <View />; }}

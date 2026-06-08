@@ -1,89 +1,153 @@
 "use client";
 
-import { useState, FormEvent } from "react";
+/* ═══════════════════════════════════════════════════════════════════════════
+   دروب Droob — Login Page
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { login } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
+import { Bus, LogIn } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
+  const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  async function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setError("");
-    setSubmitting(true);
+    if (!email.trim() || !password.trim()) {
+      setError("الرجاء إدخال البريد الإلكتروني وكلمة المرور");
+      return;
+    }
+    setError(null);
+    setIsSubmitting(true);
     try {
       await login(email, password);
-      router.replace("/");
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "فشل تسجيل الدخول");
+      router.push("/");
+    } catch (err) {
+      setError((err as Error).message || "فشل تسجيل الدخول");
     } finally {
-      setSubmitting(false);
+      setIsSubmitting(false);
     }
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">🚌 دروب</h1>
-          <p className="text-gray-500 mt-2">لوحة تحكم النقل العام الأردني</p>
+    <div
+      style={{
+        minHeight: "100vh",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "var(--bg)",
+        padding: 20,
+      }}
+    >
+      <div
+        style={{
+          width: "100%",
+          maxWidth: 400,
+          background: "var(--surface)",
+          border: "1px solid var(--border)",
+          borderRadius: "var(--radius)",
+          padding: 40,
+        }}
+      >
+        {/* Logo */}
+        <div style={{ textAlign: "center", marginBottom: 32 }}>
+          <div
+            style={{
+              width: 56,
+              height: 56,
+              margin: "0 auto 16px",
+              background: "var(--accent-soft)",
+              border: "1px solid var(--border-active)",
+              borderRadius: "var(--radius)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "var(--accent)",
+            }}
+          >
+            <Bus size={28} />
+          </div>
+          <h1
+            style={{
+              fontSize: 22,
+              fontWeight: 700,
+              color: "var(--text-primary)",
+              marginBottom: 4,
+            }}
+          >
+            دروب
+          </h1>
+          <p style={{ fontSize: 13, color: "var(--text-secondary)" }}>
+            لوحة التحكم — تسجيل الدخول
+          </p>
         </div>
 
-        <h2 className="text-xl font-semibold text-gray-800 mb-6">تسجيل الدخول</h2>
+        {/* Form */}
+        <form onSubmit={handleSubmit}>
+          {error && (
+            <div
+              style={{
+                padding: "10px 14px",
+                marginBottom: 16,
+                background: "var(--danger-soft)",
+                border: "1px solid var(--danger)",
+                borderRadius: "var(--radius-sm)",
+                color: "var(--danger)",
+                fontSize: 13,
+              }}
+            >
+              {error}
+            </div>
+          )}
 
-        {error && (
-          <div className="bg-red-50 text-red-700 border border-red-200 rounded-lg p-3 mb-4 text-sm">
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-              البريد الإلكتروني
-            </label>
+          <div style={{ marginBottom: 16 }}>
+            <label className="form-label">البريد الإلكتروني</label>
             <input
-              id="email"
+              className="form-input"
               type="email"
-              required
-              placeholder="admin@droob.jo"
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+              placeholder="admin@droob.app"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              autoFocus
+              dir="ltr"
             />
           </div>
 
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-              كلمة المرور
-            </label>
+          <div style={{ marginBottom: 24 }}>
+            <label className="form-label">كلمة المرور</label>
             <input
-              id="password"
+              className="form-input"
               type="password"
-              required
               placeholder="••••••••"
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              dir="ltr"
             />
           </div>
 
           <button
+            className="btn btn-primary"
             type="submit"
-            disabled={submitting}
-            className="w-full py-2.5 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+            disabled={isSubmitting}
+            style={{ width: "100%", justifyContent: "center", padding: "12px 20px", fontSize: 14 }}
           >
-            {submitting ? "جاري تسجيل الدخول..." : "دخول"}
+            {isSubmitting ? (
+              "جاري الدخول..."
+            ) : (
+              <>
+                <LogIn size={16} />
+                تسجيل الدخول
+              </>
+            )}
           </button>
         </form>
-
-        <p className="mt-6 text-center text-xs text-gray-400">
-          نظام دروب لإدارة النقل • v1.0
-        </p>
       </div>
     </div>
   );

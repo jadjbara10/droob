@@ -455,6 +455,9 @@ export const usersRelations = relations(users, ({ many }) => ({
   payments: many(payments),
   tickets: many(tickets),
   walletTransactions: many(walletTransactions),
+  adEvents: many(adEvents),
+  subscriptions: many(userSubscriptions),
+  feedback: many(feedback),
 }));
 
 // ═══════════════════════════════════════════════════════════════
@@ -727,6 +730,128 @@ export const walletTransactions = pgTable(
 export const walletTransactionsRelations = relations(walletTransactions, ({ one }) => ({
   user: one(users, {
     fields: [walletTransactions.user_id],
+    references: [users.id],
+  }),
+}));
+
+// ═══════════════════════════════════════════════════════════════
+// EMAIL VERIFICATION CODES — for email-based auth
+// ═══════════════════════════════════════════════════════════════
+export const emailVerificationCodes = pgTable(
+  "email_verification_codes",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    email: text("email").notNull(),
+    code: text("code").notNull(), // 6-digit code
+    purpose: text("purpose").notNull().default("verify"), // verify | login | reset_password
+    expires_at: timestamp("expires_at").notNull(),
+    used: boolean("used").notNull().default(false),
+    created_at: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => ({
+    idx_email_verification_email: index("idx_email_verification_email").on(table.email),
+    idx_email_verification_expires: index("idx_email_verification_expires").on(table.expires_at),
+  })
+);
+
+// ═══════════════════════════════════════════════════════════════
+// AD EVENTS — track ad impressions, clicks, and revenue
+// ═══════════════════════════════════════════════════════════════
+export const adEvents = pgTable(
+  "ad_events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    user_id: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
+    ad_type: text("ad_type").notNull(), // banner | interstitial | rewarded
+    ad_network: text("ad_network").notNull(), // admob | meta | unity | applovin
+    event_type: text("event_type").notNull(), // impression | click | reward_claimed | error
+    placement: text("placement").notNull(), // home_banner | departures_banner | routes_banner | trip_interstitial | route_interstitial | remove_ads_rewarded | extra_trips_rewarded | offline_map_rewarded | route_details_rewarded
+    revenue_usd: real("revenue_usd").default(0), // estimated revenue in USD
+    reward_type: text("reward_type"), // remove_ads_1h | extra_trip | offline_map | route_details
+    reward_claimed: boolean("reward_claimed").default(false),
+    ecpm: real("ecpm"), // effective CPM at time of impression
+    fill_available: boolean("fill_available"), // whether an ad was available to fill
+    created_at: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => ({
+    idx_ad_events_user: index("idx_ad_events_user").on(table.user_id),
+    idx_ad_events_type: index("idx_ad_events_type").on(table.ad_type),
+    idx_ad_events_network: index("idx_ad_events_network").on(table.ad_network),
+    idx_ad_events_created: index("idx_ad_events_created").on(table.created_at),
+    idx_ad_events_event: index("idx_ad_events_event").on(table.event_type),
+  })
+);
+
+export const adEventsRelations = relations(adEvents, ({ one }) => ({
+  user: one(users, {
+    fields: [adEvents.user_id],
+    references: [users.id],
+  }),
+}));
+
+// ═══════════════════════════════════════════════════════════════
+// USER SUBSCRIPTIONS — IAP / ad-free purchases
+// ═══════════════════════════════════════════════════════════════
+export const userSubscriptions = pgTable(
+  "user_subscriptions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    user_id: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    type: text("type").notNull(), // ad_free | premium
+    status: text("status").notNull().default("active"), // active | expired | cancelled
+    started_at: timestamp("started_at").notNull().defaultNow(),
+    expires_at: timestamp("expires_at"), // null = permanent (one-time purchase)
+    purchase_token: text("purchase_token"), // Google Play purchase token
+    product_id: text("product_id"), // droob_ad_free_one_time
+    created_at: timestamp("created_at").notNull().defaultNow(),
+    updated_at: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => ({
+    idx_user_subscriptions_user: index("idx_user_subscriptions_user").on(table.user_id),
+    idx_user_subscriptions_type: index("idx_user_subscriptions_type").on(table.type),
+    idx_user_subscriptions_status: index("idx_user_subscriptions_status").on(table.status),
+  })
+);
+
+export const userSubscriptionsRelations = relations(userSubscriptions, ({ one }) => ({
+  user: one(users, {
+    fields: [userSubscriptions.user_id],
+    references: [users.id],
+  }),
+}));
+
+// ═══════════════════════════════════════════════════════════════
+// FEEDBACK — user feedback and bug reports
+// ═══════════════════════════════════════════════════════════════
+export const feedback = pgTable(
+  "feedback",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    user_id: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
+    type: text("type").notNull(), // bug | feature_request | general | praise
+    subject: text("subject").notNull(),
+    message: text("message").notNull(),
+    app_version: text("app_version"),
+    device_info: jsonb("device_info"),
+    screenshot_url: text("screenshot_url"),
+    is_resolved: boolean("is_resolved").notNull().default(false),
+    admin_notes: text("admin_notes"),
+    created_at: timestamp("created_at").notNull().defaultNow(),
+    updated_at: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => ({
+    idx_feedback_type: index("idx_feedback_type").on(table.type),
+    idx_feedback_user: index("idx_feedback_user").on(table.user_id),
+    idx_feedback_resolved: index("idx_feedback_resolved").on(table.is_resolved),
+    idx_feedback_created: index("idx_feedback_created").on(table.created_at),
+  })
+);
+
+export const feedbackRelations = relations(feedback, ({ one }) => ({
+  user: one(users, {
+    fields: [feedback.user_id],
     references: [users.id],
   }),
 }));

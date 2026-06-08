@@ -68,7 +68,7 @@ export const BottomSheet = forwardRef<BottomSheetRef, BottomSheetProps>(
       .sort((a, b) => a - b);
 
     const translateY = useSharedValue(snapPixelPositions[initialIndex]);
-    const contextY = useSharedValue(translateY.value);
+    const contextY = useSharedValue(snapPixelPositions[initialIndex]);
     const activeIndex = useSharedValue(initialIndex);
     const [isDragging, setIsDragging] = useState(false);
 

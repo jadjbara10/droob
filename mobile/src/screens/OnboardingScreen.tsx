@@ -289,8 +289,8 @@ const styles = StyleSheet.create({
   bottomRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   finalRow: { flexDirection: "row", gap: 12 },
   skip: {
-    fontFamily: "IBM Plex Sans Arabic", fontSize: fontSize[15], color: "rgba(255,255,255,0.85)",
-    paddingVertical: 8, paddingHorizontal: 4,
+    fontFamily: "IBM Plex Sans Arabic", fontSize: fontSize[15], fontWeight: fontWeight.medium,
+    color: "#F59E0B", paddingVertical: 8, paddingHorizontal: 4,
   },
   cta: { backgroundColor: "#fff", borderRadius: radius.pill, paddingHorizontal: 40, paddingVertical: 14 },
   ctaFull: { flex: 1, backgroundColor: "#fff", borderRadius: radius.pill, paddingVertical: 14, alignItems: "center" },
@@ -299,10 +299,10 @@ const styles = StyleSheet.create({
   },
   ctaOutline: {
     flex: 1, borderRadius: radius.pill, paddingVertical: 14, alignItems: "center",
-    borderWidth: 1.5, borderColor: "rgba(255,255,255,0.6)",
+    borderWidth: 1.5, borderColor: "#F59E0B",
   },
   ctaOutlineText: {
-    fontFamily: "IBM Plex Sans Arabic", fontSize: fontSize[16], fontWeight: fontWeight.medium, color: "#fff",
+    fontFamily: "IBM Plex Sans Arabic", fontSize: fontSize[16], fontWeight: fontWeight.medium, color: "#F59E0B",
   },
   permissionRow: { flexDirection: "row", gap: 12, marginBottom: 24 },
   permBtn: {

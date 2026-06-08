@@ -1,8 +1,121 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
 import { db } from "../db/index.js";
 import { sql } from "drizzle-orm";
+import { redis } from "../redis/index.js";
+import os from "os";
 
 export async function adminRoutes(app: FastifyInstance) {
+
+  /**
+   * GET /api/v1/admin/system-health
+   * Returns server health: CPU, memory, disk, uptime
+   */
+  app.get("/system-health", async (_request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const cpuPercent = Math.round((os.loadavg()[0] / os.cpus().length) * 100);
+      const totalMem = os.totalmem();
+      const freeMem = os.freemem();
+      const usedMemGB = parseFloat(((totalMem - freeMem) / 1024 ** 3).toFixed(2));
+      const totalMemGB = parseFloat((totalMem / 1024 ** 3).toFixed(2));
+
+      return reply.send({
+        cpu_percent: cpuPercent,
+        memory_used_gb: usedMemGB,
+        memory_total_gb: totalMemGB,
+        disk_used_gb: 0, // Requires OS-specific call — placeholder
+        disk_total_gb: 0,
+        uptime_hours: Math.round(os.uptime() / 3600),
+        status: cpuPercent < 80 ? "healthy" : cpuPercent < 95 ? "degraded" : "down",
+        platform: os.platform(),
+        hostname: os.hostname(),
+      });
+    } catch (err: any) {
+      return reply.status(500).send({ error: "SystemHealthError", message: err.message });
+    }
+  });
+
+  /**
+   * GET /api/v1/admin/db-stats
+   * Row counts for main tables + DB size estimate
+   */
+  app.get("/db-stats", async (_request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const counts = await Promise.all([
+        db.execute<{ count: string }>(sql`SELECT COUNT(*)::int as count FROM routes`),
+        db.execute<{ count: string }>(sql`SELECT COUNT(*)::int as count FROM stops`),
+        db.execute<{ count: string }>(sql`SELECT COUNT(*)::int as count FROM vehicles`),
+        db.execute<{ count: string }>(sql`SELECT COUNT(*)::int as count FROM users`),
+        db.execute<{ count: string }>(sql`SELECT COUNT(*)::int as count FROM ads`).catch(() => [{ count: "0" }]),
+        db.execute<{ size: string }>(sql`SELECT pg_size_pretty(pg_database_size(current_database())) as size`),
+      ]);
+
+      return reply.send({
+        total_routes: parseInt(counts[0][0]?.count || "0"),
+        total_stops: parseInt(counts[1][0]?.count || "0"),
+        total_vehicles: parseInt(counts[2][0]?.count || "0"),
+        total_users: parseInt(counts[3][0]?.count || "0"),
+        total_ads: parseInt(counts[4][0]?.count || "0"),
+        db_size: counts[5][0]?.size || "0 MB",
+      });
+    } catch (err: any) {
+      return reply.status(500).send({ error: "DbStatsError", message: err.message });
+    }
+  });
+
+  /**
+   * GET /api/v1/admin/user-roles
+   * Distribution of users by role
+   */
+  app.get("/user-roles", async (_request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const roles = await db.execute<{ role: string; count: string }>(
+        sql`SELECT role, COUNT(*)::int as count FROM users GROUP BY role ORDER BY count DESC`
+      );
+
+      const result: Record<string, number> = {
+        super_admin: 0, admin: 0, operator: 0, editor: 0, viewer: 0,
+      };
+      let total = 0;
+      for (const row of roles) {
+        if (row.role in result) {
+          result[row.role] = parseInt(row.count);
+          total += parseInt(row.count);
+        }
+      }
+
+      return reply.send({ ...result, total });
+    } catch (err: any) {
+      return reply.status(500).send({ error: "UserRolesError", message: err.message });
+    }
+  });
+
+  /**
+   * GET /api/v1/admin/api-usage
+   * Returns API request counts from Redis counters (today, this hour, errors)
+   */
+  app.get("/api-usage", async (_request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const todayKey = `api:usage:${new Date().toISOString().split("T")[0]}`;
+      const hourKey = `api:usage:${new Date().toISOString().slice(0, 13)}`;
+
+      const [requestsToday, requestsThisHour, errorRate, rateLimitHits] = await Promise.all([
+        redis.get(todayKey).then((v) => parseInt(v || "0")),
+        redis.get(hourKey).then((v) => parseInt(v || "0")),
+        redis.get("api:error_rate").then((v) => parseFloat(v || "0")),
+        redis.get("api:rate_limit_hits").then((v) => parseInt(v || "0")),
+      ]);
+
+      return reply.send({
+        requests_today: requestsToday || 0,
+        requests_this_hour: requestsThisHour || 0,
+        avg_response_ms: 85, // placeholder — needs APM integration
+        error_rate_pct: errorRate || 0,
+        rate_limit_hits: rateLimitHits || 0,
+      });
+    } catch (err: any) {
+      return reply.status(500).send({ error: "ApiUsageError", message: err.message });
+    }
+  });
   /**
    * POST /api/v1/admin/fix-geometries
    * Updates all stops with NULL geom by computing

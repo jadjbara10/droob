@@ -54,29 +54,13 @@ import {
   TIME_OPTIONS,
 } from "@config/transport.config";
 import { MODE_PATH_COLOR, WALKING_DASH } from "@config/route-paths";
+import * as Location from "expo-location";
 
 const { width: SW } = Dimensions.get("window");
 
-// ─── Route Coordinate Data (real Amman paths) ──────────────────────────────
-
-const LEG_COORDS = {
-  // Walking from user location (near Gardens) to Gardens BRT station
-  walk_user_to_gardens: [[35.9100, 31.9550], [35.9090, 31.9560], [35.9080, 31.9570], [35.9070, 31.9580], [35.9060, 31.9590], [35.9050, 31.9600], [35.9040, 31.9610]] as [number, number][],
-  // BRT from Gardens to Sports City
-  brt_gardens_to_sportscity: [[35.9040, 31.9610], [35.9020, 31.9630], [35.9000, 31.9650], [35.8980, 31.9670], [35.8960, 31.9690], [35.8940, 31.9710], [35.8920, 31.9730], [35.8900, 31.9750], [35.8880, 31.9770], [35.8860, 31.9790], [35.8840, 31.9810], [35.8820, 31.9830], [35.8800, 31.9850]] as [number, number][],
-  // Walking from Sports City to stadium entrance
-  walk_sportscity_to_stadium: [[35.8800, 31.9850], [35.8810, 31.9860], [35.8820, 31.9870], [35.8830, 31.9880], [35.8840, 31.9890]] as [number, number][],
-  // Direct city bus from Gardens to Downtown
-  bus_gardens_to_downtown: [[35.9040, 31.9610], [35.9020, 31.9600], [35.9000, 31.9590], [35.8980, 31.9580], [35.8960, 31.9570], [35.8940, 31.9560], [35.8920, 31.9550], [35.8900, 31.9540], [35.8880, 31.9530], [35.8860, 31.9520], [35.9350, 31.9516]] as [number, number][],
-  // Serveece from Abdoun to Sweifieh
-  serv_abdoun_to_sweifieh: [[35.8900, 31.9590], [35.8890, 31.9610], [35.8880, 31.9630], [35.8870, 31.9650], [35.8860, 31.9670], [35.8850, 31.9690], [35.8840, 31.9710], [35.8830, 31.9730], [35.8820, 31.9750], [35.8810, 31.9770]] as [number, number][],
-  // Walking from Sweifieh serveece stop to final destination
-  walk_sweifieh_to_dest: [[35.8810, 31.9770], [35.8800, 31.9780], [35.8790, 31.9790]] as [number, number][],
-};
-
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-/** Generate fallback straight-line path between two stops when leg.pathCoords unavailable */
+/** Generate fallback straight-line path between two stops when leg.polyline is unavailable */
 function generateFallbackCoords(leg: Journey["legs"][0]): Array<[number, number]> {
   if (leg.fromStop && leg.toStop) {
     return [[leg.fromStop.lat, leg.fromStop.lng], [leg.toStop.lat, leg.toStop.lng]];
@@ -105,218 +89,6 @@ const MODE_FILTERS: { key: TransitMode | "all"; label_ar: string; icon: string }
   { key: "brt", label_ar: "BRT", icon: "⚡" },
   { key: "serveece", label_ar: "سرفيس", icon: "🚐" },
   { key: "intercity", label_ar: "خطوط", icon: "🚍" },
-];
-
-// ─── Mock Stops ──────────────────────────────────────────────────────────────
-
-const MOCK_STOPS = {
-  user: {
-    id: "u1",
-    nameAr: "موقعي الحالي",
-    nameEn: "My Location",
-    code: "YOU",
-    lat: transportConfig.ammanCenter.lat + 0.005,
-    lng: transportConfig.ammanCenter.lng - 0.01,
-    modes: [] as TransitMode[],
-    isLandmark: false,
-    isAccessible: true,
-  },
-  abdali: {
-    id: "abd",
-    nameAr: "العبدلي",
-    nameEn: "Abdali",
-    code: "AMM-ABD",
-    lat: 31.9636,
-    lng: 35.9156,
-    modes: ["city_bus", "brt", "serveece"] as TransitMode[],
-    isLandmark: true,
-    isAccessible: true,
-  },
-  gardens: {
-    id: "gdn",
-    nameAr: "مجمع الجاردنز",
-    nameEn: "Gardens Complex",
-    code: "AMM-GDN",
-    lat: 31.9856,
-    lng: 35.8714,
-    modes: ["city_bus", "brt"] as TransitMode[],
-    isLandmark: true,
-    isAccessible: true,
-  },
-  downtown: {
-    id: "bld",
-    nameAr: "وسط البلد",
-    nameEn: "Downtown",
-    code: "AMM-BLD",
-    lat: 31.9516,
-    lng: 35.9397,
-    modes: ["city_bus", "serveece", "intercity"] as TransitMode[],
-    isLandmark: true,
-    isAccessible: false,
-  },
-  uj: {
-    id: "uj",
-    nameAr: "الجامعة الأردنية",
-    nameEn: "University of Jordan",
-    code: "AMM-UJ",
-    lat: 32.0156,
-    lng: 35.8747,
-    modes: ["city_bus", "serveece"] as TransitMode[],
-    isLandmark: true,
-    isAccessible: true,
-  },
-  sweileh: {
-    id: "swl",
-    nameAr: "الصويلح",
-    nameEn: "Sweileh",
-    code: "AMM-SWL",
-    lat: 32.0367,
-    lng: 35.8275,
-    modes: ["city_bus", "serveece"] as TransitMode[],
-    isLandmark: true,
-    isAccessible: false,
-  },
-  wahdat: {
-    id: "whd",
-    nameAr: "الوحدات",
-    nameEn: "Wahdat",
-    code: "AMM-WHD",
-    lat: 31.9239,
-    lng: 35.89,
-    modes: ["city_bus", "serveece", "intercity"] as TransitMode[],
-    isLandmark: true,
-    isAccessible: true,
-  },
-} satisfies Record<string, TransitStop>;
-
-// ─── Mock Journeys ───────────────────────────────────────────────────────────
-// Three varied options matching @/types/transit (the JourneyCard peer type).
-
-const MOCK_JOURNEYS: Journey[] = [
-  {
-    // ── Fastest (25 min, 0.75 JOD, 1 transfer: walk → BRT) ──
-    id: "j-fast",
-    totalDurationMinutes: 25,
-    walkingMinutes: 7,
-    transfers: 1,
-    fareAmount: 0.75,
-    fareCurrency: "د.أ",
-    departureTime: "09:15",
-    arrivalTime: "09:40",
-    modes: ["brt"],
-    legs: [
-      {
-        mode: "walking",
-        fromStop: MOCK_STOPS.user,
-        toStop: MOCK_STOPS.gardens,
-        departureTime: "09:15",
-        arrivalTime: "09:19",
-        durationMinutes: 4,
-        intermediateStops: 0,
-        walkingDistance: 350,
-        polyline: LEG_COORDS.walk_user_to_gardens as [number, number][],
-      },
-      {
-        mode: "brt",
-        lineCode: "BRT1",
-        lineNameAr: "الباص السريع 1",
-        lineNameEn: "BRT Line 1",
-        fromStop: MOCK_STOPS.gardens,
-        toStop: MOCK_STOPS.abdali,
-        departureTime: "09:22",
-        arrivalTime: "09:35",
-        durationMinutes: 13,
-        intermediateStops: 3,
-        polyline: LEG_COORDS.walk_user_to_gardens as [number, number][],
-      },
-      {
-        mode: "walking",
-        fromStop: MOCK_STOPS.abdali,
-        toStop: {
-          ...MOCK_STOPS.abdali,
-          nameAr: "الوجهة",
-          nameEn: "Destination",
-          id: "dest1",
-        },
-        departureTime: "09:35",
-        arrivalTime: "09:40",
-        durationMinutes: 3,
-        intermediateStops: 0,
-        walkingDistance: 250,
-        polyline: LEG_COORDS.walk_user_to_gardens as [number, number][],
-      },
-    ],
-  },
-  {
-    // ── Cheapest (38 min, 0.55 JOD, 0 transfers: direct city bus) ──
-    id: "j-cheap",
-    totalDurationMinutes: 38,
-    walkingMinutes: 5,
-    transfers: 0,
-    fareAmount: 0.55,
-    fareCurrency: "د.أ",
-    departureTime: "09:20",
-    arrivalTime: "09:58",
-    modes: ["city_bus"],
-    legs: [
-      {
-        mode: "walking",
-        fromStop: MOCK_STOPS.user,
-        toStop: MOCK_STOPS.wahdat,
-        departureTime: "09:20",
-        arrivalTime: "09:25",
-        durationMinutes: 5,
-        intermediateStops: 0,
-        walkingDistance: 400,
-        polyline: LEG_COORDS.walk_user_to_gardens as [number, number][],
-      },
-      {
-        mode: "city_bus",
-        lineCode: "26",
-        lineNameAr: "الوحدات - العبدلي",
-        lineNameEn: "Wahdat - Abdali",
-        fromStop: MOCK_STOPS.wahdat,
-        toStop: MOCK_STOPS.abdali,
-        departureTime: "09:28",
-        arrivalTime: "09:58",
-        durationMinutes: 30,
-        intermediateStops: 8,
-        polyline: LEG_COORDS.walk_user_to_gardens as [number, number][],
-      },
-    ],
-  },
-  {
-    // ── Fewest Transfers (32 min, 1.00 JOD, 0 transfers: serveece direct) ──
-    id: "j-minxf",
-    totalDurationMinutes: 32,
-    walkingMinutes: 2,
-    transfers: 0,
-    fareAmount: 1.0,
-    fareCurrency: "د.أ",
-    departureTime: "09:10",
-    arrivalTime: "09:42",
-    modes: ["serveece"],
-    legs: [
-      {
-        mode: "serveece",
-        lineCode: "SERV1",
-        lineNameAr: "سرفيس - العبدلي",
-        lineNameEn: "Serveece - Abdali",
-        fromStop: {
-          ...MOCK_STOPS.user,
-          nameAr: "شارع الملكة رانيا",
-          nameEn: "Queen Rania St",
-          code: "QRS1",
-        },
-        toStop: MOCK_STOPS.abdali,
-        departureTime: "09:10",
-        arrivalTime: "09:42",
-        durationMinutes: 30,
-        intermediateStops: 5,
-        polyline: LEG_COORDS.walk_user_to_gardens as [number, number][],
-      },
-    ],
-  },
 ];
 
 // ─── Supporting Components ───────────────────────────────────────────────────
@@ -586,7 +358,7 @@ const TripPlannerScreen: React.FC = () => {
   const navigation = useNavigation<any>();
 
   // ── State ──────────────────────────────────────────────────────────────
-  const [fromLabel, setFromLabel] = useState("");
+  const [fromLabel, setFromLabel] = useState("موقعي الحالي");
   const [toLabel, setToLabel] = useState("");
   const [timeKey, setTimeKey] = useState<TimeKey>("now");
   const [activePref, setActivePref] = useState<string>("fastest");
@@ -598,7 +370,7 @@ const TripPlannerScreen: React.FC = () => {
   ]);
   const [showSearch, setShowSearch] = useState(false);
   const [searchTarget, setSearchTarget] = useState<"from" | "to">("from");
-  const [fromCoords, setFromCoords] = useState<[number, number] | null>(null);
+  const [fromCoords, setFromCoords] = useState<[number, number] | null>([transportConfig.ammanCenter.lat, transportConfig.ammanCenter.lng]);
   const [toCoords, setToCoords] = useState<[number, number] | null>(null);
 
   // Ad hooks
@@ -634,9 +406,13 @@ const TripPlannerScreen: React.FC = () => {
 
   /** Combined display journeys: real store data transformed for UI. */
   const displayJourneys: Journey[] = useMemo(() => {
-    if (storeJourneys.length > 0) {
-      // Transform canonical journeys (from backend/store) → display format
-      return (storeJourneys as unknown as CanonicalJourney[]).map(canonicalJourneyToDisplay);
+    if (storeJourneys && storeJourneys.length > 0) {
+      try {
+        // Transform canonical journeys (from backend/store) → display format
+        return (storeJourneys as unknown as CanonicalJourney[]).map(canonicalJourneyToDisplay);
+      } catch {
+        return [];
+      }
     }
     return []; // No mock fallback — show empty/idle state when no results
   }, [storeJourneys]);
@@ -668,7 +444,7 @@ const TripPlannerScreen: React.FC = () => {
   const filteredJourneys = useMemo(() => {
     if (selectedModes.length === 4) return sortedJourneys; // "All"
     return sortedJourneys.filter((j) =>
-      j.modes.some((m) => selectedModes.includes(m))
+      j.modes && j.modes.some((m) => selectedModes.includes(m))
     );
   }, [sortedJourneys, selectedModes]);
 
@@ -710,20 +486,38 @@ const TripPlannerScreen: React.FC = () => {
     []
   );
 
-  const handleSearch = useCallback(async () => {
-    if (!fromLabel || !toLabel) return;
-    try {
-      // Use actual coordinates from fromCoords/toCoords or default to Amman center
-      const fromLat = fromCoords?.[0] ?? transportConfig.ammanCenter.lat;
-      const fromLng = fromCoords?.[1] ?? transportConfig.ammanCenter.lng;
-      const toLat = toCoords?.[0] ?? 31.9636;
-      const toLng = toCoords?.[1] ?? 35.9156;
+  // ── Auto-search when both origin & destination are set ─────────────────
+  const hasSearched = useRef(false);
+  React.useEffect(() => {
+    if (fromCoords && toCoords && fromLabel && toLabel && !hasSearched.current) {
+      hasSearched.current = true;
+      handleSearch();
+    }
+  }, [fromCoords, toCoords]);
 
-      await planJourney(fromLat, fromLng, toLat, toLng, {
+  const handleSearch = useCallback(async (retryWithLargerWalk = false) => {
+    if (!fromLabel || !toLabel) return;
+    const fromLat = fromCoords?.[0] ?? transportConfig.ammanCenter.lat;
+    const fromLng = fromCoords?.[1] ?? transportConfig.ammanCenter.lng;
+    const toLat = toCoords?.[0] ?? 31.9636;
+    const toLng = toCoords?.[1] ?? 35.9156;
+
+    const maxWalk = retryWithLargerWalk ? 2000 : 1200; // Start 1200m, retry 2000m
+
+    try {
+      const journeys = await planJourney(fromLat, fromLng, toLat, toLng, {
         preferredModes: selectedModes.join(","),
         timeType: timeKey === "arrive_by" ? "arrive" : "depart",
         preference: activePref,
+        maxWalkingMeters: maxWalk,
+        maxTransfers: 2,
       });
+
+      // Auto-retry with larger walking radius if no results
+      if ((!journeys || journeys.length === 0) && !retryWithLargerWalk) {
+        console.log('[TripPlanner] No results with 1200m walk, retrying with 2000m...');
+        await handleSearch(true);
+      }
     } catch {
       // Store sets error state — we render it via ErrorState
     }
@@ -749,11 +543,17 @@ const TripPlannerScreen: React.FC = () => {
   }, []);
 
   const selectSearchResult = useCallback(
-    (name: string) => {
+    (stop: { nameAr: string; lat?: number; lng?: number }) => {
       if (searchTarget === "from") {
-        setFromLabel(name);
+        setFromLabel(stop.nameAr);
+        if (stop.lat !== undefined && stop.lng !== undefined) {
+          setFromCoords([stop.lat, stop.lng]);
+        }
       } else {
-        setToLabel(name);
+        setToLabel(stop.nameAr);
+        if (stop.lat !== undefined && stop.lng !== undefined) {
+          setToCoords([stop.lat, stop.lng]);
+        }
       }
       setShowSearch(false);
     },
@@ -763,51 +563,156 @@ const TripPlannerScreen: React.FC = () => {
   // ── Render Helpers ─────────────────────────────────────────────────────
   const quickStops = useMemo(
     () => [
-      { nameAr: "العبدلي", nameEn: "Abdali", code: "AMM-ABD" },
-      { nameAr: "الجامعة الأردنية", nameEn: "UJ", code: "AMM-UJ" },
-      { nameAr: "وسط البلد", nameEn: "Downtown", code: "AMM-BLD" },
-      { nameAr: "مجمع الجاردنز", nameEn: "Gardens", code: "AMM-GDN" },
-      { nameAr: "الصويلح", nameEn: "Sweileh", code: "AMM-SWL" },
-      { nameAr: "الوحدات", nameEn: "Wahdat", code: "AMM-WHD" },
+      { nameAr: "العبدلي", nameEn: "Abdali", code: "AMM-ABD", lat: 31.9636, lng: 35.9156 },
+      { nameAr: "الجامعة الأردنية", nameEn: "UJ", code: "AMM-UJ", lat: 32.0156, lng: 35.8747 },
+      { nameAr: "وسط البلد", nameEn: "Downtown", code: "AMM-BLD", lat: 31.9516, lng: 35.9397 },
+      { nameAr: "مجمع الجاردنز", nameEn: "Gardens", code: "AMM-GDN", lat: 31.9856, lng: 35.8714 },
+      { nameAr: "الصويلح", nameEn: "Sweileh", code: "AMM-SWL", lat: 32.0367, lng: 35.8275 },
+      { nameAr: "الوحدات", nameEn: "Wahdat", code: "AMM-WHD", lat: 31.9239, lng: 35.8900 },
     ],
     []
   );
 
-  // ── Compute map polylines from active journey legs ──────────────────────
+  // ── Ensure routes are loaded for path rendering ───────────────────────
+  const storeRoutes = useTransitStore((s) => s.routes);
+  const fetchRoutes = useTransitStore((s) => s.fetchRoutes);
+  React.useEffect(() => {
+    if (storeRoutes.length === 0) fetchRoutes({ limit: 500 });
+  }, []);
+
+  // ── GPS Location Tracking ──────────────────────────────────────────────
+  const [userGps, setUserGps] = useState<{ lat: number; lng: number } | null>(null);
+  const gpsSubscription = useRef<any>(null);
+
+  React.useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== "granted") return;
+        gpsSubscription.current = await Location.watchPositionAsync(
+          { accuracy: Location.Accuracy.Balanced, timeInterval: 5000, distanceInterval: 10 },
+          (loc) => {
+            if (active && loc.coords) {
+              setUserGps({ lat: loc.coords.latitude, lng: loc.coords.longitude });
+            }
+          }
+        );
+      } catch { /* GPS unavailable */ }
+    })();
+    return () => { active = false; gpsSubscription.current?.remove?.(); };
+  }, []);
+
+  // ── Map center: follow GPS if available, else journey midpoint ──────────
+  const mapCenter = useMemo(() => {
+    if (userGps) return { lat: userGps.lat, lng: userGps.lng };
+    if (filteredJourneys.length > 0) {
+      const j = filteredJourneys[0];
+      const pts = j.legs.flatMap(l => l.polyline || []);
+      if (pts.length > 0) {
+        const avgLat = pts.reduce((s, p) => s + p[1], 0) / pts.length;
+        const avgLng = pts.reduce((s, p) => s + p[0], 0) / pts.length;
+        return { lat: avgLat, lng: avgLng };
+      }
+    }
+    return { lat: 31.9600, lng: 35.9200 };
+  }, [userGps, filteredJourneys]);
+
+  // ── Compute map polylines with REAL road-matched route paths ────────────
   const journeyPolylines = useMemo(() => {
     if (filteredJourneys.length === 0) return [];
-    const j = filteredJourneys[0]; // show first/best journey on map
-    return j.legs.map((leg, i) => ({
-      id: `leg-${i}-${leg.mode}`,
-      coords: (leg.polyline && leg.polyline.length > 0) ? leg.polyline.map(([lng, lat]) => [lat, lng] as [number, number]) : generateFallbackCoords(leg),
-      color: MODE_PATH_COLOR[leg.mode] || "#999",
-      weight: leg.mode === "walking" ? 3 : 5,
-      opacity: 0.85,
-      dashArray: leg.mode === "walking" ? WALKING_DASH : "",
-    }));
-  }, [filteredJourneys]);
+    const j = filteredJourneys[0];
+    return j.legs.map((leg: any, i: number) => {
+      const mode = leg.mode || leg.type === "walk" ? "walking" : (leg.mode || "city_bus");
+      let coords: Array<[number, number]> = [];
+
+      // Backend returns: leg.from / leg.to (NOT fromStop/toStop)
+      const fromObj = leg.from || leg.fromStop;
+      const toObj = leg.to || leg.toStop;
+
+      // For transit legs: use FULL stored route path_geojson for road accuracy
+      if (leg.type === "transit" && leg.routeCode && storeRoutes.length > 0) {
+        const matchedRoute = (storeRoutes as any[]).find(
+          (r: any) => r.code === leg.routeCode || r.code === leg.routeCode?.replace(/_/g, "-")
+        );
+        if (matchedRoute?.path_geojson) {
+          let pg = matchedRoute.path_geojson;
+          if (typeof pg === "string") { try { pg = JSON.parse(pg); } catch { pg = null; } }
+          if (pg?.type === "LineString" && Array.isArray(pg.coordinates)) {
+            const allCoords = pg.coordinates as Array<[number, number]>; // [lng, lat]
+            const fromLat = fromObj?.lat;
+            const fromLng = fromObj?.lng;
+            const toLat = toObj?.lat;
+            const toLng = toObj?.lng;
+
+            if (fromLat != null && toLat != null) {
+              let bestFrom = 0, bestTo = allCoords.length - 1;
+              let minFrom = Infinity, minTo = Infinity;
+              for (let ci = 0; ci < allCoords.length; ci++) {
+                const dFrom = Math.hypot(allCoords[ci][1] - fromLat, allCoords[ci][0] - fromLng);
+                const dTo = Math.hypot(allCoords[ci][1] - toLat, allCoords[ci][0] - toLng);
+                if (dFrom < minFrom) { minFrom = dFrom; bestFrom = ci; }
+                if (dTo < minTo) { minTo = dTo; bestTo = ci; }
+              }
+              const lo = Math.min(bestFrom, bestTo);
+              const hi = Math.max(bestFrom, bestTo);
+              // Convert [lng,lat] → [lat,lng] for Leaflet
+              coords = allCoords.slice(lo, hi + 1).map(([lng, lat]) => [lat, lng] as [number, number]);
+            }
+          }
+        }
+      }
+
+      // Fallback: use polyline from API response
+      if (coords.length === 0) {
+        if (leg.polyline && leg.polyline.length > 2) {
+          // API polyline is [lng,lat] → convert to [lat,lng]
+          coords = leg.polyline.map(([lng, lat]: [number, number]) => [lat, lng] as [number, number]);
+        } else if (fromObj && toObj) {
+          coords = [[fromObj.lat, fromObj.lng], [toObj.lat, toObj.lng]];
+        } else {
+          coords = generateFallbackCoords(leg as any);
+        }
+      }
+
+      return {
+        id: `leg-${i}-${mode}`,
+        coords,
+        color: MODE_PATH_COLOR[mode] || "#999",
+        weight: leg.type === "walk" ? 3 : 5,
+        opacity: leg.type === "walk" ? 0.7 : 0.9,
+        dashArray: leg.type === "walk" ? WALKING_DASH : "",
+      };
+    });
+  }, [filteredJourneys, storeRoutes]);
 
   const journeyMarkers = useMemo(() => {
     if (filteredJourneys.length === 0) return [];
     const j = filteredJourneys[0];
     const markers: Array<{ id: string; lat: number; lng: number; label: string; color: string }> = [];
-    // Origin
-    if (j.legs[0]?.fromStop) {
-      markers.push({ id: "origin", lat: j.legs[0].fromStop.lat, lng: j.legs[0].fromStop.lng, label: "🚩 الانطلاق", color: "#16A34A" });
+    // GPS user location
+    if (userGps) {
+      markers.push({ id: "user-gps", lat: userGps.lat, lng: userGps.lng, label: "📍 موقعي", color: "#1A4F8A" });
+    }
+    // Origin — backend sends leg.from, frontend may have leg.fromStop
+    const firstFrom = j.legs[0]?.from || (j.legs[0] as any)?.fromStop;
+    if (firstFrom?.lat) {
+      markers.push({ id: "origin", lat: firstFrom.lat, lng: firstFrom.lng, label: "🚩 الانطلاق", color: "#16A34A" });
     }
     // Transfer points
-    j.legs.forEach((leg, i) => {
-      if (leg.toStop && i < j.legs.length - 1) {
-        markers.push({ id: `xfer-${i}`, lat: leg.toStop.lat, lng: leg.toStop.lng, label: `🔄 ${leg.toStop.nameAr}`, color: "#1A4F8A" });
+    j.legs.forEach((leg: any, i: number) => {
+      const legTo = leg.to || leg.toStop;
+      if (legTo?.lat && i < j.legs.length - 1) {
+        markers.push({ id: `xfer-${i}`, lat: legTo.lat, lng: legTo.lng, label: `🔄 ${legTo.nameAr || legTo.name_ar || ""}`, color: "#1A4F8A" });
       }
     });
     // Destination
-    const lastLeg = j.legs[j.legs.length - 1];
-    if (lastLeg?.toStop) {
-      markers.push({ id: "dest", lat: lastLeg.toStop.lat, lng: lastLeg.toStop.lng, label: "🏁 الوصول", color: "#DC2626" });
+    const lastTo = j.legs[j.legs.length - 1]?.to || (j.legs[j.legs.length - 1] as any)?.toStop;
+    if (lastTo?.lat) {
+      markers.push({ id: "dest", lat: lastTo.lat, lng: lastTo.lng, label: "🏁 الوصول", color: "#DC2626" });
     }
     return markers;
-  }, [filteredJourneys]);
+  }, [filteredJourneys, userGps]);
 
   const renderJourneyItem = useCallback(
     ({ item }: ListRenderItemInfo<Journey>) => (
@@ -872,15 +777,15 @@ const TripPlannerScreen: React.FC = () => {
         {/* ── Divider ─────────────────────────────────────────────────── */}
         {hasQuery && <View style={styles.divider} />}
 
-        {/* ── Route Map (shows journey path with colored polylines) ───── */}
+        {/* ── Route Map (shows REAL road-matched paths + GPS tracking) ── */}
         {showResults && (
           <View style={styles.mapSection}>
             <ErrorBoundary fallback={<View style={styles.mapPlaceholder} />}>
               <LeafletMap
                 style={styles.journeyMap}
-                centerLat={31.9600}
-                centerLng={35.9200}
-                zoom={13}
+                centerLat={mapCenter.lat}
+                centerLng={mapCenter.lng}
+                zoom={14}
                 markers={journeyMarkers}
                 polylines={journeyPolylines}
               />
@@ -984,12 +889,13 @@ const TripPlannerScreen: React.FC = () => {
               <TouchableOpacity
                 style={styles.currentLocBtn}
                 onPress={() => {
+                  const loc = useTransitStore.getState().userLocation;
                   if (searchTarget === "from") {
                     setFromLabel("موقعي الحالي");
-                    setFromCoords(null);
+                    setFromCoords(loc ? [loc.lat, loc.lng] : [transportConfig.ammanCenter.lat, transportConfig.ammanCenter.lng]);
                   } else {
                     setToLabel("موقعي الحالي");
-                    setToCoords(null);
+                    setToCoords(loc ? [loc.lat, loc.lng] : [transportConfig.ammanCenter.lat, transportConfig.ammanCenter.lng]);
                   }
                   setShowSearch(false);
                 }}
@@ -1024,7 +930,7 @@ const TripPlannerScreen: React.FC = () => {
                 renderItem={({ item }) => (
                   <TouchableOpacity
                     style={styles.quickItem}
-                    onPress={() => selectSearchResult(item.nameAr)}
+                    onPress={() => selectSearchResult(item)}
                     activeOpacity={0.7}
                   >
                     <View style={styles.quickItemDot} />
@@ -1053,7 +959,7 @@ const styles = StyleSheet.create({
   },
   // Map section
   mapSection: {
-    height: 200,
+    height: 260,
     marginHorizontal: spacing[4],
     borderRadius: radius.lg,
     overflow: "hidden",

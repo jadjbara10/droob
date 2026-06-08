@@ -220,7 +220,7 @@ const StopCard: React.FC<StopCardProps> = React.memo(({ stop, onPress }) => {
           {stop.nameAr}
         </Text>
         <View style={styles.stopMeta}>
-          <Text style={styles.stopDist}>{stop.distance} م</Text>
+          <Text style={styles.stopDist}>{Math.round(stop.distance || 0)} م</Text>
           <TransitBadge mode={stop.modes[0]} size="sm" />
         </View>
         <CountdownTimer minutes={3 + Math.random() * 8} size="sm" />
@@ -494,7 +494,7 @@ const SheetContent: React.FC<SheetContentProps> = React.memo(({
                       <Text style={styles.allStopNameEn}>{s.nameEn}</Text>
                     </View>
                     <View style={styles.allStopRight}>
-                      <Text style={styles.allStopDist}>{s.distance} م</Text>
+                      <Text style={styles.allStopDist}>{Math.round(s.distance || 0)} م</Text>
                       <TransitBadge mode={s.modes[0]} size="sm" />
                     </View>
                   </TouchableOpacity>
@@ -530,6 +530,8 @@ const HomeScreen: React.FC = () => {
   const fetchAlerts = useTransitStore((s) => s.fetchAlerts);
   const storedAlerts = useTransitStore((s) => s.alerts);
   const setUserLocation = useTransitStore((s) => s.setUserLocation);
+  const storedRoutes = useTransitStore((s) => s.routes);
+  const fetchRoutes = useTransitStore((s) => s.fetchRoutes);
 
   const [snapIdx, setSnapIdx] = useState(0);
   const [alert, setAlert] = useState<ServiceAlert | null>(null);
@@ -558,7 +560,8 @@ const HomeScreen: React.FC = () => {
     };
     initLocation();
     fetchAlerts();
-  }, [fetchNearbyStops, fetchAlerts, setUserLocation]);
+    fetchRoutes({ limit: 500 }); // Load all route paths for map display
+  }, [fetchNearbyStops, fetchAlerts, setUserLocation, fetchRoutes]);
 
   // ── Derive display data from store ─────────────────────────────────────
   const displayStops: TransitStop[] = useMemo(
@@ -669,6 +672,51 @@ const HomeScreen: React.FC = () => {
     return markers;
   }, [displayStops, userLocation]);
 
+  // ── Route polylines: extract GeoJSON paths for ALL routes on the map ───
+  const routePolylines = useMemo(() => {
+    if (!storedRoutes || storedRoutes.length === 0) return [];
+    const lines: Array<{ id: string; coords: Array<[number, number]>; color: string; weight?: number; opacity?: number }> = [];
+    const modeColors: Record<string, string> = {
+      city_bus: "#0066CC", brt: "#E60026", serveece: "#FF8C00", intercity: "#6B21A8",
+    };
+    for (const r of storedRoutes as any[]) {
+      try {
+        // Parse path_geojson (may be string or object)
+        let pg = r.path_geojson;
+        if (typeof pg === "string" && pg.length > 0) {
+          try { pg = JSON.parse(pg); } catch { pg = null; }
+        }
+        if (!pg || pg.type !== "LineString" || !Array.isArray(pg.coordinates) || pg.coordinates.length < 2) {
+          continue;
+        }
+        // Convert GeoJSON [lng, lat] → Leaflet [lat, lng] with adaptive simplification
+        const rawCoords: Array<[number, number]> = pg.coordinates;
+        const totalPts = rawCoords.length;
+        // Simplify: take every Nth point based on path length to keep rendering light
+        const step = totalPts > 200 ? 3 : totalPts > 80 ? 2 : 1;
+        const coords: Array<[number, number]> = [];
+        for (let i = 0; i < totalPts; i += step) {
+          coords.push([rawCoords[i][1], rawCoords[i][0]]); // [lng,lat] → [lat,lng]
+        }
+        // Always include the last point for path continuity
+        if (step > 1 && (totalPts - 1) % step !== 0) {
+          coords.push([rawCoords[totalPts - 1][1], rawCoords[totalPts - 1][0]]);
+        }
+        const mode = r.mode || "city_bus";
+        lines.push({
+          id: r.code || r.id,
+          coords,
+          color: r.color || modeColors[mode] || "#0066CC",
+          weight: mode === "brt" ? 4 : 2.5,
+          opacity: mode === "brt" ? 0.9 : 0.6,
+        });
+      } catch {
+        // Skip routes with malformed path data
+      }
+    }
+    return lines;
+  }, [storedRoutes]);
+
   // ── Sheet content (rebuilt only when its dependencies change) ───────────
   const renderSheet = useCallback(() => {
     return (
@@ -707,6 +755,7 @@ const HomeScreen: React.FC = () => {
           centerLng={AMAAN_COORDS[0]}
           zoom={13}
           markers={mapMarkers}
+          polylines={routePolylines}
         />
       </ErrorBoundary>
 

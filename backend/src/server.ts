@@ -25,6 +25,8 @@ import { adsRoutes } from "./routes/ads.js";
 import { faresRoutes } from "./routes/fares.js";
 import { prayerTimesRoutes } from "./routes/prayer-times.js";
 import { activityRoutes } from "./routes/activity.js";
+import { usersAdminRoutes } from "./routes/users-admin.js";
+import { snapRouteRoutes } from "./routes/snap-route.js";
 import { startPrayerTimesCron } from "./cron/prayer-times-cron.js";
 
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -192,6 +194,9 @@ async function buildApp() {
           }
         });
         adminScope.register(adminRoutes, { prefix: "/admin" });
+        adminScope.register(usersAdminRoutes, { prefix: "/admin/users" });
+        adminScope.register(snapRouteRoutes, { prefix: "/admin" });
+
         adminScope.register(dashboardRoutes, { prefix: "/dashboard" });
         adminScope.register(activityRoutes, { prefix: "/activity" });
       });
