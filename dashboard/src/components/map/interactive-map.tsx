@@ -10,9 +10,25 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { StopRecord, RouteRecord } from "@/lib/api";
 
-// ─── Dark tile layer ──────────────────────────────────────────────────────
-const TILE_URL = "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
-const TILE_ATTR = '&copy; <a href="https://carto.com/">CARTO</a>';
+// ─── Tile layers ──────────────────────────────────────────────────────────
+const TILE_LAYERS = {
+  dark: {
+    url: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+    attr: '&copy; <a href="https://carto.com/">CARTO</a>',
+    label: "داكن",
+  },
+  light: {
+    url: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+    attr: '&copy; <a href="https://carto.com/">CARTO</a>',
+    label: "فاتح",
+  },
+  colorful: {
+    url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    attr: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    label: "ملون",
+  },
+};
+type TileStyle = keyof typeof TILE_LAYERS;
 
 // ─── Default center: Amman 4th Circle ─────────────────────────────────────
 const DEFAULT_CENTER: [number, number] = [31.9539, 35.9106];
@@ -143,6 +159,7 @@ export function InteractiveMap({
   showControls = true,
 }: InteractiveMapProps) {
   const [mounted, setMounted] = useState(false);
+  const [mapStyle, setMapStyle] = useState<TileStyle>("colorful");
 
   useEffect(() => {
     setMounted(true);
@@ -166,7 +183,7 @@ export function InteractiveMap({
         zoomControl={showControls}
         attributionControl={showControls}
       >
-        <TileLayer url={TILE_URL} attribution={TILE_ATTR} />
+        <TileLayer url={TILE_LAYERS[mapStyle].url} attribution={TILE_LAYERS[mapStyle].attr} />
 
         <MapClickHandler
           onMapClick={onMapClick}
@@ -297,6 +314,25 @@ export function InteractiveMap({
             }}
           />
         ))}
+
+        {/* Map Style Switcher */}
+        <div className="leaflet-top leaflet-right" style={{ marginTop: 80 }}>
+          <div className="leaflet-control" style={{background:"var(--surface)",border:"1px solid var(--border)",borderRadius:"var(--radius)",padding:4,display:"flex",gap:2}}>
+            {(Object.keys(TILE_LAYERS) as TileStyle[]).map(style => (
+              <button
+                key={style}
+                onClick={(e) => { e.stopPropagation(); setMapStyle(style); }}
+                style={{
+                  padding:"4px 8px",fontSize:11,border:"none",borderRadius:4,cursor:"pointer",
+                  background: mapStyle === style ? "var(--accent)" : "transparent",
+                  color: mapStyle === style ? "#fff" : "var(--text-secondary)",
+                }}
+              >
+                {TILE_LAYERS[style].label}
+              </button>
+            ))}
+          </div>
+        </div>
       </MapContainer>
 
       {/* Editing mode indicator */}
