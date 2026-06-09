@@ -88,10 +88,10 @@ async function buildApp() {
         scriptSrc: ["'self'"],
         styleSrc: ["'self'", "'unsafe-inline'"],
         imgSrc: ["'self'", "data:", "https://*.mapbox.com", "https://*.tiles.mapbox.com"],
-        connectSrc: ["'self'", "https://*.mapbox.com", "wss://*.droob.jo"],
+        connectSrc: ["'self'", "https://api.droob-jo.com", "https://*.mapbox.com", "wss://*.droob.jo"],
       },
     } : false,
-    crossOriginResourcePolicy: { policy: process.env.NODE_ENV === "production" ? "same-origin" : "cross-origin" },
+    crossOriginResourcePolicy: { policy: process.env.NODE_ENV === "production" ? "cross-origin" : "cross-origin" },
   });
 
   await app.register(rateLimit, {
