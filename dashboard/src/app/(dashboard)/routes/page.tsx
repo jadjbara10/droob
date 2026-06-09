@@ -35,27 +35,28 @@ export default function RoutesPage() {
 
   useEffect(() => { fetchRoutes(); }, []);
 
-  function openForm(route?: RouteRecord) {
+  async function openForm(route?: RouteRecord) {
     if (route) {
       setEditingRoute(route);
-      // Parse existing geojson to polyline
-      if (route.path_geojson) {
-        try {
-          const gj = typeof route.path_geojson === "string" ? JSON.parse(route.path_geojson) : route.path_geojson;
+      setPolyline([]);
+      setShowForm(true);
+      // Load full route with path_geojson for map editing
+      try {
+        const full = await routesApi.getById(route.id) as any;
+        if (full?.path_geojson) {
+          const gj = typeof full.path_geojson === "string" ? JSON.parse(full.path_geojson) : full.path_geojson;
           if (gj.type === "LineString" && Array.isArray(gj.coordinates)) {
             setPolyline(gj.coordinates.map((c: number[]) => [c[1], c[0]] as [number, number]));
-          } else {
-            setPolyline([]);
           }
-        } catch { setPolyline([]); }
-      } else {
-        setPolyline([]);
-      }
+        }
+        // Update editing route with full data
+        if (full) setEditingRoute({ ...route, ...full });
+      } catch { /* keep editing without path */ }
     } else {
       setEditingRoute(null);
       setPolyline([]);
+      setShowForm(true);
     }
-    setShowForm(true);
   }
 
   async function handleSnapRoute() {
