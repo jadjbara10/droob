@@ -63,6 +63,7 @@ const MODE_COLORS: Record<string, string> = {
 interface InteractiveMapProps {
   stops?: StopRecord[];
   routes?: RouteRecord[];
+  routeGeoJSON?: any; // GeoJSON FeatureCollection for lightweight map rendering
   selectedStopId?: string | null;
   selectedRouteId?: string | null;
   onStopClick?: (stop: StopRecord) => void;
@@ -127,6 +128,7 @@ function FitBounds({ stops }: { stops?: StopRecord[] }) {
 export function InteractiveMap({
   stops = [],
   routes = [],
+  routeGeoJSON,
   selectedStopId,
   selectedRouteId,
   onStopClick,
@@ -218,7 +220,23 @@ export function InteractiveMap({
           </Marker>
         ))}
 
-        {/* Route Polylines */}
+        {/* Route Polylines from GeoJSON (lightweight, all routes) */}
+        {routeGeoJSON?.features?.map((feature: any, idx: number) => {
+          const coords = feature.geometry?.coordinates;
+          if (!coords || coords.length < 2) return null;
+          const path = coords.map((c: number[]) => [c[1], c[0]] as [number, number]);
+          const props = feature.properties || {};
+          const color = MODE_COLORS[props.mode] || props.color || "#3BB0FF";
+          return (
+            <Polyline
+              key={`geo-${idx}`}
+              positions={path}
+              pathOptions={{ color, weight: 2, opacity: 0.65 }}
+            />
+          );
+        })}
+
+        {/* Route Polylines (from routes list - for selected/highlighted) */}
         {routes.map((route) => {
           const path = extractPath(route);
           if (!path || path.length < 2) return null;

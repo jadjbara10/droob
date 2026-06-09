@@ -348,7 +348,7 @@ export interface StopCreateInput {
 export const routesApi = {
   list: (params?: {
     q?: string; mode?: string; governorate?: string; isActive?: boolean;
-    limit?: number; offset?: number;
+    limit?: number; offset?: number; includePaths?: boolean;
   }) => apiFetch<{ data: RouteRecord[]; total?: number }>("/routes", { params: params as Record<string, string | number | boolean | undefined> }),
 
   getById: (id: string) => apiFetch<RouteRecord & { agency?: AgencyRecord; stops: RouteStopRecord[] }>(`/routes/${id}`),

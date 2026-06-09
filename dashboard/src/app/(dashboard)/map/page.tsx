@@ -22,6 +22,7 @@ type EditingMode = "none" | "add-stop" | "draw-route";
 export default function MapPage() {
   const [allStops, setAllStops] = useState<StopRecord[]>([]);
   const [allRoutes, setAllRoutes] = useState<RouteRecord[]>([]);
+  const [routeGeoJSON, setRouteGeoJSON] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
@@ -43,12 +44,14 @@ export default function MapPage() {
     setLoading(true);
     setError(false);
     try {
-      const [stopsRes, routesRes] = await Promise.all([
+      const [stopsRes, routesRes, geoJSONRes] = await Promise.all([
         stopsApi.list({ limit: 1000 }),
-        routesApi.list({ limit: 500 }),
+        routesApi.list({ limit: 200 }),
+        fetch("https://api.droob-jo.com/api/v1/routes/geojson").then(r => r.json()),
       ]);
       setAllStops(Array.isArray(stopsRes) ? stopsRes : (stopsRes.data || []));
       setAllRoutes(Array.isArray(routesRes) ? routesRes : (routesRes.data || []));
+      setRouteGeoJSON(geoJSONRes);
     } catch {
       setError(true);
     } finally {
@@ -276,7 +279,7 @@ export default function MapPage() {
         <div style={{ position: "relative", flex: 1, minHeight: 400 }}>
           {loading ? <MapSkeleton /> : (
             <InteractiveMap
-              stops={stops} routes={routes}
+              stops={stops} routes={routes} routeGeoJSON={routeGeoJSON}
               selectedStopId={selectedStop?.id} selectedRouteId={selectedRoute?.id}
               onStopClick={setSelectedStop} onRouteClick={setSelectedRoute}
               onMapClick={handleMapClick} onStopDrag={handleStopDrag}
