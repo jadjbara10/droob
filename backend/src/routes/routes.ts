@@ -18,6 +18,7 @@ const routesQuerySchema = z.object({
   limit: z.coerce.number().optional().default(50),
   offset: z.coerce.number().optional().default(0),
   maxLimit: z.coerce.number().optional(),
+  includePaths: z.coerce.boolean().optional().default(false),
 });
 
 const routeCreateSchema = z.object({
@@ -78,17 +79,34 @@ export async function routesRoutes(app: FastifyInstance) {
         conditions.push(eq(routes.is_active, query.isActive));
       }
 
-      const result = await db.query.routes.findMany({
-        where: conditions.length > 0 ? and(...conditions) : undefined,
-        limit: Math.min(query.limit, query.maxLimit || 500),
-        offset: query.offset,
-        orderBy: routes.code,
-        with: {
-          agency: true,
-          originStop: true,
-          destinationStop: true,
-        },
-      });
+      let result;
+      if (query.includePaths) {
+        // Cap at 100 with paths — GeoJSON is heavy (~20KB/route)
+        const maxPathLimit = Math.min(query.maxLimit || 500, 100);
+        result = await db.query.routes.findMany({
+          where: conditions.length > 0 ? and(...conditions) : undefined,
+          limit: Math.min(query.limit, maxPathLimit),
+          offset: query.offset,
+          orderBy: routes.code,
+          // Skip relations to reduce payload size
+        });
+      } else {
+        const cols = {
+          id: routes.id, code: routes.code, name_ar: routes.name_ar, name_en: routes.name_en,
+          mode: routes.mode, agency_id: routes.agency_id, color: routes.color,
+          origin_stop_id: routes.origin_stop_id, destination_stop_id: routes.destination_stop_id,
+          distance: routes.distance, base_fare: routes.base_fare, fare_min: routes.fare_min,
+          fare_max: routes.fare_max, is_active: routes.is_active,
+          has_friday_schedule: routes.has_friday_schedule, has_ramadan_schedule: routes.has_ramadan_schedule,
+          headway_peak: routes.headway_peak, headway_offpeak: routes.headway_offpeak,
+          first_departure: routes.first_departure, last_departure: routes.last_departure,
+          created_at: routes.created_at, updated_at: routes.updated_at,
+        };
+        result = await db.select(cols).from(routes)
+          .where(conditions.length > 0 ? and(...conditions) : undefined)
+          .limit(Math.min(query.limit, query.maxLimit || 500))
+          .offset(query.offset).orderBy(routes.code);
+      }
 
       const wrapped = { data: result, total: result.length };
       await cacheSet(cacheKey, wrapped, 300);
@@ -373,4 +391,57 @@ export async function routesRoutes(app: FastifyInstance) {
       throw err;
     }
   });
+  // GET /api/v1/routes/geojson — All routes as simplified GeoJSON FeatureCollection
+  app.get("/geojson", async (_request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const cacheKey = "routes:geojson:v1";
+      const cached = await cacheGet(cacheKey);
+      if (cached) return reply.send(cached);
+
+      const allRoutes = await db.query.routes.findMany({
+        where: eq(routes.is_active, true),
+        columns: { code: true, name_ar: true, name_en: true, mode: true, color: true, path_geojson: true },
+        orderBy: routes.code,
+      });
+
+      const features = allRoutes
+        .filter((r: any) => r.path_geojson && r.path_geojson.coordinates)
+        .map((r: any) => {
+          // Simplify: keep every 15th point + first & last (enough for map display)
+          const coords = r.path_geojson.coordinates;
+          const simplified = [coords[0]];
+          const step = Math.max(Math.floor(coords.length / 40), 15);
+          for (let i = step; i < coords.length - 1; i += step) {
+            simplified.push(coords[i]);
+          }
+          simplified.push(coords[coords.length - 1]);
+
+          return {
+            type: "Feature",
+            properties: {
+              code: r.code,
+              name_ar: r.name_ar,
+              name_en: r.name_en,
+              mode: r.mode,
+              color: r.color || "#0066CC",
+            },
+            geometry: {
+              type: "LineString",
+              coordinates: simplified,
+            },
+          };
+        });
+
+      const geojson = {
+        type: "FeatureCollection",
+        features,
+      };
+
+      await cacheSet(cacheKey, geojson, 600);
+      return reply.send(geojson);
+    } catch (err: any) {
+      throw err;
+    }
+  });
+
 }
