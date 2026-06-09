@@ -394,19 +394,19 @@ export async function routesRoutes(app: FastifyInstance) {
   // GET /api/v1/routes/geojson — All routes as simplified GeoJSON FeatureCollection
   app.get("/geojson", async (_request: FastifyRequest, reply: FastifyReply) => {
     try {
-      const cacheKey = "routes:geojson:v1";
+      const cacheKey = "routes:geojson:v2";
       const cached = await cacheGet(cacheKey);
       if (cached) return reply.send(cached);
 
       const allRoutes = await db.query.routes.findMany({
         where: eq(routes.is_active, true),
-        columns: { code: true, name_ar: true, name_en: true, mode: true, color: true, path_geojson: true },
+        columns: { code: true, name_ar: true, name_en: true, mode: true, color: true, path_geojson: true, direction: true, return_route_id: true },
         orderBy: routes.code,
       });
 
       const features = allRoutes
         .filter((r: any) => r.path_geojson && r.path_geojson.coordinates)
-        .map((r: any) => {
+        .flatMap((r: any) => {
           // Simplify: keep every 15th point + first & last (enough for map display)
           const coords = r.path_geojson.coordinates;
           const simplified = [coords[0]];
@@ -416,7 +416,7 @@ export async function routesRoutes(app: FastifyInstance) {
           }
           simplified.push(coords[coords.length - 1]);
 
-          return {
+          const feature = {
             type: "Feature",
             properties: {
               code: r.code,
@@ -424,12 +424,32 @@ export async function routesRoutes(app: FastifyInstance) {
               name_en: r.name_en,
               mode: r.mode,
               color: r.color || "#0066CC",
+              direction: r.direction || "forward",
             },
             geometry: {
               type: "LineString",
               coordinates: simplified,
             },
           };
+
+          // Always generate return direction by reversing coordinates
+          const returnFeature = {
+            type: "Feature",
+            properties: {
+              code: r.code,
+              name_ar: r.name_ar + " (عودة)",
+              name_en: r.name_en + " (Return)",
+              mode: r.mode,
+              color: r.color ? r.color + "99" : "#0066CC99", // lighter for return
+              direction: "return",
+            },
+            geometry: {
+              type: "LineString",
+              coordinates: [...simplified].reverse(),
+            },
+          };
+
+          return [feature, returnFeature];
         });
 
       const geojson = {
@@ -444,4 +464,38 @@ export async function routesRoutes(app: FastifyInstance) {
     }
   });
 
+// POST /api/v1/routes/import-bidirectional — batch import with direction
+  app.post("/import-bidirectional", { preHandler: [app.authenticate] }, async (request: any, reply: any) => {
+    try {
+      const pg = await import("postgres");
+      const fs = await import("fs");
+      const crypto = await import("crypto");
+      const sql = pg.default(process.env.DATABASE_URL!, { max: 5 });
+      const raw = JSON.parse(fs.readFileSync("./src/data/unified_routes.json", "utf-8"));
+      const routeList = raw.routes || raw;
+      let imported = 0, skipped = 0;
+      for (const r of routeList) {
+        const code = r.code || ('R-' + crypto.randomBytes(4).toString('hex'));
+        const geojson = r.path_geojson;
+        if (!geojson || !geojson.coordinates || geojson.coordinates.length < 2) { skipped++; continue; }
+        const fwdId = crypto.randomUUID();
+        const retId = crypto.randomUUID();
+        const revCoords = [...geojson.coordinates].reverse();
+        try {
+          await sql`INSERT INTO routes (id, code, name_ar, name_en, mode, color, path_geojson, is_active, direction)
+            VALUES (${fwdId}, ${code}, ${r.name_ar||'x'}, ${r.name_en||'x'}, ${r.mode||'city_bus'}, ${r.color||'#0066CC'}, ${JSON.stringify(geojson)}::jsonb, true, 'forward')
+            ON CONFLICT DO NOTHING`;
+          await sql`INSERT INTO routes (id, code, name_ar, name_en, mode, color, path_geojson, is_active, direction, return_route_id)
+            VALUES (${retId}, ${code}, ${r.name_ar||'x'}||' (R)', ${r.name_en||'x'}||' (R)', ${r.mode||'city_bus'}, ${r.color||'#0066CC'}, ${JSON.stringify({type:'LineString',coordinates:revCoords})}::jsonb, true, 'return', ${fwdId})
+            ON CONFLICT DO NOTHING`;
+          await sql`UPDATE routes SET return_route_id = ${retId} WHERE id = ${fwdId}`;
+          imported++;
+        } catch (e: any) { skipped++; }
+      }
+      await sql.end();
+      return reply.send({ success: true, imported, skipped });
+    } catch (err: any) {
+      return reply.status(500).send({ error: err.message });
+    }
+  });
 }
