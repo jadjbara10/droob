@@ -8,7 +8,7 @@ import { TableSkeleton } from "@/components/skeleton";
 import { Panel } from "@/components/panel";
 import { MapPicker } from "@/components/map/map-picker";
 import { routesApi, snapRouteApi, type RouteRecord, type RouteCreateInput } from "@/lib/api";
-import { formatDateTime, modeLabels } from "@/lib/utils";
+import { formatDateTime, formatFare, modeLabels } from "@/lib/utils";
 
 const MODES = ["city_bus","brt","serveece","intercity"];
 
@@ -121,7 +121,7 @@ export default function RoutesPage() {
     )},
     { key: "mode", header: "النوع", render: (r: any) => <span className={`badge ${modeColorMap[r.mode] || "badge-info"}`}>{modeLabels[r.mode] || r.mode}</span> },
     { key: "name_ar", header: "الاسم", render: (r: any) => <span style={{ fontWeight: 500 }}>{r.name_ar}</span> },
-    { key: "fare", header: "الأجرة", render: (r: any) => <span className="cell-mono">{r.base_fare ? parseFloat(r.base_fare).toFixed(3) : "0.350"} د.أ</span> },
+    { key: "fare", header: "الأجرة", render: (r: any) => <span className="cell-mono">{formatFare(r.base_fare)} د.أ</span> },
     { key: "headway", header: "التكرار", render: (r: any) => <span className="cell-mono">{r.headway_peak ? `${r.headway_peak} ذروة` : "—"} {r.headway_offpeak ? `/ ${r.headway_offpeak}` : ""}</span> },
     { key: "status", header: "الحالة", render: (r: any) => <span className={`badge ${r.is_active ? "badge-success" : "badge-danger"}`}>{r.is_active ? "نشط" : "معطل"}</span> },
     { key: "actions", header: "إجراءات", render: (r: any) => (

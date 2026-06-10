@@ -46,6 +46,19 @@ export function formatDateTime(dateStr: string): string {
 }
 
 /**
+ * Format a fare value to JOD display string.
+ * Values > 10 are interpreted as fils (divided by 1000).
+ * Returns a 3-decimal string (e.g. "0.500").
+ */
+export function formatFare(fare: string | number | null | undefined, fallback = "0.350"): string {
+  if (fare === null || fare === undefined) return fallback;
+  const n = typeof fare === "string" ? parseFloat(fare) : fare;
+  if (isNaN(n)) return fallback;
+  const jod = n > 10 ? n / 1000 : n;
+  return jod.toFixed(3);
+}
+
+/**
  * Arabic labels for modes
  */
 export const modeLabels: Record<string, string> = {
