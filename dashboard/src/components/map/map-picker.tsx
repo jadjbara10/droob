@@ -1,13 +1,13 @@
-"use client";
+﻿"use client";
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   MapPicker — reusable map for picking coordinates / drawing routes
+/* â•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گ
+   MapPicker â€” reusable map for picking coordinates / drawing routes
    - Right-click: add point (polyline mode)
    - Left-click: pick location (point mode)
    - Drag vertices to move them
    - Right-click vertex: delete it
    - Undo last point
-   ═══════════════════════════════════════════════════════════════════════════ */
+   â•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گ */
 
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import { MapContainer, TileLayer, Marker, Polyline, useMapEvents, useMap } from "react-leaflet";
@@ -15,12 +15,12 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { X, Undo2, MousePointer2 } from "lucide-react";
 
-const TILE_URL = "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
+const TILE_URL = "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
 const TILE_ATTR = '&copy; <a href="https://carto.com/">CARTO</a>';
 const DEFAULT_CENTER: [number, number] = [31.9539, 35.9106];
 const DEFAULT_ZOOM = 13;
 
-// ─── Marker Icons ─────────────────────────────────────────────────────────
+// â”€â”€â”€ Marker Icons â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const pickIcon = L.divIcon({
   className: "",
@@ -51,7 +51,7 @@ const ghostIcon = L.divIcon({
   iconSize: [6, 6], iconAnchor: [3, 3],
 });
 
-// ─── Props ────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Props â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface MapPickerProps {
   mode: "point" | "polyline";
@@ -63,7 +63,7 @@ interface MapPickerProps {
   existingStops?: { lat: number; lng: number; name_ar: string }[];
 }
 
-// ─── Draggable Vertex Marker ──────────────────────────────────────────────
+// â”€â”€â”€ Draggable Vertex Marker â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function VertexMarker({
   index,
@@ -115,7 +115,7 @@ function VertexMarker({
   );
 }
 
-// ─── Map Event Handlers ───────────────────────────────────────────────────
+// â”€â”€â”€ Map Event Handlers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function MapHandlers({
   mode,
@@ -147,7 +147,7 @@ function FlyToMarker({ lat, lng }: { lat: number; lng: number }) {
   return null;
 }
 
-// ─── Main Component ───────────────────────────────────────────────────────
+// â”€â”€â”€ Main Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export function MapPicker({
   mode, value, polyline = [], onChange, onPolylineChange,
@@ -189,7 +189,7 @@ export function MapPicker({
         <MapContainer
           center={center}
           zoom={value ? 16 : polyline.length > 0 ? 15 : DEFAULT_ZOOM}
-          style={{ height: "100%", width: "100%" }}
+          style={{ height: "100%", width: "100%", background: "#e8ecf0" }}
           zoomControl={true}
           attributionControl={false}
         >
@@ -241,29 +241,29 @@ export function MapPicker({
         <div style={{ marginTop: 8, fontSize: 12, color: "var(--text-muted)", display: "flex", alignItems: "center", gap: 6 }}>
           <MousePointer2 size={12} />
           {value
-            ? <span className="mono">الإحداثيات: {value.lat.toFixed(5)}, {value.lng.toFixed(5)}</span>
-            : "انقر على الخريطة لتحديد الموقع"}
+            ? <span className="mono">ط§ظ„ط¥ط­ط¯ط§ط«ظٹط§طھ: {value.lat.toFixed(5)}, {value.lng.toFixed(5)}</span>
+            : "ط§ظ†ظ‚ط± ط¹ظ„ظ‰ ط§ظ„ط®ط±ظٹط·ط© ظ„طھط­ط¯ظٹط¯ ط§ظ„ظ…ظˆظ‚ط¹"}
         </div>
       ) : (
         <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", fontSize: 12 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6, color: "var(--text-secondary)" }}>
             <MousePointer2 size={12} />
             <span style={{ color: "var(--text-muted)" }}>
-              <strong style={{ color: "var(--warn)" }}>يمين</strong> لإضافة نقطة ·
-              <strong style={{ color: "var(--accent)" }}> اسحب</strong> النقاط ·
-              <strong style={{ color: "var(--danger)" }}> يمين</strong> على نقطة لحذفها
+              <strong style={{ color: "var(--warn)" }}>ظٹظ…ظٹظ†</strong> ظ„ط¥ط¶ط§ظپط© ظ†ظ‚ط·ط© آ·
+              <strong style={{ color: "var(--accent)" }}> ط§ط³ط­ط¨</strong> ط§ظ„ظ†ظ‚ط§ط· آ·
+              <strong style={{ color: "var(--danger)" }}> ظٹظ…ظٹظ†</strong> ط¹ظ„ظ‰ ظ†ظ‚ط·ط© ظ„ط­ط°ظپظ‡ط§
             </span>
           </div>
           <span className="mono" style={{ color: "var(--warn)", fontWeight: 600 }}>
-            {polyline.length} نقطة
+            {polyline.length} ظ†ظ‚ط·ط©
           </span>
           {polyline.length > 0 && (
             <>
               <button className="btn btn-xs" onClick={() => onPolylineChange?.(polyline.slice(0, -1))}>
-                <Undo2 size={10} /> تراجع
+                <Undo2 size={10} /> طھط±ط§ط¬ط¹
               </button>
               <button className="btn btn-xs" onClick={() => onPolylineChange?.([])}>
-                <X size={10} /> مسح الكل
+                <X size={10} /> ظ…ط³ط­ ط§ظ„ظƒظ„
               </button>
             </>
           )}
@@ -279,13 +279,14 @@ export function MapPicker({
           textAlign: "center", pointerEvents: "none", zIndex: 500,
         }}>
           <div style={{ fontSize: 13, color: "var(--text-secondary)", marginBottom: 4 }}>
-            اضغط <strong style={{ color: "var(--warn)" }}>بالزر الأيمن</strong> على الخريطة
+            ط§ط¶ط؛ط· <strong style={{ color: "var(--warn)" }}>ط¨ط§ظ„ط²ط± ط§ظ„ط£ظٹظ…ظ†</strong> ط¹ظ„ظ‰ ط§ظ„ط®ط±ظٹط·ط©
           </div>
           <div style={{ fontSize: 12, color: "var(--text-muted)" }}>
-            لإضافة نقاط المسار
+            ظ„ط¥ط¶ط§ظپط© ظ†ظ‚ط§ط· ط§ظ„ظ…ط³ط§ط±
           </div>
         </div>
       )}
     </div>
   );
 }
+

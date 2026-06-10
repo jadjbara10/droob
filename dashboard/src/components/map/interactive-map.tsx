@@ -1,8 +1,8 @@
-"use client";
+﻿"use client";
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   Interactive Map — Leaflet dark theme, stops/routes markers, CRUD actions
-   ═══════════════════════════════════════════════════════════════════════════ */
+/* â•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گ
+   Interactive Map â€” Leaflet dark theme, stops/routes markers, CRUD actions
+   â•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گâ•گ */
 
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMapEvents, useMap } from "react-leaflet";
@@ -10,31 +10,31 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { StopRecord, RouteRecord } from "@/lib/api";
 
-// ─── Tile layers ──────────────────────────────────────────────────────────
+// â”€â”€â”€ Tile layers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const TILE_LAYERS = {
   dark: {
     url: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
     attr: '&copy; <a href="https://carto.com/">CARTO</a>',
-    label: "داكن",
+    label: "ط¯ط§ظƒظ†",
   },
   light: {
     url: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
     attr: '&copy; <a href="https://carto.com/">CARTO</a>',
-    label: "فاتح",
+    label: "ظپط§طھط­",
   },
   colorful: {
     url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
     attr: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-    label: "ملون",
+    label: "ظ…ظ„ظˆظ†",
   },
 };
 type TileStyle = keyof typeof TILE_LAYERS;
 
-// ─── Default center: Amman 4th Circle ─────────────────────────────────────
+// â”€â”€â”€ Default center: Amman 4th Circle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const DEFAULT_CENTER: [number, number] = [31.9539, 35.9106];
 const DEFAULT_ZOOM = 13;
 
-// ─── Custom Marker Icons ──────────────────────────────────────────────────
+// â”€â”€â”€ Custom Marker Icons â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function createStopIcon(color: string = "#3BB0FF") {
   return L.divIcon({
@@ -66,7 +66,7 @@ function createTerminalIcon() {
   });
 }
 
-// ─── Mode colors ──────────────────────────────────────────────────────────
+// â”€â”€â”€ Mode colors â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const MODE_COLORS: Record<string, string> = {
   city_bus: "#3BB0FF",
   brt: "#FF4D6A",
@@ -74,7 +74,7 @@ const MODE_COLORS: Record<string, string> = {
   intercity: "#FF8C42",
 };
 
-// ─── Props ────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Props â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 interface InteractiveMapProps {
   stops?: StopRecord[];
@@ -94,7 +94,7 @@ interface InteractiveMapProps {
   showControls?: boolean;
 }
 
-// ─── Map Event Handlers ───────────────────────────────────────────────────
+// â”€â”€â”€ Map Event Handlers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function MapClickHandler({
   onMapClick,
@@ -122,7 +122,7 @@ function MapClickHandler({
   return null;
 }
 
-// ─── Fit bounds to markers ────────────────────────────────────────────────
+// â”€â”€â”€ Fit bounds to markers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function FitBounds({ stops }: { stops?: StopRecord[] }) {
   const map = useMap();
@@ -139,7 +139,7 @@ function FitBounds({ stops }: { stops?: StopRecord[] }) {
   return null;
 }
 
-// ─── Main Component ───────────────────────────────────────────────────────
+// â”€â”€â”€ Main Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export function InteractiveMap({
   stops = [],
@@ -159,7 +159,7 @@ export function InteractiveMap({
   showControls = true,
 }: InteractiveMapProps) {
   const [mounted, setMounted] = useState(false);
-  const [mapStyle, setMapStyle] = useState<TileStyle>("colorful");
+  const [mapStyle, setMapStyle] = useState<TileStyle>("light");
 
   useEffect(() => {
     setMounted(true);
@@ -179,7 +179,7 @@ export function InteractiveMap({
       <MapContainer
         center={DEFAULT_CENTER}
         zoom={DEFAULT_ZOOM}
-        style={{ height: "100%", width: "100%" }}
+        style={{ height: "100%", width: "100%", background: "#e8ecf0" }}
         zoomControl={showControls}
         attributionControl={showControls}
       >
@@ -217,17 +217,17 @@ export function InteractiveMap({
                   {stop.name_ar}
                 </div>
                 <div style={{ fontSize: 11, color: "var(--text-muted)", marginBottom: 8 }}>
-                  {stop.code} · {stop.governorate}
+                  {stop.code} آ· {stop.governorate}
                   {stop.is_terminal && (
                     <span className="badge badge-success" style={{ marginRight: 6 }}>
-                      مجمع
+                      ظ…ط¬ظ…ط¹
                     </span>
                   )}
                 </div>
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap", fontSize: 11 }}>
-                  {stop.has_shelter && <span className="tag tag-info">مظلة</span>}
-                  {stop.has_accessibility && <span className="tag tag-success">سهولة وصول</span>}
-                  {stop.has_ac && <span className="tag tag-info">تكييف</span>}
+                  {stop.has_shelter && <span className="tag tag-info">ظ…ط¸ظ„ط©</span>}
+                  {stop.has_accessibility && <span className="tag tag-success">ط³ظ‡ظˆظ„ط© ظˆطµظˆظ„</span>}
+                  {stop.has_ac && <span className="tag tag-info">طھظƒظٹظٹظپ</span>}
                 </div>
                 <div style={{ marginTop: 8, fontSize: 11, color: "var(--text-muted)" }}>
                   {stop.lat.toFixed(5)}, {stop.lng.toFixed(5)}
@@ -275,7 +275,7 @@ export function InteractiveMap({
           );
         })}
 
-        {/* Drawing polyline (for new route) — with numbered draggable vertices */}
+        {/* Drawing polyline (for new route) â€” with numbered draggable vertices */}
         {drawPoints.length >= 2 && (
           <Polyline
             positions={drawPoints}
@@ -353,16 +353,16 @@ export function InteractiveMap({
             pointerEvents: "none",
           }}
         >
-          {editingMode === "add-stop" && "انقر على الخريطة لإضافة محطة"}
+          {editingMode === "add-stop" && "ط§ظ†ظ‚ط± ط¹ظ„ظ‰ ط§ظ„ط®ط±ظٹط·ط© ظ„ط¥ط¶ط§ظپط© ظ…ط­ط·ط©"}
           {editingMode === "draw-route" &&
-            `رسم مسار — ${drawPoints.length} نقطة`}
+            `ط±ط³ظ… ظ…ط³ط§ط± â€” ${drawPoints.length} ظ†ظ‚ط·ط©`}
         </div>
       )}
     </div>
   );
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────
+// â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function extractPath(route: RouteRecord): [number, number][] | null {
   if (route.path_geojson) {
@@ -379,3 +379,4 @@ function extractPath(route: RouteRecord): [number, number][] | null {
   }
   return null;
 }
+

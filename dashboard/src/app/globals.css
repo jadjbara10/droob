@@ -627,7 +627,7 @@ body {
 /* ─── Leaflet Dark Overrides ────────────────────────────────────────────── */
 
 .leaflet-container {
-  background: var(--bg) !important;
+  background: #2a3548 !important;
   border-radius: var(--radius);
 }
 
@@ -646,6 +646,18 @@ body {
 
 .leaflet-popup-tip {
   background: var(--surface) !important;
+}
+
+
+/* --- Leaflet Tile Loading Fix --- */
+.leaflet-tile-pane {
+  background: #e8ecf0 !important;
+}
+.leaflet-container.light-map {
+  background: #e8ecf0 !important;
+}
+.leaflet-tile {
+  border: none !important;
 }
 
 /* ─── Grid ──────────────────────────────────────────────────────────────── */
