@@ -5,3 +5,7 @@ account_id = "445395f9fbc91a6f47c5aed960dd67f1"
 
 [site]
 bucket = "../deploy"
+
+[[routes]]
+pattern = "droob-jo.com/*"
+zone_name = "droob-jo.com"

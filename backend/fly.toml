@@ -1,0 +1,21 @@
+app = "droob-api"
+primary_region = "ams"
+
+[env]
+  NODE_ENV = "production"
+  DATABASE_URL = "postgresql://postgres:DyHNJjVhvGySkXgVdgXpaivfxLCOdpru@acela.proxy.rlwy.net:32787/railway"
+  REDIS_URL = "redis://default:JFuWlUfUhovizNQLLfmWjGBokHQUJcNX@acela.proxy.rlwy.net:48764"
+  JWT_SECRET = "droob-prod-PDRSUVgAwuqELijCyzdktMnfXWZ6ec8b7Km90r2G1sFQ3YNhxopv5O4BTaHlIJ"
+  CORS_ORIGIN = "*"
+  RATE_LIMIT_MAX = "100"
+  DEFAULT_LANGUAGE = "ar"
+  TIMEZONE = "Asia/Amman"
+  CURRENCY = "JOD"
+  FRIDAY_PRAYER_GAP_START = "11:30"
+  FRIDAY_PRAYER_GAP_END = "13:30"
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  auto_start_machines = true
+  auto_stop_machines = false

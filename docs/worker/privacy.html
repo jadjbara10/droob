@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>سياسة الخصوصية — دروب Droob</title>
+  <style>
+    :root {
+      --bg: #0B0F1A; --surface: #111827; --text: #F0F4FF;
+      --text-secondary: #8899BB; --accent: #3BB0FF;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: var(--bg); color: var(--text);
+      line-height: 1.8; padding: 20px;
+    }
+    .container {
+      max-width: 800px; margin: 0 auto;
+      background: var(--surface); border-radius: 16px;
+      padding: 40px; border: 1px solid rgba(255,255,255,0.07);
+    }
+    h1 { font-size: 28px; margin-bottom: 8px; color: var(--accent); }
+    h2 { font-size: 18px; margin-top: 32px; margin-bottom: 12px; color: var(--accent); }
+    p, li { font-size: 15px; color: var(--text-secondary); margin-bottom: 12px; }
+    ul { padding-right: 24px; }
+    .lang-switch { text-align: left; margin-bottom: 24px; }
+    .lang-switch a { color: var(--accent); text-decoration: none; font-size: 14px; }
+    .last-updated { font-size: 13px; color: #445577; margin-top: 32px; }
+    footer { text-align: center; margin-top: 24px; font-size: 13px; color: #445577; }
+  </style>
+</head>
+<body>
+  <div class="container" id="content-ar">
+    <div class="lang-switch">
+      <a href="#" onclick="switchLang('en'); return false;">English</a>
+    </div>
+    <h1>🔒 سياسة الخصوصية — دروب</h1>
+    <p><strong>آخر تحديث:</strong> 8 يونيو 2026</p>
+
+    <h2>1. مقدمة</h2>
+    <p>مرحباً بك في تطبيق دروب ("التطبيق")، المقدم من فريق دروب ("نحن"، "نحن"). نحن ملتزمون بحماية خصوصيتك وبياناتك الشخصية. توضح سياسة الخصوصية هذه كيفية جمع واستخدام ومشاركة وحماية معلوماتك عند استخدامك لتطبيق دروب لنظام النقل العام في الأردن.</p>
+
+    <h2>2. البيانات التي نجمعها</h2>
+    <p>لضرورة تقديم خدمات النقل العام، نجمع البيانات التالية:</p>
+    <ul>
+      <li><strong>بيانات الموقع الجغرافي:</strong> موقع GPS الخاص بك عند استخدام التطبيق (فقط أثناء الاستخدام النشط أو في الخلفية إذا سمحت). نستخدم هذا لإظهار أقرب محطات الباصات، وحساب مسارات الرحلات، وإرسال تنبيهات عند الاقتراب من محطتك.</li>
+      <li><strong>معلومات الحساب:</strong> إذا سجلت حساباً، نجمع بريدك الإلكتروني أو رقم هاتفك، واسمك (اختياري)، ونقاط منزلك وعملك المحفوظة.</li>
+      <li><strong>بيانات الجهاز:</strong> نوع الجهاز، نظام التشغيل، إصدار التطبيق، ومعرفات تشخيص الأعطال (عبر Sentry).</li>
+      <li><strong>تقارير المجتمع:</strong> إذا أرسلت بلاغاً عن ازدحام أو تأخير أو إغلاق محطة، نخزن البلاغ مع موقعك التقريبي.</li>
+    </ul>
+
+    <h2>3. كيف نستخدم بياناتك</h2>
+    <ul>
+      <li>عرض أقرب محطات الباصات وخطوط النقل</li>
+      <li>تخطيط الرحلات متعددة الوسائط (حافلة، سرفيس، باص سريع)</li>
+      <li>إرسال تنبيهات عند الاقتراب من محطتك</li>
+      <li>تحسين خدمات النقل العام بناءً على أنماط الاستخدام</li>
+      <li>مشاركة بلاغات المجتمع (ازدحام، تأخير) مع المستخدمين الآخرين بشكل مجهول</li>
+      <li>إصلاح الأعطال وتحسين التطبيق عبر تشخيص الأخطاء (Sentry)</li>
+    </ul>
+
+    <h2>4. مشاركة البيانات</h2>
+    <p><strong>نحن لا نبيع بياناتك لأي طرف ثالث.</strong> قد نشارك البيانات في الحالات التالية فقط:</p>
+    <ul>
+      <li><strong>خرائط Mapbox:</strong> لعرض الخرائط وحساب المسارات</li>
+      <li><strong>Sentry:</strong> لمراقبة الأعطال وتشخيص الأخطاء</li>
+      <li><strong>مزودي الاستضافة:</strong> قاعدة البيانات وخوادم API (Railway, Neon)</li>
+      <li><strong>السلطات القانونية:</strong> إذا تطلب القانون ذلك</li>
+    </ul>
+
+    <h2>5. تخزين البيانات وأمانها</h2>
+    <p>تخزن بياناتك على خوادم آمنة في الاتحاد الأوروبي أو الولايات المتحدة (حسب مزود الاستضافة). نستخدم تشفير HTTPS لجميع الاتصالات، وتشفير كلمات المرور بـ bcrypt، ومفاتيح JWT للتحقق من الهوية.</p>
+
+    <h2>6. حقوقك</h2>
+    <p>لك الحق في:</p>
+    <ul>
+      <li>طلب نسخة من بياناتك الشخصية</li>
+      <li>طلب تصحيح أو حذف بياناتك</li>
+      <li>سحب موافقتك على جمع بيانات الموقع (من إعدادات جهازك)</li>
+      <li>حذف حسابك وجميع بياناتك المرتبطة</li>
+    </ul>
+    <p>لأي طلب بخصوص بياناتك، راسلنا على البريد أدناه.</p>
+
+    <h2>7. خدمات الطرف الثالث</h2>
+    <p>يستخدم التطبيق الخدمات التالية التي لها سياسات خصوصية خاصة بها:</p>
+    <ul>
+      <li><strong>Mapbox:</strong> <a href="https://www.mapbox.com/legal/privacy" target="_blank" rel="noopener">mapbox.com/legal/privacy</a></li>
+      <li><strong>Sentry:</strong> <a href="https://sentry.io/privacy/" target="_blank" rel="noopener">sentry.io/privacy</a></li>
+      <li><strong>Expo:</strong> <a href="https://expo.dev/privacy" target="_blank" rel="noopener">expo.dev/privacy</a></li>
+    </ul>
+
+    <h2>8. الأطفال</h2>
+    <p>تطبيق دروب غير مخصص للأطفال دون سن 13 عاماً. لا نجمع عن علم بيانات شخصية من الأطفال.</p>
+
+    <h2>9. تغييرات على سياسة الخصوصية</h2>
+    <p>سنخطرك بأي تغييرات جوهرية على سياسة الخصوصية عبر إشعار داخل التطبيق أو عبر البريد الإلكتروني المسجل.</p>
+
+    <h2>10. اتصل بنا</h2>
+    <p>
+      📧 <strong>البريد الإلكتروني:</strong> privacy@droob-jo.com<br>
+      🌐 <strong>الموقع:</strong> https://droob-jo.com<br>
+      📍 <strong>العنوان:</strong> عمان، الأردن
+    </p>
+
+    <p class="last-updated">آخر تحديث: 8 يونيو 2026</p>
+  </div>
+
+  <!-- English version -->
+  <div class="container" id="content-en" style="display:none" dir="ltr">
+    <div class="lang-switch">
+      <a href="#" onclick="switchLang('ar'); return false;">العربية</a>
+    </div>
+    <h1>🔒 Privacy Policy — Droob</h1>
+    <p><strong>Last Updated:</strong> June 8, 2026</p>
+
+    <h2>1. Introduction</h2>
+    <p>Welcome to Droob ("the App"), provided by the Droob Team ("we", "us"). We are committed to protecting your privacy and personal data. This Privacy Policy explains how we collect, use, share, and protect your information when you use the Droob app for Jordan's public transit system.</p>
+
+    <h2>2. Data We Collect</h2>
+    <p>To provide transit services, we collect:</p>
+    <ul>
+      <li><strong>Location Data:</strong> Your GPS location when using the app (only during active use or in background if permitted). We use this to show nearby bus stops, calculate trip routes, and send alerts when approaching your stop.</li>
+      <li><strong>Account Information:</strong> If you register, we collect your email or phone number, your name (optional), and your saved home/work locations.</li>
+      <li><strong>Device Data:</strong> Device type, OS, app version, and crash diagnostic IDs (via Sentry).</li>
+      <li><strong>Community Reports:</strong> If you submit a crowding, delay, or station closure report, we store the report with your approximate location.</li>
+    </ul>
+
+    <h2>3. How We Use Your Data</h2>
+    <ul>
+      <li>Display nearby bus stops and transit routes</li>
+      <li>Plan multi-modal journeys (bus, serveece, BRT)</li>
+      <li>Send arrival alerts when approaching your stop</li>
+      <li>Improve transit services based on usage patterns</li>
+      <li>Share community reports (crowding, delays) anonymously with other users</li>
+      <li>Fix crashes and improve the app via error diagnostics (Sentry)</li>
+    </ul>
+
+    <h2>4. Data Sharing</h2>
+    <p><strong>We do not sell your data to any third party.</strong> We may share data only in the following cases:</p>
+    <ul>
+      <li><strong>Mapbox:</strong> For map rendering and route calculation</li>
+      <li><strong>Sentry:</strong> For crash monitoring and error diagnostics</li>
+      <li><strong>Hosting Providers:</strong> Database and API servers (Railway, Neon)</li>
+      <li><strong>Legal Authorities:</strong> If required by law</li>
+    </ul>
+
+    <h2>5. Data Storage & Security</h2>
+    <p>Your data is stored on secure servers in the EU or US (depending on hosting provider). We use HTTPS encryption for all communications, bcrypt for password hashing, and JWT tokens for authentication.</p>
+
+    <h2>6. Your Rights</h2>
+    <p>You have the right to:</p>
+    <ul>
+      <li>Request a copy of your personal data</li>
+      <li>Request correction or deletion of your data</li>
+      <li>Withdraw location consent (from your device settings)</li>
+      <li>Delete your account and all associated data</li>
+    </ul>
+    <p>For any data request, contact us at the email below.</p>
+
+    <h2>7. Third-Party Services</h2>
+    <p>The app uses these services which have their own privacy policies:</p>
+    <ul>
+      <li><strong>Mapbox:</strong> <a href="https://www.mapbox.com/legal/privacy" target="_blank" rel="noopener">mapbox.com/legal/privacy</a></li>
+      <li><strong>Sentry:</strong> <a href="https://sentry.io/privacy/" target="_blank" rel="noopener">sentry.io/privacy</a></li>
+      <li><strong>Expo:</strong> <a href="https://expo.dev/privacy" target="_blank" rel="noopener">expo.dev/privacy</a></li>
+    </ul>
+
+    <h2>8. Children</h2>
+    <p>Droob is not intended for children under 13. We do not knowingly collect personal data from children.</p>
+
+    <h2>9. Changes to This Policy</h2>
+    <p>We will notify you of any material changes to this Privacy Policy via in-app notification or your registered email.</p>
+
+    <h2>10. Contact Us</h2>
+    <p>
+      📧 <strong>Email:</strong> privacy@droob-jo.com<br>
+      🌐 <strong>Website:</strong> https://droob-jo.com<br>
+      📍 <strong>Address:</strong> Amman, Jordan
+    </p>
+
+    <p class="last-updated">Last Updated: June 8, 2026</p>
+  </div>
+
+  <footer>© 2026 Droob — Jordan Transit Navigator</footer>
+
+  <script>
+    function switchLang(lang) {
+      document.getElementById('content-ar').style.display = lang === 'ar' ? '' : 'none';
+      document.getElementById('content-en').style.display = lang === 'en' ? '' : 'none';
+      document.documentElement.lang = lang;
+      document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+    }
+  </script>
+</body>
+</html>
