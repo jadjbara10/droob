@@ -17,6 +17,8 @@ import {
   Users,
   Settings,
   Bus,
+  DollarSign,
+  Clock,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { roleLabels } from "@/lib/utils";
@@ -39,6 +41,8 @@ export function Sidebar() {
     { href: "/stops", label: "إدارة المحطات", icon: <MapPin size={18} /> },
     { href: "/hubs", label: "إدارة المجمعات", icon: <Building2 size={18} /> },
     { href: "/routes", label: "الخطوط والمسارات", icon: <Route size={18} /> },
+    { href: "/fares", label: "إدارة الأجرة", icon: <DollarSign size={18} /> },
+    { href: "/schedules", label: "الجداول الزمنية", icon: <Clock size={18} /> },
     { href: "/reports", label: "التقارير", icon: <BarChart3 size={18} /> },
     { href: "/users", label: "إدارة المستخدمين", icon: <Users size={18} />, superAdminOnly: true },
     { href: "/settings", label: "الإعدادات", icon: <Settings size={18} />, superAdminOnly: true },

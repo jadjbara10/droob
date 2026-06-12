@@ -2,21 +2,21 @@
 
 /* ═══════════════════════════════════════════════════════════════════════════
    دروب Droob — Users Management Page (super_admin only)
-   List · Create · Edit role · Reset password · Delete
+   List · Create · Edit role · Reset password · Delete · Activity log
    ═══════════════════════════════════════════════════════════════════════════ */
 
 import React, { useEffect, useState } from "react";
-import { Plus, RefreshCw, Search, Trash2, Edit3, Key, X } from "lucide-react";
+import { Plus, RefreshCw, Search, Trash2, Edit3, Key, X, Activity, Eye } from "lucide-react";
 import { InlineError, EmptyState } from "@/components/error-boundary";
 import { TableSkeleton } from "@/components/skeleton";
 import { Panel } from "@/components/panel";
-import { usersAdminApi, type AdminUserRecord } from "@/lib/api";
-import { formatDateTime, roleLabels } from "@/lib/utils";
+import { usersAdminApi, adminExtendedApi, type AdminUserRecord, type ActivityRecord } from "@/lib/api";
+import { formatDateTime, formatRelativeTime, roleLabels, entityTypeLabels, actionLabels } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 
 const ALL_ROLES = ["super_admin", "admin", "editor", "operator", "viewer", "driver", "passenger"];
 
-type ModalMode = null | "create" | "edit" | "password";
+type ModalMode = null | "create" | "edit" | "password" | "activity";
 
 export default function UsersPage() {
   const { user: currentUser } = useAuth();
@@ -39,6 +39,10 @@ export default function UsersPage() {
   const [formPhone, setFormPhone] = useState("");
   const [formPassword, setFormPassword] = useState("");
   const [formError, setFormError] = useState("");
+
+  // Activity log state
+  const [userActivities, setUserActivities] = useState<ActivityRecord[]>([]);
+  const [activitiesLoading, setActivitiesLoading] = useState(false);
 
   async function fetchUsers() {
     setLoading(true);
@@ -76,6 +80,20 @@ export default function UsersPage() {
       setFormPhone(user.phone || "");
     } else if (mode === "password" && user) {
       setFormPassword("");
+    } else if (mode === "activity" && user) {
+      fetchUserActivities(user.id);
+    }
+  }
+
+  async function fetchUserActivities(userId: string) {
+    setActivitiesLoading(true);
+    try {
+      const res = await adminExtendedApi.getAuditLog({ limit: 50, userId });
+      setUserActivities(res.data || []);
+    } catch {
+      setUserActivities([]);
+    } finally {
+      setActivitiesLoading(false);
     }
   }
 
@@ -83,6 +101,7 @@ export default function UsersPage() {
     setModalMode(null);
     setSelectedUser(null);
     setFormError("");
+    setUserActivities([]);
   }
 
   async function handleCreate(e: React.FormEvent) {
@@ -173,26 +192,16 @@ export default function UsersPage() {
         subtitle={`${total} مستخدم`}
         headerRight={
           <div style={{ display: "flex", gap: 8 }}>
-            <select
-              className="form-select"
-              value={roleFilter}
-              onChange={(e) => setRoleFilter(e.target.value)}
-              style={{ width: 140, padding: "6px 10px", fontSize: 12 }}
-            >
+            <select className="form-select" value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)}
+              style={{ width: 140, padding: "6px 10px", fontSize: 12 }}>
               <option value="all">جميع الصلاحيات</option>
-              {ALL_ROLES.map((r) => (
-                <option key={r} value={r}>{roleLabels[r] || r}</option>
-              ))}
+              {ALL_ROLES.map((r) => <option key={r} value={r}>{roleLabels[r] || r}</option>)}
             </select>
             <div style={{ position: "relative" }}>
               <Search size={14} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", color: "var(--text-muted)" }} />
-              <input
-                className="form-input"
-                placeholder="بحث عن مستخدم..."
-                value={search}
+              <input className="form-input" placeholder="بحث عن مستخدم..." value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                style={{ paddingRight: 32, width: 200, padding: "6px 10px 6px 10px", fontSize: 12 }}
-              />
+                style={{ paddingRight: 32, width: 200, padding: "6px 10px 6px 10px", fontSize: 12 }} />
             </div>
             <button className="btn btn-sm" onClick={fetchUsers}><RefreshCw size={12} /> تحديث</button>
             <button className="btn btn-primary btn-sm" onClick={() => openModal("create")}>
@@ -204,7 +213,7 @@ export default function UsersPage() {
         {error ? (
           <InlineError message="فشل تحميل المستخدمين" onRetry={fetchUsers} />
         ) : loading ? (
-          <TableSkeleton rows={8} cols={6} />
+          <TableSkeleton rows={8} cols={7} />
         ) : users.length === 0 ? (
           <EmptyState message="لا يوجد مستخدمين" />
         ) : (
@@ -242,32 +251,17 @@ export default function UsersPage() {
                       </div>
                     </td>
                     <td className="cell-mono" style={{ fontSize: 12 }}>{u.email}</td>
-                    <td>
-                      <span className={`badge ${roleBadgeClass[u.role] || "badge-info"}`}>
-                        {roleLabels[u.role] || u.role}
-                      </span>
-                    </td>
+                    <td><span className={`badge ${roleBadgeClass[u.role] || "badge-info"}`}>{roleLabels[u.role] || u.role}</span></td>
                     <td className="cell-mono" style={{ fontSize: 12 }}>{u.phone || "—"}</td>
-                    <td style={{ fontSize: 12, color: "var(--text-muted)" }}>
-                      {u.lastLoginAt ? formatDateTime(u.lastLoginAt) : "—"}
-                    </td>
-                    <td style={{ fontSize: 12, color: "var(--text-muted)" }}>
-                      {formatDateTime(u.createdAt)}
-                    </td>
+                    <td style={{ fontSize: 12, color: "var(--text-muted)" }}>{u.lastLoginAt ? formatDateTime(u.lastLoginAt) : "—"}</td>
+                    <td style={{ fontSize: 12, color: "var(--text-muted)" }}>{formatDateTime(u.createdAt)}</td>
                     <td>
                       <div style={{ display: "flex", gap: 4 }}>
-                        <button className="btn btn-sm" onClick={() => openModal("edit", u)} title="تعديل">
-                          <Edit3 size={12} />
-                        </button>
-                        <button className="btn btn-sm" onClick={() => openModal("password", u)} title="تغيير كلمة المرور">
-                          <Key size={12} />
-                        </button>
-                        <button
-                          className="btn btn-danger btn-sm"
-                          onClick={() => handleDelete(u)}
-                          disabled={u.id === currentUser?.id}
-                          title={u.id === currentUser?.id ? "لا يمكن حذف حسابك" : "حذف"}
-                        >
+                        <button className="btn btn-sm" onClick={() => openModal("activity", u)} title="نشاط المستخدم"><Eye size={12} /></button>
+                        <button className="btn btn-sm" onClick={() => openModal("edit", u)} title="تعديل"><Edit3 size={12} /></button>
+                        <button className="btn btn-sm" onClick={() => openModal("password", u)} title="تغيير كلمة المرور"><Key size={12} /></button>
+                        <button className="btn btn-danger btn-sm" onClick={() => handleDelete(u)} disabled={u.id === currentUser?.id}
+                          title={u.id === currentUser?.id ? "لا يمكن حذف حسابك" : "حذف"}>
                           <Trash2 size={12} />
                         </button>
                       </div>
@@ -282,26 +276,15 @@ export default function UsersPage() {
 
       {/* ─── Modal ──────────────────────────────────────────────────────── */}
       {modalMode && (
-        <div
-          style={{
-            position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            zIndex: 1000, padding: 20,
-          }}
-          onClick={(e) => { if (e.target === e.currentTarget) closeModal(); }}
-        >
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 20 }}
+          onClick={(e) => { if (e.target === e.currentTarget) closeModal(); }}>
           <form
-            onSubmit={modalMode === "create" ? handleCreate : modalMode === "edit" ? handleEdit : handleResetPassword}
-            style={{
-              background: "var(--surface)", border: "1px solid var(--border)",
-              borderRadius: "var(--radius)", padding: 28, width: "100%", maxWidth: 480,
-              maxHeight: "90vh", overflow: "auto",
-            }}
-          >
-            {/* Header */}
+            onSubmit={modalMode === "create" ? handleCreate : modalMode === "edit" ? handleEdit : modalMode === "password" ? handleResetPassword : undefined as any}
+            style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius)", padding: 28, width: "100%", maxWidth: modalMode === "activity" ? 650 : 480, maxHeight: "90vh", overflow: "auto" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24 }}>
               <h3 style={{ fontSize: 16, fontWeight: 600 }}>
-                {modalMode === "create" ? "إضافة مستخدم جديد"
+                {modalMode === "activity" ? `نشاط: ${selectedUser?.name}`
+                  : modalMode === "create" ? "إضافة مستخدم جديد"
                   : modalMode === "edit" ? `تعديل: ${selectedUser?.name}`
                   : `إعادة تعيين كلمة المرور: ${selectedUser?.name}`}
               </h3>
@@ -311,33 +294,46 @@ export default function UsersPage() {
             </div>
 
             {formError && (
-              <div style={{
-                padding: "10px 14px", marginBottom: 16, background: "var(--danger-soft)",
-                border: "1px solid var(--danger)", borderRadius: "var(--radius-sm)",
-                color: "var(--danger)", fontSize: 13,
-              }}>
+              <div style={{ padding: "10px 14px", marginBottom: 16, background: "var(--danger-soft)", border: "1px solid var(--danger)", borderRadius: "var(--radius-sm)", color: "var(--danger)", fontSize: 13 }}>
                 {formError}
               </div>
             )}
 
-            {modalMode === "password" ? (
-              /* ── Reset Password Form ── */
+            {modalMode === "activity" ? (
+              /* ── Activity Log ── */
+              activitiesLoading ? <TableSkeleton rows={5} cols={4} /> : userActivities.length === 0 ? (
+                <EmptyState message="لا يوجد نشاط لهذا المستخدم" />
+              ) : (
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>الإجراء</th>
+                      <th>النوع</th>
+                      <th>التفاصيل</th>
+                      <th>الوقت</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {userActivities.map((a: ActivityRecord) => (
+                      <tr key={a.id}>
+                        <td><span className="badge badge-info">{actionLabels[a.action] || a.action}</span></td>
+                        <td className="cell-mono">{entityTypeLabels[a.entity_type] || a.entity_type}</td>
+                        <td style={{ fontSize: 12, color: "var(--text-secondary)", maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {a.details ? JSON.stringify(a.details).substring(0, 60) : "—"}
+                        </td>
+                        <td style={{ fontSize: 12, color: "var(--text-muted)" }}>{formatRelativeTime(a.created_at)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )
+            ) : modalMode === "password" ? (
               <div style={{ marginBottom: 24 }}>
                 <label className="form-label">كلمة المرور الجديدة *</label>
-                <input
-                  className="form-input"
-                  type="password"
-                  value={formPassword}
-                  onChange={(e) => setFormPassword(e.target.value)}
-                  required
-                  minLength={6}
-                  placeholder="6 أحرف على الأقل"
-                  dir="ltr"
-                  autoFocus
-                />
+                <input className="form-input" type="password" value={formPassword} onChange={(e) => setFormPassword(e.target.value)}
+                  required minLength={6} placeholder="6 أحرف على الأقل" dir="ltr" autoFocus />
               </div>
             ) : (
-              /* ── Create / Edit Form ── */
               <div style={{ display: "grid", gap: 14 }}>
                 <div>
                   <label className="form-label">الاسم *</label>
@@ -354,39 +350,27 @@ export default function UsersPage() {
                 <div>
                   <label className="form-label">الصلاحية *</label>
                   <select className="form-select" value={formRole} onChange={(e) => setFormRole(e.target.value)}>
-                    {ALL_ROLES.map((r) => (
-                      <option key={r} value={r}>{roleLabels[r] || r}</option>
-                    ))}
+                    {ALL_ROLES.map((r) => <option key={r} value={r}>{roleLabels[r] || r}</option>)}
                   </select>
                 </div>
                 {modalMode === "create" && (
                   <div>
                     <label className="form-label">كلمة المرور *</label>
-                    <input
-                      className="form-input"
-                      type="password"
-                      value={formPassword}
-                      onChange={(e) => setFormPassword(e.target.value)}
-                      required
-                      minLength={6}
-                      placeholder="6 أحرف على الأقل"
-                      dir="ltr"
-                    />
+                    <input className="form-input" type="password" value={formPassword} onChange={(e) => setFormPassword(e.target.value)}
+                      required minLength={6} placeholder="6 أحرف على الأقل" dir="ltr" />
                   </div>
                 )}
               </div>
             )}
 
-            {/* Buttons */}
-            <div style={{ display: "flex", gap: 8, marginTop: 24, justifyContent: "flex-end" }}>
-              <button className="btn" type="button" onClick={closeModal}>إلغاء</button>
-              <button className="btn btn-primary" type="submit" disabled={saving}>
-                {saving ? "جاري الحفظ..."
-                  : modalMode === "create" ? "إضافة"
-                  : modalMode === "password" ? "تعيين كلمة المرور"
-                  : "تحديث"}
-              </button>
-            </div>
+            {modalMode !== "activity" && (
+              <div style={{ display: "flex", gap: 8, marginTop: 24, justifyContent: "flex-end" }}>
+                <button className="btn" type="button" onClick={closeModal}>إلغاء</button>
+                <button className="btn btn-primary" type="submit" disabled={saving}>
+                  {saving ? "جاري الحفظ..." : modalMode === "create" ? "إضافة" : modalMode === "password" ? "تعيين كلمة المرور" : "تحديث"}
+                </button>
+              </div>
+            )}
           </form>
         </div>
       )}

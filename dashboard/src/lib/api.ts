@@ -629,6 +629,15 @@ export const adsApi = {
 export const faresApi = {
   list: (params?: { routeId?: string; fromGovernorate?: string; toGovernorate?: string }) =>
     apiFetch<FareRule[]>("/fares", { params: params as Record<string, string | number | boolean | undefined> }),
+
+  create: (data: FareCreateInput) =>
+    apiFetch<FareRule>("/fares", { method: "POST", body: data }),
+
+  update: (id: string, data: Partial<FareCreateInput>) =>
+    apiFetch<FareRule>(`/fares/${id}`, { method: "PATCH", body: data }),
+
+  delete: (id: string) =>
+    apiFetch<{ deleted: boolean; id: string }>(`/fares/${id}`, { method: "DELETE" }),
 };
 
 export interface FareRule {
@@ -641,3 +650,61 @@ export interface FareRule {
   fare_amount: string;
   currency: string;
 }
+
+export interface FareCreateInput {
+  routeId?: string;
+  fromGovernorate?: string;
+  toGovernorate?: string;
+  distanceMinKm?: number;
+  distanceMaxKm?: number;
+  fareAmount: number;
+  currency?: string;
+}
+
+// Schedules
+export const schedulesApi = {
+  list: (params?: { routeId?: string; scheduleType?: string }) =>
+    apiFetch<ScheduleRecord[]>("/schedules", { params: params as Record<string, string | number | boolean | undefined> }),
+
+  create: (data: ScheduleCreateInput) =>
+    apiFetch<ScheduleRecord>("/schedules", { method: "POST", body: data }),
+
+  update: (id: string, data: Partial<ScheduleCreateInput>) =>
+    apiFetch<ScheduleRecord>(`/schedules/${id}`, { method: "PATCH", body: data }),
+
+  delete: (id: string) =>
+    apiFetch<{ deleted: boolean; id: string }>(`/schedules/${id}`, { method: "DELETE" }),
+};
+
+export interface ScheduleRecord {
+  id: string;
+  route_id: string;
+  schedule_type: string; // "normal" | "friday" | "ramadan"
+  start_time: string;
+  end_time: string;
+  interval_minutes: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ScheduleCreateInput {
+  routeId: string;
+  scheduleType: string;
+  startTime: string;
+  endTime: string;
+  intervalMinutes: number;
+}
+
+// Admin — extended
+export const adminExtendedApi = {
+  exportBackup: () =>
+    apiFetch<{ success: boolean; data: unknown }>("/admin/export-backup"),
+
+  getAuditLog: (params?: { limit?: number; entityType?: string; userId?: string }) =>
+    apiFetch<{ data: ActivityRecord[]; total: number }>("/activity", {
+      params: params as Record<string, string | number | boolean | undefined>,
+    }),
+
+  updateConfig: (data: Record<string, string>) =>
+    apiFetch<{ success: boolean }>("/admin/config", { method: "PATCH", body: data }),
+};
