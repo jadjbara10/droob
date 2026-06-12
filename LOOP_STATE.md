@@ -1,12 +1,13 @@
 # Droob Loop State
-**Last Updated**: 2026-06-11
-**Version**: v6.1.0-dev (Loop Engineering Integration)
+**Last Updated**: 2026-06-12
+**Version**: v6.1.0 (Deployment Complete)
 
 ---
 
 ## Completed
 
 - [x] APK v6.0.0 مبني ومرفوع على GitHub Releases
+- [x] APK v6.1.0 مبني محلياً ومرفوع على GitHub Releases (86 MB)
 - [x] Dashboard مربوط بـ api.droob-jo.com ومنشور على Vercel
 - [x] صفحة droob-jo.com مُعاد تصميمها احترافياً مع QR Code
 - [x] Mobile API URL محدّث لـ https://api.droob-jo.com
@@ -25,6 +26,11 @@
 - [x] 🟠 Fix 6: Redis password enforced for production
 - [x] 🟡 Fix 7: expo-secure-store integrated for mobile token storage
 - [x] 🟡 Fix 8: Rate limiting added to API worker (100 req/min/IP)
+- [x] نشر المشروع كاملاً — 10/10 نقاط تحقق ناجحة
+- [x] DEPLOYMENT_LOG.md created
+- [x] Dashboard build fix (React 19 in monorepo root)
+- [x] not-found.tsx (404 page) added to dashboard
+- [x] droob-site worker updated with v6.1.0 APK link
 
 ## Security Fixes Applied (Details)
 
@@ -41,11 +47,13 @@
 
 ## In Progress
 
-- [ ] تحديث DROOB_MASTER_PLAN.md
+- (لا شيء)
 
 ## Pending
 
-- (جميع الإصلاحات الأمنية مكتملة ✓)
+- [ ] تكوين نطاق مخصص للداشبورد (admin.droob-jo.com)
+- [ ] إعداد CI/CD pipeline للنشر التلقائي
+- [ ] مراقبة وأتمتة للنشر
 
 ## Blocked
 
@@ -53,9 +61,9 @@
 
 ## Next Actions
 
-1. تحديث DROOB_MASTER_PLAN.md
-2. نشر الإصدار الجديد (fly deploy, wrangler deploy)
-3. اختبار شامل للتطبيق
+1. مراقبة Vercel auto-deploy للـ commit الجديد (80c7409)
+2. تكوين admin.droob-jo.com للداشبورد
+3. اختبار APK v6.1.0 على جهاز حقيقي
 
 ## Loop Engineering Files Created
 
@@ -71,6 +79,7 @@
 | `.claude/agents/deploy-agent.md` | Deployment agent | ✅ |
 | `LOOP_STATE.md` | State/memory file | ✅ |
 | `LOOPS.md` | Loop definitions | ✅ |
+| `DEPLOYMENT_LOG.md` | Deployment log | ✅ |
 
 ---
 
@@ -84,4 +93,5 @@
 - **GitHub**: jadjbara10/droob
 - **Tunnel**: droob-api (39f963a3-7efb-40cf-80dc-b61b93c7d92b)
 - **Super Admin**: jadjbara@live.com
-- **Latest APK**: v6.0.0
+- **Latest APK**: v6.1.0 (86 MB)
+- **Deployment Log**: DEPLOYMENT_LOG.md
