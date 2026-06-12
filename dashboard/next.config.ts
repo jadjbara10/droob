@@ -3,13 +3,16 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   devIndicators: false,
-  // Force UTF-8 encoding for all responses
+  // Security headers — applied only to HTML page routes, NOT static assets
   async headers() {
     return [
       {
-        source: "/(.*)",
+        // App pages only — excludes _next/static, _next/image, API routes, etc.
+        source: "/((?!_next|api|favicon).*)",
         headers: [
-          { key: "Content-Type", value: "text/html; charset=utf-8" },
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "X-Frame-Options", value: "DENY" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
         ],
       },
     ];
