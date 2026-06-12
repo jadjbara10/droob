@@ -9,3 +9,7 @@ bucket = "../deploy"
 [[routes]]
 pattern = "droob-jo.com/*"
 zone_name = "droob-jo.com"
+
+[[routes]]
+pattern = "www.droob-jo.com/*"
+zone_name = "droob-jo.com"

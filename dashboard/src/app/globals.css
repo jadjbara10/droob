@@ -1,9 +1,9 @@
 /* ═══════════════════════════════════════════════════════════════════════════
    دروب Droob — Admin Dashboard Design System
-   RTL Arabic · Dark Theme · IBM Plex
+   RTL Arabic · Dark Theme · Tajawal / Inter
    ═══════════════════════════════════════════════════════════════════════════ */
 
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Tajawal:wght@400;500;700;800;900&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 
 /* ─── Design Tokens ─────────────────────────────────────────────────────── */
 
@@ -41,7 +41,7 @@
 html { direction: rtl; }
 
 body {
-  font-family: 'IBM Plex Sans Arabic', sans-serif;
+  font-family: 'Tajawal', 'IBM Plex Sans Arabic', sans-serif;
   background: var(--bg);
   color: var(--text-primary);
   line-height: 1.6;
@@ -405,7 +405,7 @@ body {
   gap: 8px;
   padding: 8px 16px;
   border-radius: var(--radius-sm);
-  font-family: 'IBM Plex Sans Arabic', sans-serif;
+  font-family: 'Tajawal', sans-serif;
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
@@ -522,6 +522,23 @@ body {
 .tag-warn    { background: var(--warn-soft);     color: var(--warn); }
 .tag-danger  { background: var(--danger-soft);   color: var(--danger); }
 
+/* ─── Modal Keyframes ───────────────────────────────────────────────────── */
+
+@keyframes modalFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes modalSlideUp {
+  from { opacity: 0; transform: translateY(16px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
 /* ─── Form Inputs ───────────────────────────────────────────────────────── */
 
 .form-input {
@@ -531,7 +548,7 @@ body {
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   color: var(--text-primary);
-  font-family: 'IBM Plex Sans Arabic', sans-serif;
+  font-family: 'Tajawal', sans-serif;
   font-size: 13px;
   transition: border-color 0.15s ease;
 }

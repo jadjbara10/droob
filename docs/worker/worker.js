@@ -6,7 +6,13 @@ const APK_URL = 'https://github.com/jadjbara10/droob/releases/download/v6.1.0/ap
 export default {
   async fetch(request) {
     const url = new URL(request.url);
+    const hostname = url.hostname;
     const path = url.pathname;
+
+    // Redirect www.droob-jo.com -> droob-jo.com
+    if (hostname === 'www.droob-jo.com') {
+      return Response.redirect(`https://droob-jo.com${path}`, 301);
+    }
 
     // Privacy policy page
     if (path === '/privacy' || path === '/privacy/') {

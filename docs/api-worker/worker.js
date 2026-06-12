@@ -94,8 +94,12 @@ export default {
       // Restrict to known Droob domains only — no wildcard
       const ALLOWED_ORIGINS = [
         "https://droob-jo.com",
+        "https://www.droob-jo.com",
         "https://admin.droob-jo.com",
         "https://app.droob-jo.com",
+        "https://dashboard.droob.app",
+        "http://localhost:3000",
+        "http://localhost:3001",
       ];
       const origin = request.headers.get("Origin") || "";
       const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];

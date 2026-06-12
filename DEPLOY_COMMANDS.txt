@@ -1,0 +1,163 @@
+أنت مهندس DevOps. نفّذ هذه الخطة بالضبط بدون أي تعديل. لا تضف ولا تحذف أي خطوة.
+
+===== الخطوة 0: تأمين الوضع الحالي =====
+نفّذ هذه الأوامر بالترتيب:
+cd D:\trans_app\droob
+git tag v6.1.0-stable HEAD
+git push origin v6.1.0-stable
+Write-Output "Tag created: v6.1.0-stable"
+
+===== الخطوة 1: إنشاء سكربتات النشر المستقلة =====
+
+أنشئ ملف D:\trans_app\droob\deploy-backend.bat يحتوي على:
+--- SNIP ---
+@echo off
+chcp 65001 >nul
+echo === Deploy Backend to Fly.io ===
+cd /d D:\trans_app\droob\backend
+fly deploy -a droob-api --remote-only
+echo === Verify ===
+curl -s https://api.droob-jo.com/health
+pause
+--- SNIP ---
+
+أنشئ ملف D:\trans_app\droob\deploy-worker.bat يحتوي على:
+--- SNIP ---
+@echo off
+chcp 65001 >nul
+echo === Deploy Website Worker ===
+cd /d D:\trans_app\droob\docs\worker
+npx wrangler deploy
+echo === Verify ===
+curl -s -o nul -w "HTTP %%{http_code}" https://droob-jo.com
+pause
+--- SNIP ---
+
+أنشئ ملف D:\trans_app\droob\deploy-api-worker.bat يحتوي على:
+--- SNIP ---
+@echo off
+chcp 65001 >nul
+echo === Deploy API Proxy Worker ===
+cd /d D:\trans_app\droob\docs\api-worker
+npx wrangler deploy
+echo === Verify ===
+curl -s https://api.droob-jo.com/health
+pause
+--- SNIP ---
+
+أنشئ ملف D:\trans_app\droob\deploy-dashboard.bat يحتوي على:
+--- SNIP ---
+@echo off
+chcp 65001 >nul
+echo === Build Dashboard ===
+cd /d D:\trans_app\droob\dashboard
+call npx tsc --noEmit
+if errorlevel 1 (
+    echo TypeScript errors found! Aborting.
+    pause
+    exit /b 1
+)
+call npm run build
+if errorlevel 1 (
+    echo Build failed! Aborting.
+    pause
+    exit /b 1
+)
+echo === Push to GitHub (triggers Vercel) ===
+cd /d D:\trans_app\droob
+git add -A
+git commit -m "dashboard: update"
+git push origin main
+echo Done! Vercel will auto-deploy.
+pause
+--- SNIP ---
+
+أنشئ ملف D:\trans_app\droob\rollback.bat يحتوي على:
+--- SNIP ---
+@echo off
+chcp 65001 >nul
+echo === ROLLBACK to v6.1.0-stable ===
+cd /d D:\trans_app\droob
+git reset --hard v6.1.0-stable
+git push origin main --force
+echo Done! All code rolled back.
+pause
+--- SNIP ---
+
+أنشئ ملف D:\trans_app\droob\verify-all.bat يحتوي على:
+--- SNIP ---
+@echo off
+chcp 65001 >nul
+echo === Verifying All Services ===
+echo.
+echo [1] Website...
+curl -s -o nul -w "  HTTP %%{http_code}" https://droob-jo.com
+echo.
+echo [2] API Health...
+curl -s https://api.droob-jo.com/health
+echo.
+echo [3] API Routes...
+curl -s "https://api.droob-jo.com/api/v1/routes?limit=1" | findstr "code"
+echo [4] OSRM...
+curl -s -o nul -w "  HTTP %%{http_code}" "https://droob-osrm.fly.dev/route/v1/driving/35.9106,31.9539;35.9335,31.9516?overview=false"
+echo.
+echo [5] Dashboard...
+curl -s -o nul -w "  HTTP %%{http_code}" https://admin.droob-jo.com
+echo.
+echo [6] APK Download...
+curl -s -o nul -w "  HTTP %%{http_code}" -L https://droob-jo.com/download
+echo.
+echo.
+echo Done! Check results above.
+pause
+--- SNIP ---
+
+===== الخطوة 2: إصلاح مشكلة الترميز في الداشبورد =====
+
+2.1 افتح الملف D:\trans_app\droob\dashboard\src\lib\auth.ts (أو أي ملف فيه API client)
+وتحقق من الآتي:
+- إذا وجدت res.text() ثم JSON.parse: غيّرها إلى res.json()
+- أضف في headers: 'Accept': 'application/json; charset=utf-8'
+
+2.2 افتح كل ملف .tsx في dashboard/src/ وشغّل على كل واحد:
+powershell -Command "$content = [System.IO.File]::ReadAllText('PATH', [System.Text.UTF8Encoding]::new($false)); [System.IO.File]::WriteAllText('PATH', $content, [System.Text.UTF8Encoding]::new($false))"
+هذا يضمن أن كل ملف محفوظ بـ UTF-8 without BOM.
+
+2.3 في ملف next.config.js أو next.config.mjs أضف:
+experimental: { optimizePackageImports: ['lucide-react'] }
+
+2.4 شغّل:
+cd D:\trans_app\droob\dashboard
+chcp 65001
+npx tsc --noEmit
+npm run build
+
+2.5 إذا فشل البناء: توقف وأخبرني بالخطأ. لا تعدل شيئاً.
+
+2.6 إذا نجح: 
+cd D:\trans_app\droob
+git add -A
+git commit -m "fix: ensure UTF-8 encoding in all dashboard files"
+لا تعمل git push
+
+===== الخطوة 3: التحقق المحلي =====
+
+شغّل الداشبورد محلياً:
+cd D:\trans_app\droob\dashboard
+chcp 65001
+npm run dev
+
+ثم افتح http://localhost:3000 في المتصفح وتحقق:
+1. العربية تظهر بشكل صحيح (ليس ظ†ظ…ظٹظ†)
+2. تسجيل الدخول يعمل بـ jadjbara@live.com / Jad@12345
+3. الخطوط تظهر (221 خط)
+4. المحطات تظهر (200 محطة)
+
+إذا كل شيء يعمل محلياً: أخبرني "الداشبورد يعمل محلياً" 
+إذا العربية لا تزال مشوهة محلياً: أخبرني بالضبط أين تظهر المشكلة
+
+===== قواعد صارمة =====
+1. لا تعمل git push أبداً - أنا سأنشر يدوياً
+2. لا تعدل API أو Workers أو أي شيء خارج dashboard/
+3. إذا فشل شيء: توقف فوراً وأخبرني
+4. لا تضف ميزات جديدة - فقط أصلح الموجود
