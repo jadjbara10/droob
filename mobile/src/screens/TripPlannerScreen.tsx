@@ -35,6 +35,7 @@ import {
   fontSize,
   fontWeight,
   shadows,
+  shadowModern,
   layout as lo,
 } from "@theme/tokens";
 import type { TransitMode } from "@theme/tokens";
@@ -577,7 +578,7 @@ const TripPlannerScreen: React.FC = () => {
   const storeRoutes = useTransitStore((s) => s.routes);
   const fetchRoutes = useTransitStore((s) => s.fetchRoutes);
   React.useEffect(() => {
-    if (storeRoutes.length === 0) fetchRoutes({ limit: 500 });
+    if (storeRoutes.length === 0) fetchRoutes();
   }, []);
 
   // ── GPS Location Tracking ──────────────────────────────────────────────
@@ -695,7 +696,7 @@ const TripPlannerScreen: React.FC = () => {
       markers.push({ id: "user-gps", lat: userGps.lat, lng: userGps.lng, label: "📍 موقعي", color: "#1A4F8A" });
     }
     // Origin — backend sends leg.from, frontend may have leg.fromStop
-    const firstFrom = j.legs[0]?.from || (j.legs[0] as any)?.fromStop;
+    const firstFrom = j.legs[0]?.fromStop;
     if (firstFrom?.lat) {
       markers.push({ id: "origin", lat: firstFrom.lat, lng: firstFrom.lng, label: "🚩 الانطلاق", color: "#16A34A" });
     }
@@ -707,7 +708,7 @@ const TripPlannerScreen: React.FC = () => {
       }
     });
     // Destination
-    const lastTo = j.legs[j.legs.length - 1]?.to || (j.legs[j.legs.length - 1] as any)?.toStop;
+    const lastTo = j.legs[j.legs.length - 1]?.toStop;
     if (lastTo?.lat) {
       markers.push({ id: "dest", lat: lastTo.lat, lng: lastTo.lng, label: "🏁 الوصول", color: "#DC2626" });
     }
@@ -834,7 +835,7 @@ const TripPlannerScreen: React.FC = () => {
                 <TouchableOpacity
                   style={styles.sortBtn}
                   activeOpacity={0.7}
-                  onPress={handleSearch}
+                  onPress={() => handleSearch()}
                 >
                   <Text style={styles.sortBtnText}>تحديث</Text>
                 </TouchableOpacity>

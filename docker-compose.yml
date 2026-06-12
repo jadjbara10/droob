@@ -21,7 +21,7 @@ services:
     environment:
       POSTGRES_DB: droob
       POSTGRES_USER: droob
-      POSTGRES_PASSWORD: droob_password
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-DroobL0calDev2024!StrongP@ss_AmmanJO}
       POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --locale=en_US.UTF-8"
     ports:
       - "5432:5432"
@@ -84,7 +84,7 @@ services:
       PORT: 3000
       HOST: 0.0.0.0
       LOG_LEVEL: debug
-      DATABASE_URL: postgresql://droob:droob_password@postgres:5432/droob
+      DATABASE_URL: postgresql://droob:${DB_PASSWORD:-DroobL0calDev2024!StrongP@ss_AmmanJO}@postgres:5432/droob
       REDIS_URL: redis://redis:6379
       JWT_SECRET: droob-jordan-dev-secret-change-in-production
       CORS_ORIGIN: "*"

@@ -3,8 +3,7 @@
  * No PostGIS dependency. Run: npx tsx drizzle/seed-all.ts
  */
 import { db } from "../src/db/index.js";
-import { stops, routes, routeStops, governorates, agencies } from "./schema.js";
-import { eq } from "drizzle-orm";
+import { stops, routes, governorates } from "./schema.js";
 import { readFileSync } from "fs";
 import { join } from "path";
 

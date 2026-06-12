@@ -1,139 +1,337 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>دروب Droob — النقل الذكي في الأردن</title>
-  <meta name="description" content="دروب — تطبيق النقل الذكي في الأردن. باص، سرفيس، باص سريع. خطط رحلتك في عمّان بسهولة.">
-  <meta property="og:title" content="دروب — النقل الذكي في الأردن">
-  <meta property="og:description" content="تطبيق دروب للنقل الذكي — باص، سرفيس، باص سريع في عمّان">
-  <meta property="og:type" content="website">
-  <meta property="og:url" content="https://droob-jo.com">
-  <style>
-    :root {
-      --bg: #0B0F1A; --surface: #111827; --surface2: #1A2235;
-      --text: #F0F4FF; --secondary: #8899BB; --muted: #445577;
-      --accent: #3BB0FF; --accent2: #00E5A0; --warn: #FF8C42;
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: system-ui, -apple-system, sans-serif;
-      background: var(--bg); color: var(--text);
-      min-height: 100vh; display: flex; flex-direction: column;
-    }
-    .hero {
-      flex: 1; display: flex; flex-direction: column; align-items: center;
-      justify-content: center; text-align: center; padding: 40px 20px;
-    }
-    .logo {
-      width: 100px; height: 100px; border-radius: 24px;
-      background: linear-gradient(135deg, #1A4F8A, #3BB0FF);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 44px; margin-bottom: 24px; box-shadow: 0 8px 32px rgba(59,176,255,0.3);
-    }
-    h1 { font-size: 40px; margin-bottom: 8px; }
-    h2 { font-size: 18px; color: var(--secondary); font-weight: 400; margin-bottom: 32px; }
-    .badges { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; margin-bottom: 40px; }
-    .badge-btn {
-      display: inline-flex; align-items: center; gap: 10px;
-      padding: 14px 28px; border-radius: 14px;
-      background: var(--surface); border: 1px solid rgba(255,255,255,0.1);
-      color: var(--text); text-decoration: none; font-size: 16px;
-      font-weight: 600; transition: all 0.2s;
-    }
-    .badge-btn:hover { border-color: var(--accent); background: rgba(59,176,255,0.08); transform: translateY(-2px); }
-    .badge-btn img { width: 28px; height: 28px; }
-    .badge-btn.primary {
-      background: linear-gradient(135deg, #1A4F8A, #3BB0FF);
-      border-color: #3BB0FF; color: white;
-    }
-    .badge-btn.primary:hover { background: linear-gradient(135deg, #1560A8, #2A9EE8); border-color: #2A9EE8; }
-    .download-info {
-      font-size: 12px; color: var(--muted); margin-top: 8px; margin-bottom: 24px;
-    }
-    .features {
-      display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-      gap: 16px; max-width: 600px; width: 100%;
-    }
-    .feature {
-      padding: 16px; border-radius: 12px; background: var(--surface);
-      border: 1px solid rgba(255,255,255,0.07); text-align: center;
-      transition: all 0.2s;
-    }
-    .feature:hover { border-color: var(--accent); background: var(--surface2); }
-    .feature .icon { font-size: 28px; margin-bottom: 8px; }
-    .feature .label { font-size: 13px; color: var(--secondary); }
-    .stats {
-      display: flex; gap: 32px; margin-top: 32px; flex-wrap: wrap; justify-content: center;
-    }
-    .stat { text-align: center; }
-    .stat-value { font-size: 28px; font-weight: 700; color: var(--accent); }
-    .stat-label { font-size: 12px; color: var(--muted); margin-top: 4px; }
-    footer {
-      text-align: center; padding: 24px; font-size: 13px;
-      color: #445577; border-top: 1px solid rgba(255,255,255,0.05);
-    }
-    footer a { color: var(--accent); text-decoration: none; }
-    footer a:hover { text-decoration: underline; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>دروب Droob — النقل الذكي في الأردن</title>
+<meta name="description" content="دروب — تطبيق النقل الذكي في الأردن. 262 مسار، 36,000+ محطة، باص، سرفيس، باص سريع. خطط رحلتك بسهولة.">
+<meta property="og:title" content="دروب — النقل الذكي في الأردن">
+<meta property="og:description" content="تطبيق دروب للنقل الذكي — 262 مسار، 36,000+ محطة في عمّان والأردن">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://droob-jo.com">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Tajawal:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --brand: #3BB0FF; --brand2: #1A4F8A; --accent: #00E5A0; --warn: #FF8C42;
+  --bg: #070B18; --bg2: #0C1225; --surface: rgba(255,255,255,0.04);
+  --surface2: rgba(255,255,255,0.07); --border: rgba(255,255,255,0.08);
+  --text: #EDF2FC; --text2: #A0B4D0; --text3: #5A7090;
+  --font-ar: 'Tajawal', sans-serif; --font-en: 'Inter', sans-serif;
+  --radius: 16px; --radius-sm: 10px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--font-ar); background: var(--bg); color: var(--text);
+  line-height: 1.7; overflow-x: hidden;
+}
+.container { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+.en { font-family: var(--font-en); }
+
+/* ─── Hero ─────────────────────────────────────────────────── */
+.hero {
+  position: relative; min-height: 100vh; display: flex;
+  align-items: center; justify-content: center; text-align: center;
+  padding: 100px 24px; overflow: hidden;
+  background: linear-gradient(135deg, #0A1628 0%, #1A0A2E 30%, #0F1B3D 60%, #0A1628 100%);
+  background-size: 400% 400%; animation: gradientShift 15s ease infinite;
+}
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+.hero::before {
+  content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
+  background: radial-gradient(circle at 30% 40%, rgba(59,176,255,0.08) 0%, transparent 50%),
+              radial-gradient(circle at 70% 60%, rgba(0,229,160,0.05) 0%, transparent 50%);
+  animation: floatOrbs 20s ease-in-out infinite;
+}
+@keyframes floatOrbs {
+  0%, 100% { transform: translate(0,0) rotate(0deg); }
+  33% { transform: translate(30px,-20px) rotate(1deg); }
+  66% { transform: translate(-20px,10px) rotate(-1deg); }
+}
+.hero-content { position: relative; z-index: 2; max-width: 700px; }
+.hero-logo {
+  width: 120px; height: 120px; margin: 0 auto 28px;
+  background: linear-gradient(135deg, #1A4F8A 0%, #3BB0FF 50%, #00E5A0 100%);
+  border-radius: 28px; display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 0 60px rgba(59,176,255,0.25), 0 0 120px rgba(59,176,255,0.1);
+  animation: logoPulse 3s ease-in-out infinite;
+}
+@keyframes logoPulse {
+  0%, 100% { box-shadow: 0 0 60px rgba(59,176,255,0.25), 0 0 120px rgba(59,176,255,0.1); }
+  50% { box-shadow: 0 0 80px rgba(59,176,255,0.4), 0 0 160px rgba(59,176,255,0.2); }
+}
+.hero-logo svg { width: 52px; height: 52px; }
+h1 { font-size: clamp(44px, 8vw, 72px); font-weight: 900; margin-bottom: 12px; letter-spacing: -1px; }
+h1 span { background: linear-gradient(135deg, #3BB0FF, #00E5A0); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.hero-subtitle { font-size: clamp(16px, 2.5vw, 20px); color: var(--text2); margin-bottom: 40px; font-weight: 400; }
+.hero-actions { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; align-items: center; margin-bottom: 32px; }
+.btn {
+  display: inline-flex; align-items: center; gap: 10px; padding: 16px 32px;
+  border-radius: 14px; font-size: 17px; font-weight: 700; text-decoration: none;
+  transition: all 0.3s cubic-bezier(0.4,0,0.2,1); cursor: pointer;
+  font-family: var(--font-ar); border: none; position: relative;
+}
+.btn-primary {
+  background: linear-gradient(135deg, #1A4F8A, #3BB0FF); color: #fff;
+  box-shadow: 0 0 30px rgba(59,176,255,0.3), 0 8px 32px rgba(26,79,138,0.4);
+  animation: btnGlow 2.5s ease-in-out infinite;
+}
+@keyframes btnGlow {
+  0%, 100% { box-shadow: 0 0 30px rgba(59,176,255,0.3), 0 8px 32px rgba(26,79,138,0.4); }
+  50% { box-shadow: 0 0 50px rgba(59,176,255,0.55), 0 12px 40px rgba(26,79,138,0.6); }
+}
+.btn-primary:hover { transform: translateY(-3px) scale(1.03); }
+.btn-primary:active { transform: translateY(0) scale(0.98); }
+.btn-secondary {
+  background: rgba(255,255,255,0.06); color: var(--text);
+  border: 1px solid rgba(255,255,255,0.15); backdrop-filter: blur(10px);
+}
+.btn-secondary:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.3); transform: translateY(-3px); }
+.qr-block { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.qr-block img {
+  width: 130px; height: 130px; border-radius: 12px; background: #fff; padding: 8px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+}
+.qr-label { font-size: 12px; color: var(--text3); font-family: var(--font-ar); }
+
+/* ─── Section Headers ──────────────────────────────────────── */
+section { padding: 90px 24px; }
+.section-title { text-align: center; margin-bottom: 56px; }
+.section-title h2 { font-size: clamp(28px, 5vw, 40px); font-weight: 800; margin-bottom: 12px; }
+.section-title p { font-size: 17px; color: var(--text2); max-width: 500px; margin: 0 auto; }
+.section-divider { width: 60px; height: 3px; background: linear-gradient(90deg, var(--brand), var(--accent)); margin: 16px auto 0; border-radius: 2px; }
+
+/* ─── Features ─────────────────────────────────────────────── */
+#features { background: var(--bg2); }
+.features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; }
+.feature-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 36px 28px; text-align: center;
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  transition: all 0.3s ease;
+}
+.feature-card:hover { transform: translateY(-6px); border-color: rgba(59,176,255,0.3); box-shadow: 0 16px 48px rgba(0,0,0,0.3); }
+.feature-icon { width: 56px; height: 56px; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center; border-radius: 16px; }
+.feature-card:nth-child(1) .feature-icon { background: rgba(59,176,255,0.15); }
+.feature-card:nth-child(2) .feature-icon { background: rgba(0,229,160,0.15); }
+.feature-card:nth-child(3) .feature-icon { background: rgba(255,140,66,0.15); }
+.feature-card:nth-child(4) .feature-icon { background: rgba(168,85,247,0.15); }
+.feature-card:nth-child(5) .feature-icon { background: rgba(236,72,153,0.15); }
+.feature-card:nth-child(6) .feature-icon { background: rgba(59,176,255,0.15); }
+.feature-card h3 { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+.feature-card p { font-size: 14px; color: var(--text2); line-height: 1.6; }
+
+/* ─── Stats ────────────────────────────────────────────────── */
+#stats { background: linear-gradient(135deg, #0A1628, #0F1B3D); position: relative; }
+.stats-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 48px; }
+.stat-item { text-align: center; }
+.stat-number { font-size: clamp(36px, 6vw, 52px); font-weight: 900; font-family: var(--font-en);
+  background: linear-gradient(135deg, var(--brand), var(--accent));
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+.stat-label { font-size: 15px; color: var(--text2); margin-top: 4px; }
+
+/* ─── Transport ────────────────────────────────────────────── */
+.transport-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
+.transport-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 32px 20px; text-align: center;
+  transition: all 0.3s ease; position: relative; overflow: hidden;
+}
+.transport-card:hover { transform: translateY(-4px); }
+.transport-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+}
+.transport-card:nth-child(1)::before { background: var(--brand); }
+.transport-card:nth-child(2)::before { background: var(--warn); }
+.transport-card:nth-child(3)::before { background: #E60026; }
+.transport-card:nth-child(4)::before { background: #8B5CF6; }
+.transport-icon { width: 48px; height: 48px; margin: 0 auto 16px; }
+.transport-card h3 { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+.transport-card .en-label { font-size: 12px; color: var(--text3); }
+
+/* ─── CTA ──────────────────────────────────────────────────── */
+#cta {
+  background: linear-gradient(135deg, #0F1B3D 0%, #1A0A2E 50%, #0F1B3D 100%);
+  text-align: center; position: relative; overflow: hidden;
+}
+#cta::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+  background: radial-gradient(circle at 50% 50%, rgba(59,176,255,0.1) 0%, transparent 70%);
+}
+.cta-content { position: relative; z-index: 1; }
+.cta-content h2 { font-size: clamp(28px, 5vw, 40px); font-weight: 800; margin-bottom: 12px; }
+.cta-content p { font-size: 17px; color: var(--text2); margin-bottom: 36px; }
+
+/* ─── Footer ───────────────────────────────────────────────── */
+footer {
+  background: var(--bg); border-top: 1px solid var(--border);
+  text-align: center; padding: 40px 24px;
+}
+.footer-links { display: flex; gap: 24px; flex-wrap: wrap; justify-content: center; margin-bottom: 16px; }
+.footer-links a { color: var(--text2); text-decoration: none; font-size: 14px; transition: color 0.2s; }
+.footer-links a:hover { color: var(--brand); }
+.footer-copy { font-size: 13px; color: var(--text3); margin-top: 8px; }
+
+/* ─── Scroll Reveal ────────────────────────────────────────── */
+.reveal { opacity: 0; transform: translateY(30px); transition: all 0.7s cubic-bezier(0.4,0,0.2,1); }
+.reveal.visible { opacity: 1; transform: translateY(0); }
+
+/* ─── Responsive ───────────────────────────────────────────── */
+@media (max-width: 768px) {
+  section { padding: 60px 16px; }
+  .hero { padding: 80px 16px; min-height: auto; }
+  .hero-logo { width: 90px; height: 90px; border-radius: 22px; }
+  .hero-logo svg { width: 40px; height: 40px; }
+  .stats-grid { gap: 32px; }
+  .qr-block img { width: 100px; height: 100px; }
+}
+@media (max-width: 480px) {
+  .hero-actions { flex-direction: column; }
+  .btn { width: 100%; justify-content: center; }
+}
+</style>
 </head>
 <body>
-  <div class="hero">
-    <div class="logo">🚌</div>
-    <h1>دروب</h1>
-    <h2>النقل الذكي في الأردن — باص، سرفيس، باص سريع</h2>
 
-    <div class="badges">
-      <a href="/download" class="badge-btn primary" download>
-        📱 تنزيل APK للأندرويد
-      </a>
-      <a href="https://admin.droob-jo.com" class="badge-btn">
-        <img src="https://upload.wikimedia.org/wikipedia/commons/d/d0/Google_Play_Arrow_logo.svg" alt="">
-        لوحة التحكم
-      </a>
+<!-- ═════════════════════ HERO ═══════════════════════════════ -->
+<section class="hero">
+  <div class="hero-content">
+    <div class="hero-logo">
+      <svg viewBox="0 0 64 64" fill="none"><rect x="6" y="20" width="52" height="28" rx="6" fill="#fff"/><rect x="10" y="24" width="16" height="8" rx="3" fill="#1A4F8A"/><rect x="28" y="24" width="16" height="8" rx="3" fill="#3BB0FF"/><circle cx="10" cy="40" r="4" fill="#111"/><circle cx="28" cy="40" r="4" fill="#111"/><rect x="14" y="6" width="4" height="14" rx="2" fill="#00E5A0"/><rect x="30" y="6" width="4" height="14" rx="2" fill="#00E5A0"/></svg>
     </div>
-    <div class="download-info">v1.0.0 — 90 MB — يعمل على أندرويد 6.0 وأحدث</div>
-
-    <div class="features">
-      <div class="feature">
-        <div class="icon">🗺️</div>
-        <div class="label">خريطة تفاعلية</div>
-      </div>
-      <div class="feature">
-        <div class="icon">🚏</div>
-        <div class="label">مواعيد الباصات</div>
-      </div>
-      <div class="feature">
-        <div class="icon">🧭</div>
-        <div class="label">تخطيط الرحلات</div>
-      </div>
-      <div class="feature">
-        <div class="icon">⚠️</div>
-        <div class="label">تنبيهات فورية</div>
+    <h1>د<span>روب</span></h1>
+    <p class="hero-subtitle">النقل الذكي في الأردن — باص، سرفيس، باص سريع 🇯🇴</p>
+    <div class="hero-actions">
+      <a href="/download" class="btn btn-primary" download>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        تنزيل التطبيق للأندرويد
+      </a>
+      <div class="qr-block">
+        <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://droob-jo.com/download&bgcolor=ffffff&color=1A4F8A" alt="QR Code لتنزيل تطبيق دروب" width="130" height="130">
+        <span class="qr-label">📱 امسح الكود للتنزيل</span>
       </div>
     </div>
+    <a href="https://admin.droob-jo.com" class="btn btn-secondary">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="3"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+      لوحة التحكم
+    </a>
+  </div>
+</section>
 
-    <div class="stats">
-      <div class="stat">
-        <div class="stat-value">262+</div>
-        <div class="stat-label">خط مسار</div>
-      </div>
-      <div class="stat">
-        <div class="stat-value">36K+</div>
-        <div class="stat-label">محطة</div>
-      </div>
-      <div class="stat">
-        <div class="stat-value">4K+</div>
-        <div class="stat-label">جدول</div>
-      </div>
+<!-- ════════════════════ FEATURES ════════════════════════════ -->
+<section id="features">
+  <div class="container">
+    <div class="section-title reveal">
+      <h2>لماذا دروب؟</h2>
+      <p>تطبيق شامل يجمع كل وسائل النقل في الأردن في مكان واحد</p>
+      <div class="section-divider"></div>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card reveal"><div class="feature-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#3BB0FF" stroke-width="2" stroke-linecap="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg></div><h3>خريطة تفاعلية</h3><p>خريطة حية لجميع مسارات ومحطات النقل في عمّان مع تحديد موقعك اللحظي</p></div>
+      <div class="feature-card reveal"><div class="feature-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#00E5A0" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div><h3>مواعيد الباصات الحية</h3><p>مواعيد وصول وانطلاق فورية لجميع الخطوط مع تحديث مستمر على مدار الساعة</p></div>
+      <div class="feature-card reveal"><div class="feature-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FF8C42" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="10" r="3"/><path d="M12 21.7C17.3 17 20 13 20 10a8 8 0 10-16 0c0 3 2.7 7 8 11.7z"/></svg></div><h3>تخطيط رحلات ذكي</h3><p>أدخل وجهتك واحصل على أفضل مسار باستخدام الباص والسرفيس وBRT مع وقت الوصول المتوقع</p></div>
+      <div class="feature-card reveal"><div class="feature-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#A855F7" stroke-width="2" stroke-linecap="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg></div><h3>تنبيهات فورية</h3><p>إشعارات فورية عن التأخيرات والتحويلات وحالات الطوارئ على خطوطك المفضلة</p></div>
+      <div class="feature-card reveal"><div class="feature-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#EC4899" stroke-width="2" stroke-linecap="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></div><h3>تغطية شاملة</h3><p>262 مسار نقل في عمّان والأردن مع 36,000+ محطة و14 وكالة نقل رسمية</p></div>
+      <div class="feature-card reveal"><div class="feature-icon"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#3BB0FF" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg></div><h3>دعم العربية والإنجليزية</h3><p>واجهة ثنائية اللغة كاملة مع دعم كامل للغة العربية والإنجليزية بسلاسة</p></div>
     </div>
   </div>
+</section>
 
-  <footer>
-    © 2026 Droob — Jordan Transit Navigator &nbsp;|&nbsp;
-    <a href="/privacy">سياسة الخصوصية</a> &nbsp;|&nbsp;
-    <a href="/download">تنزيل التطبيق</a> &nbsp;|&nbsp;
+<!-- ════════════════════ STATS ═══════════════════════════════ -->
+<section id="stats">
+  <div class="container">
+    <div class="stats-grid">
+      <div class="stat-item reveal"><div class="stat-number counter" data-target="262">0</div><div class="stat-label">🚍 مسار نقل</div></div>
+      <div class="stat-item reveal"><div class="stat-number counter" data-target="36000">0</div><div class="stat-label">📍 محطة</div></div>
+      <div class="stat-item reveal"><div class="stat-number counter" data-target="14">0</div><div class="stat-label">🏢 وكالة نقل</div></div>
+      <div class="stat-item reveal"><div class="stat-number counter" data-target="9">0</div><div class="stat-label">⚡ مسارات BRT</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═════════════════ TRANSPORT ══════════════════════════════ -->
+<section id="transport">
+  <div class="container">
+    <div class="section-title reveal">
+      <h2>وسائل النقل المدعومة</h2>
+      <p>دروب يغطي جميع أنواع النقل العام في الأردن</p>
+      <div class="section-divider"></div>
+    </div>
+    <div class="transport-grid">
+      <div class="transport-card reveal"><div class="transport-icon"><svg width="48" height="48" viewBox="0 0 48 48" fill="none"><rect x="6" y="10" width="36" height="24" rx="6" fill="#3BB0FF" opacity="0.2"/><rect x="9" y="14" width="12" height="6" rx="2" fill="#3BB0FF"/><rect x="23" y="14" width="16" height="6" rx="2" fill="#3BB0FF"/><circle cx="13" cy="28" r="3" fill="#1A4F8A"/><circle cx="35" cy="28" r="3" fill="#1A4F8A"/></svg></div><h3>باص رؤية المدينة</h3><span class="en-label">City Bus</span></div>
+      <div class="transport-card reveal"><div class="transport-icon"><svg width="48" height="48" viewBox="0 0 48 48" fill="none"><rect x="4" y="8" width="40" height="24" rx="4" fill="#FF8C42" opacity="0.2"/><rect x="7" y="12" width="34" height="8" rx="2" fill="#FF8C42"/><rect x="10" y="24" width="6" height="4" rx="1" fill="#E07B00"/><rect x="20" y="24" width="6" height="4" rx="1" fill="#E07B00"/><rect x="30" y="24" width="6" height="4" rx="1" fill="#E07B00"/><circle cx="14" cy="30" r="2.5" fill="#111"/><circle cx="34" cy="30" r="2.5" fill="#111"/></svg></div><h3>سرفيس عمّان</h3><span class="en-label">Serveece</span></div>
+      <div class="transport-card reveal"><div class="transport-icon"><svg width="48" height="48" viewBox="0 0 48 48" fill="none"><rect x="4" y="6" width="40" height="28" rx="6" fill="#E60026" opacity="0.2"/><rect x="8" y="10" width="32" height="10" rx="3" fill="#E60026"/><rect x="10" y="24" width="28" height="6" rx="2" fill="#CC0020"/><circle cx="14" cy="31" r="3" fill="#222"/><circle cx="34" cy="31" r="3" fill="#222"/></svg></div><h3>باص سريع BRT</h3><span class="en-label">Bus Rapid Transit</span></div>
+      <div class="transport-card reveal"><div class="transport-icon"><svg width="48" height="48" viewBox="0 0 48 48" fill="none"><rect x="3" y="8" width="42" height="26" rx="6" fill="#8B5CF6" opacity="0.2"/><rect x="7" y="12" width="34" height="10" rx="3" fill="#8B5CF6"/><rect x="10" y="26" width="28" height="4" rx="2" fill="#6D28D9"/><circle cx="16" cy="31" r="3" fill="#222"/><circle cx="32" cy="31" r="3" fill="#222"/></svg></div><h3>باص بين المدن</h3><span class="en-label">Intercity</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════ CTA ═════════════════════════════════ -->
+<section id="cta">
+  <div class="container cta-content">
+    <h2 class="reveal">حمّل دروب الآن</h2>
+    <p class="reveal">انضم لآلاف المستخدمين وخطط رحلاتك في الأردن بذكاء</p>
+    <div class="hero-actions reveal" style="margin-bottom:24px">
+      <a href="/download" class="btn btn-primary" download>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        تنزيل للأندرويد
+      </a>
+    </div>
+    <div class="qr-block reveal" style="margin-bottom:12px">
+      <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://droob-jo.com/download&bgcolor=ffffff&color=1A4F8A" alt="QR Code تنزيل دروب" width="130" height="130">
+      <span class="qr-label">📱 امسح الكود للتنزيل</span>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════ FOOTER ══════════════════════════════ -->
+<footer>
+  <div class="footer-links">
+    <a href="/privacy">سياسة الخصوصية</a>
+    <a href="/download">تنزيل التطبيق</a>
+    <a href="https://admin.droob-jo.com">لوحة التحكم</a>
     <a href="mailto:privacy@droob-jo.com">privacy@droob-jo.com</a>
-  </footer>
+  </div>
+  <p class="footer-copy">© 2026 دروب Droob — جميع الحقوق محفوظة</p>
+</footer>
+
+<!-- ════════════════════ SCRIPTS ═════════════════════════════ -->
+<script>
+// ─── Scroll Reveal ───────────────────────────────────────────
+const revealEls = document.querySelectorAll('.reveal');
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+}, { threshold: 0.15, rootMargin: '0px 0px -50px 0px' });
+revealEls.forEach(el => observer.observe(el));
+
+// ─── Animated Counters ───────────────────────────────────────
+const counterEls = document.querySelectorAll('.counter');
+const counterObserver = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (!entry.isIntersecting) return;
+    const el = entry.target;
+    const target = parseInt(el.dataset.target);
+    const duration = 2000;
+    const start = performance.now();
+    const step = (now) => {
+      const elapsed = now - start;
+      const progress = Math.min(elapsed / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      el.textContent = Math.floor(eased * target).toLocaleString('en-US') + '+';
+      if (progress < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+    counterObserver.unobserve(el);
+  });
+}, { threshold: 0.5 });
+counterEls.forEach(el => counterObserver.observe(el));
+</script>
+
 </body>
 </html>

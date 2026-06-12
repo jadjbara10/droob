@@ -25,8 +25,8 @@
 import { db } from "../db/index.js";
 import { routes } from "../../drizzle/schema.js";
 import { sql } from "drizzle-orm";
-import { cacheGet, cacheSet } from "../redis/index.js";
-import { reportToQueue } from "./activity-logger.js";
+// Redis cache and activity logger imports (unused for now, kept for future use)
+import type { } from "./activity-logger.js";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -400,7 +400,7 @@ export interface PlannerParams {
 export async function planTrip(params: PlannerParams): Promise<{
   from: LatLng; to: LatLng; journeys: Journey[]; generatedAt: string;
 }> {
-  const startTime = Date.now();
+  // const startTime = Date.now(); // benchmark timer
   const origin: LatLng = { lat: params.fromLat, lng: params.fromLng };
   const dest: LatLng = { lat: params.toLat, lng: params.toLng };
   const maxWalk = Math.min(params.maxWalkingMeters, MAX_WALK_METERS);
@@ -508,7 +508,7 @@ export async function planTrip(params: PlannerParams): Promise<{
       unique.sort((a, b) => a.totalDuration - b.totalDuration);
   }
 
-  const elapsed = Date.now() - startTime;
+  // const elapsed = Date.now() - startTime; // elapsed time tracking
 
   return {
     from: origin, to: dest,

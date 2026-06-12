@@ -1105,9 +1105,9 @@ export async function planJourney(
       toLng,
       time: options?.time,
       timeType: options?.timeType,
-      maxWalkMeters: options?.maxWalkMeters,
+      maxWalkingMeters: options?.maxWalkMeters,
       maxTransfers: options?.maxTransfers,
-      preferredModes: options?.preferredModes,
+      preferredModes: options?.preferredModes?.join(","),
       preference: options?.preference,
     });
     return unwrapList<Journey>(response);

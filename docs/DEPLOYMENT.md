@@ -1,153 +1,129 @@
-# 🚀 دروب Droob — خطة النشر الكاملة
+# 🚀 دروب Droob — خطة النشر الكاملة (محدّثة)
 
-## 📋 حالة النشر الحالية
+## 📋 حالة النشر الحالية — يونيو 2026
 
-| العنصر | الحالة |
-|--------|--------|
-| 🏪 حساب Google Play | ⏳ قيد المراجعة |
-| 🌐 الدومين `droob-jo.com` | ✅ تم الشراء من Namecheap |
-| 📱 نسخة التطبيق | 1.0.0 — جاهز للبناء |
-| 🔒 سياسة الخصوصية | ✅ جاهزة (`docs/privacy/index.html`) |
-
----
-
-## 🔧 الخطوة 1: استضافة الخلفية (Railway — الخيار الأرخص)
-
-### أ. إنشاء حساب Railway
-1. افتح https://railway.app
-2. سجل دخول بحساب GitHub
-3. اربط بطاقة دفع (لن يتم الخصم إلا بعد تجاوز الحد المجاني $5)
-
-### ب. نشر قاعدة البيانات
-```bash
-# من لوحة Railway:
-1. اضغط New → Database → PostgreSQL
-2. انسخ DATABASE_URL الناتج
-3. الصقها في .env.production مكان DATABASE_URL
-```
-
-### ج. نشر الـ API
-```bash
-# من مجلد المشروع:
-cd D:\trans_app\droob\backend
-
-# تثبيت Railway CLI (مرة واحدة):
-npm i -g @railway/cli
-
-# تسجيل الدخول:
-railway login
-
-# ربط المشروع:
-railway link
-
-# نشر الخلفية:
-railway up
-```
-
-### د. إعداد المتغيرات البيئية في Railway
-اذهب إلى Dashboard → Project → Variables وأضف كل المتغيرات من ملف `.env.production`
+| العنصر | الحالة | المنصة |
+|--------|--------|--------|
+| 🌐 الدومين `droob-jo.com` | ✅ يعمل | Namecheap + Cloudflare |
+| 🏠 الموقع الرئيسي `droob-jo.com` | ✅ يعمل 24/7 | Cloudflare Worker (`droob-site`) |
+| 📥 تنزيل APK | ✅ يعمل | GitHub Release + Worker redirect |
+| 🔒 سياسة الخصوصية | ✅ تعمل | `droob-jo.com/privacy` |
+| 🔗 API السحابي `api.droob-jo.com` | ✅ يعمل 24/7 | Cloudflare Worker (`droob-api-proxy`) → Fly.io |
+| 🖥️ Backend API | ✅ يعمل 24/7 | Fly.io (`droob-api`) — المنفذ 3000 |
+| 🗺️ OSRM تخطيط الرحلات | ✅ يعمل 24/7 | Fly.io (`droob-osrm`) — خوارزمية CH |
+| 🏪 حساب Google Play | ⏳ قيد المراجعة | — |
+| 📱 نسخة التطبيق | ✅ جاهز | v1.0.0 — APK عبر الموقع |
 
 ---
 
-## 🔧 الخطوة 2: ربط الدومين
+## ✅ ما تم إنجازه بالكامل
 
-### في Namecheap:
-1. ادخل على لوحة تحكم الدومين droob-jo.com
-2. اذهب إلى Advanced DNS
-3. أضف السجلات التالية:
+### 1. البنية التحتية السحابية (تعمل بدون جهاز محلي)
 
+التطبيق يعمل **كاملاً سحابياً** — لا يعتمد على تشغيل أي خدمة على الجهاز المحلي.
+
+```
+المستخدم (Android)
+    │
+    ▼
+droob-jo.com ← Cloudflare Worker (droob-site)
+    ├── /           → Landing Page
+    ├── /download   → GitHub Release APK (تنزيل مباشر)
+    └── /privacy    → سياسة الخصوصية
+    │
+api.droob-jo.com ← Cloudflare Worker (droob-api-proxy)
+    │
+    ▼
+droob-api.fly.dev ← Fly.io (Backend API)
+    │
+    ▼
+droob-osrm.fly.dev ← Fly.io (OSRM — تخطيط الرحلات)
+```
+
+### 2. تفاصيل المكونات المنشورة
+
+#### Cloudflare Workers
+| Worker | الدومين | الوظيفة |
+|--------|---------|---------|
+| `droob-site` | `droob-jo.com/*` | الموقع الرئيسي + تنزيل APK + سياسة الخصوصية |
+| `droob-api-proxy` | `api.droob-jo.com/*` | Proxy للـ Backend على Fly.io مع CORS |
+
+#### Fly.io Apps
+| App | الوظيفة | المنفذ الداخلي |
+|-----|---------|----------------|
+| `droob-api` | Backend API (Fastify) | 3000 |
+| `droob-osrm` | OSRM تخطيط الرحلات (CH) | 5000 |
+
+#### Cloudflare DNS
 | النوع | المضيف | القيمة |
 |-------|--------|--------|
-| CNAME | `api` | `droob-api.railway.app` (أو الرابط اللي يعطيك Railway) |
-| CNAME | `admin` | `droob-dashboard.vercel.app` (بعد نشر الداشبورد) |
-| A | `@` | (IP الخادم إذا استخدمت استضافة ثابتة) |
+| CNAME | `droob-jo.com` | Worker `droob-site` |
+| CNAME | `api` | Worker `droob-api-proxy` |
+
+#### متغيرات البيئة على Fly.io
+- `droob-api`: `OSRM_BASE_URL=https://droob-osrm.fly.dev` ✅
+- `droob-api`: `PORT=3000` ✅
+
+### 3. Docker (محلي — للتطوير فقط)
+- تم تنظيف Docker: حُذف **4.1 GB** من الموارد غير المستخدمة
+- OSRM محلي على المنفذ 5000 ببيانات `jordan-latest.osrm*` وخوارزمية CH
+- Backend محلي عبر PM2 على المنفذ 3001 (للتطوير فقط)
 
 ---
 
-## 🔧 الخطوة 3: نشر الداشبورد (Vercel — مجاني)
+## 🔧 المهام المتبقية
 
-```bash
-cd D:\trans_app\droob\dashboard
+### الخطوة 1: تفعيل حساب Google Play
+- [ ] إنشاء حساب مطور Google Play ($25 رسوم لمرة واحدة)
+- [ ] رفع APK/AAB للمتجر
+- [ ] إضافة لقطات الشاشة (8+ صور)
+- [ ] وصف المتجر (عربي + إنجليزي)
+- [ ] أيقونب التطبيق 1024×1024
 
-# تثبيت Vercel CLI:
-npm i -g vercel
+### الخطوة 2: تحسينات اختيارية
+- [ ] تفعيل SSL/TLS على Cloudflare (Full Strict)
+- [ ] إضافة Monitoring (Uptime monitoring للـ API)
+- [ ] إضافة CI/CD عبر GitHub Actions
+- [ ] نشر لوحة التحكم (Dashboard) على Vercel
 
-# نشر:
-vercel --prod
-
-# بعد النشر، اربط الدومين:
-# Vercel Dashboard → Settings → Domains → أضف admin.droob-jo.com
-```
-
----
-
-## 🔧 الخطوة 4: بناء التطبيق ورفعه للمتجر
-
-### أ. توليد مفاتيح JWT قوية
-```bash
-node -e "console.log('JWT_SECRET=' + require('crypto').randomBytes(64).toString('hex'))"
-node -e "console.log('JWT_REFRESH_SECRET=' + require('crypto').randomBytes(64).toString('hex'))"
-```
-
-### ب. تحديث متغيرات EAS
-```bash
-# تعيين متغيرات البيئة للإنتاج:
-eas secret:create --scope project SECRET_JWT_SECRET --value "الناتج من الأمر أعلاه"
-eas secret:create --scope project SECRET_API_URL --value "https://api.droob-jo.com"
-```
-
-### ج. بناء نسخة الإنتاج
-```bash
-cd D:\trans_app\droob\mobile
-
-# بناء AAB للمتجر:
-eas build --platform android --profile production
-
-# رفع مباشر للمتجر:
-eas submit --platform android
-```
+### الخطوة 3: تحسينات الإنتاج
+- [ ] قاعدة بيانات سحابية (Supabase / Neon PostgreSQL)
+- [ ] Redis سحابي (Upstash)
+- [ ] تفعيل Firebase Auth للإنتاج
+- [ ] إعداد Sentry لتتبع الأخطاء
 
 ---
 
-## 🔧 الخطوة 5: استضافة سياسة الخصوصية
-
-ارفع ملف `docs/privacy/index.html` إلى:
-- **GitHub Pages** (مجاني): أنشئ مستودع `droob-jo/droob-jo.github.io` وارفع الملف
-- **Vercel** (مجاني): `vercel deploy docs/privacy/index.html`
-- **Netlify** (مجاني): اسحب ملف index.html إلى https://app.netlify.com/drop
-
-الرابط النهائي يجب أن يكون: `https://droob-jo.com/privacy`
-
----
-
-## 💰 ملخص التكاليف الشهرية
+## 💰 ملخص التكاليف الشهرية الحالية
 
 | الخدمة | التكلفة |
 |--------|---------|
-| Railway (API + DB + Redis) | ~$15-20/شهر |
-| Vercel (Dashboard) | مجاني |
-| GitHub Pages (سياسة الخصوصية) | مجاني |
-| EAS Build | مجاني (30 build/شهر) |
-| **المجموع** | **~$15-20/شهر** |
-
-### بدائل للتوفير:
-- **Render** بدل Railway: مجاني لكن الخادم بينام بعد 15 دقيقة inactivity
-- **Neon** بدل Railway PG: PostgreSQL مجاني 0.5GB
-- **Upstash** بدل Railway Redis: Redis مجاني 256MB
-- **Fly.io** (مجاني 3 VMs صغيرة)
+| Fly.io (Backend + OSRM) | مجاني (Hobby Plan — 3 VMs) |
+| Cloudflare Workers | مجاني (100K طلب/يوم) |
+| Cloudflare DNS | مجاني |
+| GitHub Release (APK) | مجاني |
+| Namecheap (droob-jo.com) | ~$10/سنة |
+| **المجموع الشهري** | **~$0.83/شهر** (الدومين فقط) |
 
 ---
 
-## ✅ قائمة التدقيق النهائية قبل النشر
+## 🔑 بيانات الوصول المهمة
 
-- [ ] حساب Google Play مفعل
-- [ ] الخلفية منشورة على Railway والدومين مربوط
-- [ ] قاعدة البيانات مهيأة بالبيانات (تشغيل السكربتات)
-- [ ] CORS مضبوط للإنتاج
-- [ ] JWT_SECRET وجميع كلمات المرور قوية
-- [ ] سياسة الخصوصية منشورة ورابطها شغال
-- [ ] أيقونة التطبيق 1024×1024 مرفوعة
-- [ ] لقطات الشاشة 8+ مرفوعة
-- [ ] وصف المتجر مكتوب (عربي + إنجليزي)
-- [ ] نسخة AAB مبنية وجاهزة للرفع
-- [ ] اختبار التطبيق على جهاز حقيقي
+| الخدمة | التفاصيل |
+|--------|----------|
+| Fly.io App (Backend) | `droob-ap` — `droob-api.fly.dev` |
+| Fly.io App (OSRM) | `droob-osrm` — `droob-osrm.fly.dev` |
+| Cloudflare Account | `jadjbara10@gmail.com` |
+| Cloudflare Account ID | `445395f9fbc91a6f47c5aed960dd67f1` |
+| Cloudflare Zone (droob-jo.com) | `c1a602970981d8fda43ce70b5af80afe` |
+| Named Tunnel | `droob-api` / ID: `39f963a3-7efb-40cf-80dc-b61b93c7d92b` |
+
+---
+
+## ⚐️ ملاحظات مهمة
+
+1. **التطبيق يعمل كاملاً سحابياً*** — لا حاجة لتشغيل أي خدمة على الجهاز المحلي
+2. **OSRM محلي لا يزال متاحاً** للتطوير عبر PM2 على المنفذ 5000
+3. **الـ Named Tunnel `droob-api`** لا يُستخدم حالياً في الإنتاج (الإنتاج يعمل عبر Workers → Fly.io)
+4. **R2 غير مفعّل** على Cloudflare — يُستخدم GitHub Release كبديل لاستضافة APK
+5. **المسار المحلي** `D:\trans_app\droob\` يحتوي على كل ملفات المشروع

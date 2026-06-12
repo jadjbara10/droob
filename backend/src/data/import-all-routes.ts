@@ -5,7 +5,7 @@
 import "dotenv/config";
 import { db } from "../db/index.js";
 import { stops, routes, routeStops, agencies } from "../../drizzle/schema.js";
-import { eq, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { readFileSync } from "fs";
 
 const GOV_MAP: Record<string, string> = {

@@ -1,7 +1,7 @@
 import landingHTML from './landing.html';
 import privacyHTML from './privacy.html';
 
-const APK_URL = 'https://github.com/jadjbara10/droob/releases/download/v1.0.0/app-release.apk';
+const APK_URL = 'https://github.com/jadjbara10/droob/releases/download/v6.0.0/droob-v6.0-20260611-0754.apk';
 
 export default {
   async fetch(request) {
@@ -15,24 +15,11 @@ export default {
       });
     }
 
-    // APK direct download - proxy through Worker so browser downloads directly
+    // APK direct download - redirect to GitHub release asset
+    // GitHub returns 302 to CDN with Content-Disposition: attachment
+    // This ensures browser downloads the file directly without opening a new tab
     if (path === '/download' || path === '/download/') {
-      try {
-        const apkResponse = await fetch(APK_URL, { redirect: 'follow' });
-        const apkBlob = await apkResponse.blob();
-        return new Response(apkBlob, {
-          status: 200,
-          headers: {
-            'Content-Type': 'application/vnd.android.package-archive',
-            'Content-Disposition': 'attachment; filename="droob.apk"',
-            'Content-Length': apkBlob.size.toString(),
-            'Cache-Control': 'public, max-age=3600',
-          },
-        });
-      } catch (err) {
-        // Fallback: redirect to GitHub
-        return Response.redirect(APK_URL, 302);
-      }
+      return Response.redirect(APK_URL, 302);
     }
 
     // Landing page (default)

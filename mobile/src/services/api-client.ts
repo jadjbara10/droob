@@ -7,33 +7,84 @@ import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import { z } from 'zod';
 
-// Android emulator uses 10.0.2.2 to reach host machine's localhost
-const HOST = Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
-// Defensive: strip unresolved shell template syntax ${VAR:-default} from extra config
+// Optional SecureStore — lazy-loaded to avoid errors when not installed
+let SecureStore: any = null;
+try { SecureStore = require('expo-secure-store'); } catch { /* not installed */ }
+
+const TOKEN_KEY = 'droob_auth_token';
+const REFRESH_KEY = 'droob_refresh_token';
+
+// Production API URL — falls back to localhost only for local dev
 const rawExtra = Constants.expoConfig?.extra?.API_URL;
+const PRODUCTION_API = 'https://api.droob-jo.com';
+// Strip shell template syntax if present (${VAR:-default})
 const sanitized = (rawExtra || '')
-  .replace(/^\$\{[^}]+\}\s*:?-?\s*/, '')  // strip ${VAR:- prefix
-  .replace(/}$/, '')                        // strip trailing }
+  .replace(/^\$\{[^}]+\}\s*:?-?\s*/, '')
+  .replace(/}$/, '')
   .trim();
-const rawUrl = sanitized || `http://${HOST}:3000`;
-// Replace localhost with correct host for Android emulator
-const API_URL = rawUrl.replace('localhost', HOST).replace('127.0.0.1', HOST);
+// Use the extra config, sanitized value, or production URL
+const API_URL = sanitized || PRODUCTION_API;
 const API_VERSION = '/api/v1';
 const TIMEOUT_MS = 15_000;
 
 let authToken: string | null = null;
 
-// ─── Auth Token Management ─────────────────────────────────────────────────
-export function setAuthToken(token: string | null) {
+// ─── Auth Token Management (SecureStore + memory) ──────────────────────────
+// Tokens are stored in expo-secure-store (iOS Keychain / Android Keystore).
+// Memory cache avoids async SecureStore reads on every API call.
+
+export async function setAuthToken(token: string | null): Promise<void> {
   authToken = token;
+  try {
+    if (token) {
+      await SecureStore.setItemAsync(TOKEN_KEY, token);
+    } else {
+      await SecureStore.deleteItemAsync(TOKEN_KEY);
+    }
+  } catch {
+    // SecureStore may be unavailable in dev — memory fallback is fine
+  }
+}
+
+export async function setRefreshToken(token: string | null): Promise<void> {
+  try {
+    if (token) {
+      await SecureStore.setItemAsync(REFRESH_KEY, token);
+    } else {
+      await SecureStore.deleteItemAsync(REFRESH_KEY);
+    }
+  } catch {
+    // no-op
+  }
 }
 
 export function getAuthToken(): string | null {
   return authToken;
 }
 
-export function clearAuthToken() {
+export async function getRefreshToken(): Promise<string | null> {
+  try {
+    return await SecureStore.getItemAsync(REFRESH_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export async function loadTokensFromSecureStore(): Promise<string | null> {
+  try {
+    const token = await SecureStore.getItemAsync(TOKEN_KEY);
+    if (token) authToken = token;
+    return token;
+  } catch {
+    return null;
+  }
+}
+
+export function clearAuthToken(): void {
   authToken = null;
+  // Async cleanup — not awaited to avoid blocking
+  SecureStore.deleteItemAsync(TOKEN_KEY).catch(() => {});
+  SecureStore.deleteItemAsync(REFRESH_KEY).catch(() => {});
 }
 
 // ─── Base HTTP Client ─────────────────────────────────────────────────────

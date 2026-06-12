@@ -10,7 +10,7 @@ import Constants from 'expo-constants';
 import { cacheData, getCachedData } from './offline-cache';
 import NetInfo from '@react-native-community/netinfo';
 
-const API_URL = Constants.expoConfig?.extra?.API_URL || 'http://localhost:3000';
+const API_URL = Constants.expoConfig?.extra?.API_URL || 'https://api.droob-jo.com';
 const ANALYTICS_QUEUE_KEY = 'analytics_event_queue';
 
 type EventName =

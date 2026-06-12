@@ -31,7 +31,7 @@ export async function snapRouteRoutes(app: FastifyInstance) {
         return sendError(reply, 502, "OsrmError", "فشل الاتصال بخدمة تخطيط المسارات", "OSRM routing service error");
       }
 
-      const data = await response.json();
+      const data = await response.json() as { routes: Array<{ geometry: { coordinates: [number, number][] }; distance: number; duration: number }> };
 
       if (!data.routes || data.routes.length === 0) {
         return sendError(reply, 404, "NoRoute", "تعذر إيجاد مسار بين النقاط المحددة", "No route found between the given points");

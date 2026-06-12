@@ -1,8 +1,32 @@
 import { Server as SocketIOServer } from "socket.io";
+import jwt from "jsonwebtoken";
 
-export function setupWebSocket(io: SocketIOServer) {
+export function setupWebSocket(io: SocketIOServer, jwtSecret: string) {
+  // ──── JWT Authentication Middleware ────
+  io.use((socket, next) => {
+    const token = socket.handshake.auth?.token
+      || socket.handshake.query?.token
+      || socket.handshake.headers?.authorization?.replace("Bearer ", "");
+
+    if (!token || typeof token !== "string") {
+      return next(new Error("Authentication required — please provide a valid JWT token"));
+    }
+
+    try {
+      const payload = jwt.verify(token, jwtSecret) as { sub: string; role: string };
+      (socket as any).userId = payload.sub;
+      (socket as any).userRole = payload.role;
+      console.log(`[WS] Authenticated: ${socket.id} (user: ${payload.sub})`);
+      next();
+    } catch (err: any) {
+      console.warn(`[WS] Auth failed: ${socket.id} — ${err.message}`);
+      next(new Error(`Authentication failed: ${err.message}`));
+    }
+  });
+
   io.on("connection", (socket) => {
-    console.log(`[WS] Client connected: ${socket.id}`);
+    const userId = (socket as any).userId || "anonymous";
+    console.log(`[WS] Client connected: ${socket.id} (user: ${userId})`);
 
     // ---- Join Rooms ----
 

@@ -41,19 +41,19 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 4,
     right: 8,
-    backgroundColor: colors.brand_gold + "30",
+    backgroundColor: colors.gold_accent + "30",
     paddingHorizontal: spacing[2],
     borderRadius: radius.input,
   },
   badgeText: {
     fontFamily: "IBM Plex Sans Arabic",
-    fontSize: fontSize[10],
-    color: colors.brand_gold,
+    fontSize: fontSize[11],
+    color: colors.gold_accent,
     fontWeight: fontWeight.bold,
   },
   text: {
     fontFamily: "IBM Plex Sans Arabic",
-    fontSize: fontSize[12],
+    fontSize: fontSize[13],
     color: colors.text_tertiary,
   },
 });

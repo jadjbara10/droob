@@ -50,7 +50,7 @@ async function main() {
   console.log(`Updated: ${updated}, Skipped (no match): ${skipped}`);
 
   const count = await db.execute(sql`SELECT count(*) FROM routes WHERE path_geojson IS NOT NULL`);
-  console.log(`Routes with path_geojson: ${count.rows[0].count}`);
+  console.log(`Routes with path_geojson: ${(count as any).rows[0].count}`);
   process.exit(0);
 }
 

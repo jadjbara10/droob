@@ -17,7 +17,7 @@ import Animated, {
   runOnJS,
   withTiming,
 } from "react-native-reanimated";
-import { colors, radius, shadows } from "@theme/tokens";
+import { colors, radius, shadows, shadowModern } from "@theme/tokens";
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
@@ -200,25 +200,28 @@ const styles = StyleSheet.create({
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.4)",
+    backgroundColor: "rgba(0,0,0,0.35)",
   },
   sheet: {
     position: "absolute",
     left: 0,
     right: 0,
-    backgroundColor: colors.surface,
-    ...shadows.xl,
+    backgroundColor: "rgba(255,255,255,0.97)",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    ...shadowModern.xl,
   },
   handleArea: {
-    height: HANDLE_HEIGHT,
+    height: HANDLE_HEIGHT + 8,
     alignItems: "center",
     justifyContent: "center",
+    paddingTop: 8,
   },
   handleBar: {
-    width: HANDLE_BAR_WIDTH,
-    height: HANDLE_BAR_HEIGHT,
-    backgroundColor: colors.border,
-    borderRadius: 2,
+    width: 36,
+    height: 5,
+    backgroundColor: "rgba(0,0,0,0.15)",
+    borderRadius: 3,
   },
   content: {
     flex: 1,

@@ -6,13 +6,25 @@ import "dotenv/config";
 import postgres from "postgres";
 import bcrypt from "bcrypt";
 
-const DATABASE_URL = process.env.DATABASE_URL || "postgresql://droob:droob_password@localhost:5432/droob";
+const DATABASE_URL = process.env.DATABASE_URL;
+if (!DATABASE_URL) {
+  console.error("❌ FATAL: DATABASE_URL environment variable is required");
+  process.exit(1);
+}
+
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "jadjbara@live.com";
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
+if (!ADMIN_PASSWORD) {
+  console.error("❌ FATAL: ADMIN_PASSWORD environment variable is required");
+  console.error("   Usage: ADMIN_PASSWORD='your-secure-password' npx tsx drizzle/create-admin.ts");
+  process.exit(1);
+}
 
 async function createAdmin() {
-  const sql = postgres(DATABASE_URL, { max: 1 });
+  const sql = postgres(DATABASE_URL!, { max: 1 });
 
-  const email = "jadjbara@live.com";
-  const password = "Jad@12345";
+  const email = ADMIN_EMAIL;
+  const password = ADMIN_PASSWORD!;
   const name = "مدير النظام";
   const role = "super_admin";
   const preferredLang = "ar";

@@ -14,13 +14,13 @@ services:
       - key: HOST
         value: "0.0.0.0"
       - key: DATABASE_URL
-        value: "postgresql://postgres:DyHNJjVhvGySkXgVdgXpaivfxLCOdpru@acela.proxy.rlwy.net:32787/railway"
+        sync: false  # Set manually via Render dashboard — never hardcode credentials
       - key: REDIS_URL
-        value: "redis://default:JFuWlUfUhovizNQLLfmWjGBokHQUJcNX@acela.proxy.rlwy.net:48764"
+        sync: false  # Set manually via Render dashboard — includes Redis password
       - key: JWT_SECRET
-        value: "droob-prod-PDRSUVgAwuqELijCyzdktMnfXWZ6ec8b7Km90r2G1sFQ3YNhxopv5O4BTaHlIJ"
+        sync: false  # Set manually via Render dashboard — generate with: openssl rand -base64 64
       - key: JWT_REFRESH_SECRET
-        value: "droob-refresh-u0qClow8VEiPDpOmF72jLhnNdza4txGQ51ZrKW3sU9gYyMcRAfeXb6TBHvJSIk"
+        sync: false  # Set manually via Render dashboard
       - key: CORS_ORIGIN
         value: "*"
       - key: RATE_LIMIT_MAX

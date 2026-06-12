@@ -214,18 +214,20 @@ export async function authRoutes(app: FastifyInstance) {
     try {
       const body = loginSchema.parse(request.body);
 
+      // SECURITY: Use constant-time approach — don't reveal if email exists
+      // Always hash even if user doesn't exist to prevent timing enumeration
       const [user] = await db
         .select()
         .from(users)
         .where(eq(users.email, body.email))
         .limit(1);
 
-      if (!user) {
-        return sendError(reply, 401, "Unauthorized", "بريد إلكتروني أو كلمة مرور غير صحيحة", "Invalid email or password");
-      }
+      const dummyHash = "$2b$12$LJ3m4ys3Lk0TSwHCiMhBZuL0F8GqDvO6yJNYPqFvXXkIoFbUxJCWa"; // bcrypt hash of "dummy"
+      const valid = user
+        ? await bcrypt.compare(body.password, user.password_hash)
+        : await bcrypt.compare(body.password, dummyHash).then(() => false); // Always false, constant-time
 
-      const valid = await bcrypt.compare(body.password, user.password_hash);
-      if (!valid) {
+      if (!user || !valid) {
         return sendError(reply, 401, "Unauthorized", "بريد إلكتروني أو كلمة مرور غير صحيحة", "Invalid email or password");
       }
 

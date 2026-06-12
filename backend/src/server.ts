@@ -28,6 +28,7 @@ import { activityRoutes } from "./routes/activity.js";
 import { usersAdminRoutes } from "./routes/users-admin.js";
 import { snapRouteRoutes } from "./routes/snap-route.js";
 import { startPrayerTimesCron } from "./cron/prayer-times-cron.js";
+import { setupWebSocket } from "./websocket/index.js";
 
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) {
@@ -291,7 +292,8 @@ async function start() {
   try {
     await app.listen({ port: PORT, host: HOST });
     app.log.info(`🚍 دروب Droob API running on http://${HOST}:${PORT}`);
-    app.log.info(`📡 WebSocket server ready`);
+    setupWebSocket(app.io, JWT_SECRET_FINAL);
+    app.log.info(`📡 WebSocket server ready (JWT auth enforced)`);
     app.log.info(`🗺️  API Docs: http://${HOST}:${PORT}/health`);
   } catch (err) {
     app.log.error(err);

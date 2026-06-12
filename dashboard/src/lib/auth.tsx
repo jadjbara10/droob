@@ -92,10 +92,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new ApiRequestError(403, "Forbidden", "صلاحيات غير كافية. هذا القسم مخصص للمشرفين والمحررين فقط.");
       }
       setAuthToken(result.accessToken);
-      // Also store refresh token
-      if (typeof window !== "undefined") {
-        localStorage.setItem("droob_refresh", result.refreshToken);
-      }
+      // Refresh token is stored in httpOnly cookie by backend — no client-side storage
       const profile = await authApi.getProfile();
       setUser(profile);
     } catch (err) {
@@ -117,9 +114,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // ignore
     }
     clearAuthToken();
-    if (typeof window !== "undefined") {
-      localStorage.removeItem("droob_refresh");
-    }
+    // httpOnly cookies are cleared by the backend on logout — no client-side cleanup needed
     setUser(null);
     setError(null);
   }, []);

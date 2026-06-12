@@ -400,7 +400,7 @@ export async function routesRoutes(app: FastifyInstance) {
 
       const allRoutes = await db.query.routes.findMany({
         where: eq(routes.is_active, true),
-        columns: { code: true, name_ar: true, name_en: true, mode: true, color: true, path_geojson: true, direction: true, return_route_id: true },
+        columns: { code: true, name_ar: true, name_en: true, mode: true, color: true, path_geojson: true },
         orderBy: routes.code,
       });
 
@@ -465,7 +465,7 @@ export async function routesRoutes(app: FastifyInstance) {
   });
 
 // POST /api/v1/routes/import-bidirectional — batch import with direction
-  app.post("/import-bidirectional", { preHandler: [app.authenticate] }, async (request: any, reply: any) => {
+  app.post("/import-bidirectional", { preHandler: [app.authenticate] }, async (_request: any, reply: any) => {
     try {
       const pg = await import("postgres");
       const fs = await import("fs");

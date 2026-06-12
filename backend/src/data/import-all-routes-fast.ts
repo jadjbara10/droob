@@ -46,7 +46,7 @@ async function importRoutesFast() {
     city_bus: "#0066CC", brt: "#E60026", serveece: "#E07B00", coaster: "#0066CC", intercity: "#6B21A8",
   };
 
-  let imported = 0, skipped = 0;
+  let imported = 0;
   // Batch insert in groups of 20
   const batch: any[] = [];
 

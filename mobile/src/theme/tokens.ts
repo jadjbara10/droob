@@ -222,6 +222,23 @@ export const animation = {
   },
 } as const;
 
+// ─── Modern Animations (2025/2026) ───────────────────────────────────────────
+
+export const animationModern = {
+  spring: { damping: 20, stiffness: 300 },
+  springBouncy: { damping: 15, stiffness: 200 },
+  timing: { duration: 300 },
+  timingSlow: { duration: 500 },
+  entrance: { duration: 400, delay: 80 },
+  bottomSheetSpring: { damping: 25, stiffness: 250, mass: 0.8 },
+  tabBounce: { damping: 12, stiffness: 250 },
+  pulse: {
+    damping: 8,
+    stiffness: 150,
+    mass: 1,
+  },
+} as const;
+
 // ─── Layout ──────────────────────────────────────────────────────────────────
 
 export const layout = {
@@ -279,6 +296,21 @@ export const glass = {
   },
 } as const;
 
+// ─── Modern Glassmorphism (2025) ─────────────────────────────────────────────
+
+export const glassModern = {
+  background: "rgba(255, 255, 255, 0.72)",
+  backgroundDark: "rgba(15, 23, 42, 0.72)",
+  border: "rgba(255, 255, 255, 0.18)",
+  blur: 20,
+  shadow: {
+    color: "rgba(0, 0, 0, 0.08)",
+    offset: { width: 0, height: 4 },
+    opacity: 0.12,
+    radius: 16,
+  },
+} as const;
+
 // ─── Gradients ───────────────────────────────────────────────────────────────
 
 export const gradients = {
@@ -286,6 +318,13 @@ export const gradients = {
   brandVertical: ["#1A4F8A", "#2E7D32"] as readonly [string, string],
   goldAccent: ["#C9A84C", "#E8D48B"] as readonly [string, string],
   dark: ["#0F2B4C", "#1A4F8A"] as readonly [string, string],
+  // Modern UI gradients (2025/2026)
+  primary: ["#1A4F8A", "#2563EB"] as readonly [string, string],     // Droob blue
+  success: ["#059669", "#10B981"] as readonly [string, string],     // Green
+  gold: ["#B8860B", "#D4A853"] as readonly [string, string],        // Gold
+  darkModern: ["#0F172A", "#1E293B"] as readonly [string, string],  // Dark
+  warm: ["#F59E0B", "#EF4444"] as readonly [string, string],        // Warning
+  hero: ["#1A4F8A", "#7C3AED"] as readonly [string, string],        // Blue-purple hero
 } as const;
 
 // ─── Map Style ───────────────────────────────────────────────────────────────
@@ -301,6 +340,40 @@ export const map = {
   clusterMinZoom: 12,
 } as const;
 
+// ─── Modern Multi-Layer Shadows (2025/2026) ──────────────────────────────────
+// Two-layer shadow system: close subtle shadow + far soft shadow
+
+export const shadowModern = {
+  sm: {
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  md: {
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  lg: {
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  xl: {
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.16,
+    shadowRadius: 24,
+    elevation: 12,
+  },
+} as const;
+
 // ─── Export all tokens ───────────────────────────────────────────────────────
 
 const tokens = {
@@ -313,11 +386,14 @@ const tokens = {
   fontWeight,
   radius,
   shadows,
+  shadowModern,
   animation,
+  animationModern,
   layout,
   opacity,
   haptics,
   glass,
+  glassModern,
   gradients,
   map,
 } as const;

@@ -25,20 +25,16 @@ export class ApiRequestError extends Error {
   }
 }
 
-// ─── Token Management ──────────────────────────────────────────────────────
+// ─── Token Management (in-memory only — NO localStorage) ──────────────────
+// Tokens are stored in httpOnly cookies set by the backend.
+// The client only keeps authToken in memory for the Authorization header.
+// On page refresh, the refresh token cookie is used to re-authenticate.
 
 let authToken: string | null = null;
 
-if (typeof window !== "undefined") {
-  authToken = localStorage.getItem("droob_token");
-}
-
 export function setAuthToken(token: string | null) {
   authToken = token;
-  if (typeof window !== "undefined") {
-    if (token) localStorage.setItem("droob_token", token);
-    else localStorage.removeItem("droob_token");
-  }
+  // NO localStorage — tokens are managed via httpOnly cookies
 }
 
 export function getAuthToken(): string | null {
@@ -46,7 +42,8 @@ export function getAuthToken(): string | null {
 }
 
 export function clearAuthToken() {
-  setAuthToken(null);
+  authToken = null;
+  // NO localStorage cleanup needed
 }
 
 // ─── Core Fetch ────────────────────────────────────────────────────────────
@@ -93,6 +90,7 @@ export async function apiFetch<T>(
       headers,
       body: body ? JSON.stringify(body) : undefined,
       signal: controller.signal,
+      credentials: "include",  // Send httpOnly cookies (auth tokens)
     });
 
     const contentType = response.headers.get("content-type");
@@ -104,24 +102,21 @@ export async function apiFetch<T>(
       data = await response.text();
     }
 
-    // Auto-refresh token on 401 and retry once
+    // Auto-refresh token on 401 via httpOnly refresh cookie
     if (response.status === 401 && authToken) {
-      const refreshToken = typeof window !== "undefined" ? localStorage.getItem("droob_refresh") : null;
-      if (refreshToken && !endpoint.includes("/auth/")) {
+      if (!endpoint.includes("/auth/")) {
         try {
           const refreshRes = await fetch(`${API_URL}${API_VERSION}/auth/refresh`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ refreshToken }),
+            credentials: "include",  // Send httpOnly refresh cookie
           });
           if (refreshRes.ok) {
             const refreshData = await refreshRes.json();
             const newToken = refreshData.success ? refreshData.data.accessToken : refreshData.accessToken;
             if (newToken) {
               setAuthToken(newToken);
-              if (typeof window !== "undefined") {
-                localStorage.setItem("droob_refresh", refreshData.success ? refreshData.data.refreshToken : refreshData.refreshToken);
-              }
+              // Refresh token is stored in httpOnly cookie by backend — no client-side storage
               // Retry with new token
               headers["Authorization"] = `Bearer ${newToken}`;
               const retryRes = await fetch(url, {
@@ -129,6 +124,7 @@ export async function apiFetch<T>(
                 headers,
                 body: body ? JSON.stringify(body) : undefined,
                 signal: controller.signal,
+                credentials: "include",
               });
               if (retryRes.ok) {
                 const retryData = await retryRes.json();

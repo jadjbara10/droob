@@ -39,6 +39,8 @@ import {
   layout,
   glass,
   animation,
+  shadowModern,
+  glassModern,
 } from "@theme/tokens";
 import type { TransitMode } from "@theme/tokens";
 import type { TransitStop, QuickChip, ServiceAlert } from "@/types/transit";
@@ -560,7 +562,7 @@ const HomeScreen: React.FC = () => {
     };
     initLocation();
     fetchAlerts();
-    fetchRoutes({ limit: 500 }); // Load all route paths for map display
+    fetchRoutes(); // Load all route paths for map display
   }, [fetchNearbyStops, fetchAlerts, setUserLocation, fetchRoutes]);
 
   // ── Derive display data from store ─────────────────────────────────────
@@ -857,13 +859,17 @@ const styles = StyleSheet.create({
   searchBar: {
     height: layout.searchBarHeight,
     borderRadius: layout.searchBarHeight / 2,
-    backgroundColor: Platform.OS === "ios" ? glass.ios.backgroundColor : glass.android.backgroundColor,
+    backgroundColor: Platform.OS === "ios" ? glassModern.background : "rgba(255,255,255,0.95)",
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.3)",
+    borderColor: "rgba(255,255,255,0.4)",
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: spacing[2],
-    ...shadows.md,
+    shadowColor: colors.brand_blue,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 6,
   },
   searchIconBox: {
     width: layout.avatarSize,
@@ -1071,11 +1077,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     height: layout.chipHeight,
     paddingHorizontal: spacing[4],
-    borderRadius: radius.pill,
-    backgroundColor: colors.surface_2,
+    borderRadius: radius.xl,
+    backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: "rgba(0,0,0,0.06)",
     gap: spacing[2],
+    ...shadowModern.sm,
   },
   chipAdd: {
     borderStyle: "dashed",
@@ -1122,10 +1129,10 @@ const styles = StyleSheet.create({
   stopCard: {
     width: layout.stopCardWidth,
     height: layout.stopCardHeight,
-    borderRadius: radius.card,
+    borderRadius: radius.xl,
     backgroundColor: colors.surface,
     overflow: "hidden",
-    ...shadows.sm,
+    ...shadowModern.md,
   },
   stopModeBar: {
     height: 4,

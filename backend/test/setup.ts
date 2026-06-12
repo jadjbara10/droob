@@ -19,7 +19,7 @@ import * as schema from "../drizzle/schema.js";
 // Use a separate connection for tests (never touch prod)
 const TEST_DB_URL =
   process.env.TEST_DATABASE_URL ||
-  "postgresql://droob:droob_password@localhost:5432/droob_test";
+  "postgresql://droob:DroobL0calTest2024!@localhost:5432/droob_test";
 
 let testPool: Pool;
 let testDb: ReturnType<typeof drizzle>;

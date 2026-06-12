@@ -31,7 +31,7 @@ interface Waypoint {
   lng: number;
 }
 
-interface RouteRecord {
+export interface RouteRecord {
   id: string;
   code: string;
   name_ar: string;

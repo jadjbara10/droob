@@ -5,13 +5,16 @@
 // ============================================================================
 
 import React, { createContext, useContext, useState, useCallback, useEffect } from "react";
-import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
+import { View, Text, TouchableOpacity, StyleSheet, Platform } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { NavigationContainer, useNavigation } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { useTranslation } from "react-i18next";
-import { colors, spacing, radius, fontSize, fontWeight, shadows } from "@theme/tokens";
+import { BlurView } from "expo-blur";
+import Animated, { useAnimatedStyle, withSpring, useSharedValue, withSequence, withTiming } from "react-native-reanimated";
+import { colors, spacing, radius, fontSize, fontWeight, shadows, animationModern, glassModern, gradients } from "@theme/tokens";
 import { useAppStore } from "@stores/app.store";
 import linkingConfig from "./linking";
 import type { Journey } from "../types/transit.types";
@@ -129,54 +132,115 @@ function ActiveTripBanner() {
   );
 }
 
+// ─── Tab Bar Icon Component ──────────────────────────────────────────────────
+
+function TabIcon({ emoji, focused, isCenter }: { emoji: string; focused: boolean; isCenter?: boolean }) {
+  const scale = useSharedValue(1);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  const handlePress = useCallback(() => {
+    scale.value = withSequence(
+      withTiming(0.85, { duration: 80 }),
+      withSpring(1, animationModern.tabBounce),
+    );
+  }, []);
+
+  if (isCenter && focused) {
+    return (
+      <View style={tabStyles.centerIconContainer}>
+        <Text style={tabStyles.centerIcon}>{emoji}</Text>
+      </View>
+    );
+  }
+
+  return (
+    <Animated.View style={[tabStyles.iconContainer, focused && tabStyles.iconContainerActive, animatedStyle]}>
+      <Text style={[tabStyles.icon, focused && tabStyles.iconActive]}>{emoji}</Text>
+    </Animated.View>
+  );
+}
+
 // ─── Main Tabs ────────────────────────────────────────────────────────────
 
 function MainTabs() {
   const { t } = useTranslation();
+  const insets = useSafeAreaInsets();
 
   return (
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: colors.brand_blue,
-        tabBarInactiveTintColor: colors.text_tertiary,
+        tabBarInactiveTintColor: "#94A3B8",
         tabBarStyle: {
-          backgroundColor: colors.surface,
-          borderTopWidth: 0.5,
-          borderTopColor: colors.border,
-          height: 64,
-          paddingBottom: 8,
-          paddingTop: 6,
+          position: "absolute",
+          bottom: 0,
+          left: 0,
+          right: 0,
+          borderTopWidth: 0,
+          height: 68 + insets.bottom,
+          paddingBottom: 8 + insets.bottom,
+          paddingTop: 8,
+          elevation: 0,
+          shadowColor: "transparent",
+          backgroundColor: "transparent",
         },
+        tabBarBackground: () => (
+          Platform.OS === "ios" ? (
+            <BlurView
+              tint="light"
+              intensity={85}
+              style={{
+                ...StyleSheet.absoluteFillObject,
+                borderTopLeftRadius: 24,
+                borderTopRightRadius: 24,
+                overflow: "hidden",
+              }}
+            />
+          ) : (
+            <View
+              style={{
+                ...StyleSheet.absoluteFillObject,
+                backgroundColor: "rgba(255, 255, 255, 0.95)",
+                borderTopLeftRadius: 24,
+                borderTopRightRadius: 24,
+              }}
+            />
+          )
+        ),
         tabBarLabelStyle: {
           fontFamily: "IBM Plex Sans Arabic",
           fontSize: 11,
-          fontWeight: fontWeight.bold,
+          fontWeight: fontWeight.semiBold,
+          marginTop: -2,
         },
       }}
     >
       <Tab.Screen name="Home" component={HomeScreen} options={{
         tabBarLabel: t("nav.map"),
         tabBarIcon: ({ focused }: { focused: boolean; color: string; size: number }) => (
-          <Text style={{ fontSize: focused ? 22 : 18 }}>🗺️</Text>
+          <TabIcon emoji="🗺️" focused={focused} />
         ),
       }} />
       <Tab.Screen name="TripPlanner" component={TripPlannerScreen} options={{
         tabBarLabel: t("nav.planner"),
         tabBarIcon: ({ focused }: { focused: boolean; color: string; size: number }) => (
-          <Text style={{ fontSize: focused ? 22 : 18 }}>🧭</Text>
+          <TabIcon emoji="🧭" focused={focused} isCenter />
         ),
       }} />
       <Tab.Screen name="Routes" component={RoutesScreen} options={{
         tabBarLabel: t("nav.routes"),
         tabBarIcon: ({ focused }: { focused: boolean; color: string; size: number }) => (
-          <Text style={{ fontSize: focused ? 22 : 18 }}>🛣️</Text>
+          <TabIcon emoji="🛣️" focused={focused} />
         ),
       }} />
       <Tab.Screen name="Profile" component={ProfileScreen} options={{
         tabBarLabel: t("nav.profile"),
         tabBarIcon: ({ focused }: { focused: boolean; color: string; size: number }) => (
-          <Text style={{ fontSize: focused ? 22 : 18 }}>👤</Text>
+          <TabIcon emoji="👤" focused={focused} />
         ),
       }} />
     </Tab.Navigator>
@@ -317,4 +381,40 @@ const styles = StyleSheet.create({
     alignItems: "center", justifyContent: "center",
   },
   tripBannerCloseText: { fontSize: 12, color: colors.white, fontWeight: fontWeight.bold },
+});
+
+const tabStyles = StyleSheet.create({
+  iconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  iconContainerActive: {
+    backgroundColor: "rgba(26, 79, 138, 0.1)",
+  },
+  icon: {
+    fontSize: 20,
+  },
+  iconActive: {
+    fontSize: 22,
+  },
+  centerIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: colors.brand_blue,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: -20,
+    shadowColor: colors.brand_blue,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  centerIcon: {
+    fontSize: 24,
+  },
 });

@@ -12,8 +12,9 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
+import * as Haptics from "expo-haptics";
 import { ErrorBoundary } from "@components/ErrorBoundary";
-import { colors, radius, spacing, fontSize, fontWeight, shadows, layout } from "@theme/tokens";
+import { colors, radius, spacing, fontSize, fontWeight, shadows, layout, gradients } from "@theme/tokens";
 import { apiFetch, setAuthToken } from "@services/api-client";
 
 type Step = "email" | "verify" | "login";
@@ -140,8 +141,9 @@ export default function AuthScreen() {
     navigation.reset({ index: 0, routes: [{ name: "MainTabs" }] });
   }, [navigation]);
 
-  // ──── OTP Digit Handler ────
+  // ──── OTP Digit Handler (with haptics) ────
   const handleOtpDigit = useCallback((text: string, index: number) => {
+    if (text) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     const newOtp = [...otp];
     newOtp[index] = text.slice(-1);
     setOtp(newOtp);
@@ -331,9 +333,9 @@ export default function AuthScreen() {
             </>
           )}
 
-          {/* ── SKIP / TERMS ── */}
+          {/* ── GUEST MODE / TERMS ── */}
           <TouchableOpacity style={styles.skipBtn} onPress={handleSkip}>
-            <Text style={styles.skipText}>تخطي التسجيل · استخدم التطبيق الآن</Text>
+            <Text style={styles.skipText}>متابعة كضيف · استخدم التطبيق الآن</Text>
           </TouchableOpacity>
 
           <Text style={styles.terms}>
@@ -345,53 +347,77 @@ export default function AuthScreen() {
   );
 }
 
-// ──── STYLES ────
+// ──── STYLES (Modern 2025 UI) ────
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.surface },
+  root: { flex: 1, backgroundColor: "#F8FAFC" },
   container: { paddingHorizontal: spacing[6], justifyContent: "center", paddingBottom: 40 },
 
-  logoWrap: { alignItems: "center", marginBottom: spacing[6] },
-  logo: { fontSize: 56 },
+  // Logo section
+  logoWrap: { alignItems: "center", marginBottom: spacing[8] },
+  logo: {
+    width: 80, height: 80, borderRadius: 24, backgroundColor: colors.brand_blue,
+    alignItems: "center", justifyContent: "center", marginBottom: spacing[3],
+    shadowColor: colors.brand_blue, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 20, elevation: 10,
+    overflow: "hidden",
+  },
   appName: { fontFamily: "IBM Plex Sans Arabic", fontSize: fontSize[32], fontWeight: fontWeight.bold, color: colors.brand_blue, marginTop: spacing[2] },
   tagline: { fontFamily: "IBM Plex Sans Arabic", fontSize: fontSize[14], color: colors.text_secondary, marginTop: spacing[1] },
 
-  modeToggle: { flexDirection: "row", backgroundColor: colors.surface_2, borderRadius: radius.pill, padding: 3, marginBottom: spacing[6] },
-  modeBtn: { flex: 1, paddingVertical: spacing[2], alignItems: "center", borderRadius: radius.pill },
-  modeBtnActive: { backgroundColor: colors.brand_blue },
+  // Mode toggle — glass pill style
+  modeToggle: {
+    flexDirection: "row", backgroundColor: colors.surface_2, borderRadius: radius.pill, padding: 3, marginBottom: spacing[6],
+    borderWidth: 0.5, borderColor: colors.border,
+  },
+  modeBtn: { flex: 1, paddingVertical: spacing[3], alignItems: "center", borderRadius: radius.pill },
+  modeBtnActive: {
+    backgroundColor: colors.brand_blue,
+    shadowColor: colors.brand_blue, shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 8, elevation: 4,
+  },
   modeBtnText: { fontFamily: "IBM Plex Sans Arabic", fontSize: fontSize[14], fontWeight: fontWeight.medium, color: colors.text_secondary },
-  modeBtnTextActive: { color: colors.white },
+  modeBtnTextActive: { color: colors.white, fontWeight: fontWeight.semiBold },
 
   heading: { fontFamily: "IBM Plex Sans Arabic", fontSize: fontSize[24], fontWeight: fontWeight.bold, color: colors.text_primary, textAlign: "center", marginBottom: spacing[1] },
   subtitle: { fontFamily: "IBM Plex Sans Arabic", fontSize: fontSize[14], color: colors.text_secondary, textAlign: "center", marginBottom: spacing[6] },
 
+  // Glass input — transparent bg with border, rounded
   input: {
     fontFamily: "IBM Plex Sans Arabic", fontSize: fontSize[16], color: colors.text_primary,
-    backgroundColor: colors.surface_2, borderRadius: radius.input,
-    paddingHorizontal: spacing[4], paddingVertical: spacing[3],
-    borderWidth: 1, borderColor: colors.border,
+    backgroundColor: "rgba(255,255,255,0.8)", borderRadius: radius.xl,
+    paddingHorizontal: spacing[5], paddingVertical: spacing[4],
+    borderWidth: 1.5, borderColor: "rgba(0,0,0,0.08)",
     textAlign: "right", marginBottom: spacing[3],
+    shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.03, shadowRadius: 4, elevation: 1,
   },
 
+  // Gradient button (simulated with brand_blue + shadow)
   primaryBtn: {
     backgroundColor: colors.brand_blue, borderRadius: radius.pill,
-    paddingVertical: spacing[3], alignItems: "center", marginBottom: spacing[3],
+    paddingVertical: spacing[4], alignItems: "center", marginBottom: spacing[3],
+    shadowColor: colors.brand_blue, shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.35, shadowRadius: 16, elevation: 8,
   },
-  primaryBtnDisabled: { opacity: 0.6 },
+  primaryBtnDisabled: { opacity: 0.5 },
   primaryBtnText: { fontFamily: "IBM Plex Sans Arabic", fontSize: fontSize[16], fontWeight: fontWeight.bold, color: colors.white },
 
+  // OTP boxes — separate, clean design
   otpRow: { flexDirection: "row", justifyContent: "center", gap: spacing[2], marginBottom: spacing[5] },
   otpBox: {
-    width: 48, height: 56, borderRadius: radius.input, borderWidth: 2, borderColor: colors.border,
-    backgroundColor: colors.surface_2, fontFamily: "IBM Plex Sans Arabic",
-    fontSize: fontSize[22], fontWeight: fontWeight.bold, color: colors.text_primary,
+    width: 48, height: 60, borderRadius: radius.lg, borderWidth: 2, borderColor: "rgba(0,0,0,0.08)",
+    backgroundColor: "rgba(255,255,255,0.8)", fontFamily: "IBM Plex Sans Arabic",
+    fontSize: fontSize[24], fontWeight: fontWeight.bold, color: colors.text_primary,
+    shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 6, elevation: 2,
   },
-  otpBoxFilled: { borderColor: colors.brand_blue, backgroundColor: colors.brand_blue + "10" },
+  otpBoxFilled: { borderColor: colors.brand_blue, backgroundColor: "rgba(26,79,138,0.06)", borderWidth: 2.5 },
 
   linkBtn: { alignItems: "center", paddingVertical: spacing[2] },
   linkText: { fontFamily: "IBM Plex Sans Arabic", fontSize: fontSize[14], color: colors.brand_blue, fontWeight: fontWeight.medium },
 
-  skipBtn: { alignItems: "center", marginTop: spacing[8], paddingVertical: spacing[3] },
-  skipText: { fontFamily: "IBM Plex Sans Arabic", fontSize: fontSize[15], color: colors.text_secondary },
+  // Guest mode — transparent style
+  skipBtn: {
+    alignItems: "center", marginTop: spacing[8], paddingVertical: spacing[3],
+    borderWidth: 1, borderColor: "rgba(0,0,0,0.08)", borderRadius: radius.pill,
+    marginHorizontal: spacing[4],
+  },
+  skipText: { fontFamily: "IBM Plex Sans Arabic", fontSize: fontSize[15], color: colors.text_secondary, fontWeight: fontWeight.medium },
 
   terms: { fontFamily: "IBM Plex Sans Arabic", fontSize: fontSize[11], color: colors.text_tertiary, textAlign: "center", marginTop: spacing[4], paddingHorizontal: spacing[6] },
 });

@@ -3,10 +3,13 @@ primary_region = "ams"
 
 [env]
   NODE_ENV = "production"
-  DATABASE_URL = "postgresql://postgres:DyHNJjVhvGySkXgVdgXpaivfxLCOdpru@acela.proxy.rlwy.net:32787/railway"
-  REDIS_URL = "redis://default:JFuWlUfUhovizNQLLfmWjGBokHQUJcNX@acela.proxy.rlwy.net:48764"
-  JWT_SECRET = "droob-prod-PDRSUVgAwuqELijCyzdktMnfXWZ6ec8b7Km90r2G1sFQ3YNhxopv5O4BTaHlIJ"
-  CORS_ORIGIN = "*"
+  # ═══ SECRETS — Managed via `fly secrets set`, NEVER hardcoded ═══
+  # DATABASE_URL  → fly secrets set DATABASE_URL=...
+  # REDIS_URL     → fly secrets set REDIS_URL=...
+  # JWT_SECRET    → fly secrets set JWT_SECRET=...
+  # SMTP_PASS     → fly secrets set SMTP_PASS=...
+  # ═══════════════════════════════════════════════════════════════
+  CORS_ORIGIN = "https://droob-jo.com,https://admin.droob-jo.com,https://app.droob-jo.com"
   RATE_LIMIT_MAX = "100"
   DEFAULT_LANGUAGE = "ar"
   TIMEZONE = "Asia/Amman"

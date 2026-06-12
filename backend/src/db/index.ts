@@ -3,7 +3,10 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as schema from "../../drizzle/schema.js";
 
-const DATABASE_URL = process.env.DATABASE_URL || "postgresql://droob:droob_password@localhost:5432/droob";
+const DATABASE_URL = process.env.DATABASE_URL;
+if (!DATABASE_URL) {
+  throw new Error("FATAL: DATABASE_URL environment variable is required. Set it in your .env file.");
+}
 
 const client = postgres(DATABASE_URL, {
   max: 20,

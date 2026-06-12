@@ -1,7 +1,7 @@
 import { io, Socket } from 'socket.io-client';
 import Constants from 'expo-constants';
 
-const WS_URL = Constants.expoConfig?.extra?.API_URL || 'http://localhost:3000';
+const WS_URL = Constants.expoConfig?.extra?.API_URL || 'https://api.droob-jo.com';
 
 let socket: Socket | null = null;
 

@@ -58,3 +58,6 @@ yarn-error.log*
 # GTFS
 gtfs_jordan.zip
 gtfs_output/
+docker/osrm-fly/*.tar
+docker/osrm-fly/*.zip
+

@@ -24,8 +24,12 @@ export const StatusPill: React.FC<StatusPillProps> = ({ status, showDot=true, si
   );
 };
 const st = StyleSheet.create({
-  c: { flexDirection: "row", alignItems: "center", borderRadius: radius.pill, alignSelf: "flex-start", gap: 6 },
-  d: { width: 6, height: 6, borderRadius: 3 },
-  l: { fontFamily: "IBM Plex Sans Arabic", fontWeight: fontWeight.medium },
+  c: {
+    flexDirection: "row", alignItems: "center", borderRadius: radius.pill,
+    alignSelf: "flex-start", gap: 6,
+    shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 3, elevation: 1,
+  },
+  d: { width: 7, height: 7, borderRadius: 3.5 },
+  l: { fontFamily: "IBM Plex Sans Arabic", fontWeight: fontWeight.semiBold },
 });
 export default StatusPill;

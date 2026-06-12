@@ -21,9 +21,8 @@ const adEventSchema = z.object({
   fill_available: z.boolean().optional(),
 });
 
-const statsQuerySchema = z.object({
-  days: z.coerce.number().default(7),
-});
+// statsQuerySchema reserved for future stats endpoint
+// const statsQuerySchema = z.object({ days: z.coerce.number().default(7) });
 
 export async function adsRoutes(app: FastifyInstance) {
   // ──── POST /api/v1/ads/event ────

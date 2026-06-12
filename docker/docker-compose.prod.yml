@@ -22,7 +22,7 @@ services:
     environment:
       POSTGRES_DB: droob
       POSTGRES_USER: droob
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-droob_password}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?err - DB_PASSWORD must be set for production}
       POSTGRES_INITDB_ARGS: "--data-checksums"
     ports:
       - "${DB_PORT:-5432}:5432"
@@ -100,9 +100,9 @@ services:
       PORT: "3000"
       HOST: "0.0.0.0"
       # Database
-      DATABASE_URL: "postgresql://droob:${DB_PASSWORD:-droob_password}@postgres:5432/droob"
+      DATABASE_URL: "postgresql://droob:${DB_PASSWORD:?err}@postgres:5432/droob"
       # Redis
-      REDIS_URL: "redis://:${REDIS_PASSWORD:-droob_redis}@redis:6379"
+      REDIS_URL: "redis://:${REDIS_PASSWORD:?err}@redis:6379"
       # External APIs
       GAM_GTFS_URL: "${GAM_GTFS_URL}"
       OSRM_BASE_URL: "${OSRM_BASE_URL:-http://osrm:5000}"

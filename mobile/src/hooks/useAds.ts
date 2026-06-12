@@ -15,7 +15,7 @@ export function useInterstitial(placement: "trip" | "route") {
   const cooldown = placement === "trip" ? INTERSTITIAL_COOLDOWN : INTERSTITIAL_ROUTE_COOLDOWN;
 
   // Check if ad-free
-  const isAdFree = useAppStore((s) => s.user?.isAdFree ?? false);
+  const isAdFree = useAppStore((s) => s.isAuthenticated ?? false);
 
   const canShow = useCallback(() => {
     if (isAdFree) return false;
