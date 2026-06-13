@@ -132,11 +132,18 @@ export const useTransitStore = create<TransitState>((set, get) => ({
   fetchRoutes: async (params) => {
     set({ isLoading: true, error: null, usingMockData: false });
     try {
-      // Fetch all routes (pass limit: 500 to get everything, API caps safely)
-      const data = await routesApi.list({ limit: 500, ...params }) as any;
-      // Handle both response shapes: { data: [...] } or { data: { data: [...] } }
-      const routesList = Array.isArray(data?.data) ? data.data : (data?.data?.data || []);
-      set({ routes: routesList, isLoading: false });
+      // Fetch ALL routes across multiple pages
+      let allRoutes: any[] = [];
+      let offset = 0;
+      const LIMIT = 500;
+      while (true) {
+        const data = await routesApi.list({ limit: LIMIT, offset, ...params }) as any;
+        const batch = Array.isArray(data?.data) ? data.data : (data?.data?.data || []);
+        allRoutes = [...allRoutes, ...batch];
+        offset += LIMIT;
+        if (batch.length < LIMIT) break;
+      }
+      set({ routes: allRoutes, isLoading: false });
     } catch (e) {
       set({ error: (e as Error).message, isLoading: false, usingMockData: true });
     }

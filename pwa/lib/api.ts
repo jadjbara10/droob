@@ -2,7 +2,7 @@
  * API Client — fetches data from backend with offline fallback
  */
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://api.droob.app/api/v1";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "https://api.droob-jo.com/api/v1";
 
 // ─── Types ───────────────────────────────────────────────
 
