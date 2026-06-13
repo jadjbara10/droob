@@ -34,7 +34,7 @@ export default function FaresPage() {
 
   async function fetchRoutes() {
     try {
-      const res = await routesApi.list({ limit: 500 });
+      const res = await routesApi.list({ limit: 200 });
       const list = Array.isArray(res) ? res : (res.data || []);
       setRoutes(list.map((r: any) => ({ id: r.id, name_ar: r.name_ar, code: r.code })));
     } catch { /* optional */ }

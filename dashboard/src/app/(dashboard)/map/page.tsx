@@ -45,7 +45,7 @@ export default function MapPage() {
     setError(false);
     try {
       const [stopsRes, routesRes, geoJSONRes] = await Promise.all([
-        stopsApi.list({ limit: 1000 }),
+        stopsApi.list({ limit: 300 }),
         routesApi.list({ limit: 200 }),
         fetch("https://api.droob-jo.com/api/v1/routes/geojson").then(r => r.json()),
       ]);

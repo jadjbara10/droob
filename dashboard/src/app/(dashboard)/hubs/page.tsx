@@ -23,7 +23,7 @@ export default function HubsPage() {
   async function fetchHubs() {
     setLoading(true); setError(false);
     try {
-      const res = await stopsApi.list({ limit: 500, isTerminal: true });
+      const res = await stopsApi.list({ limit: 200, isTerminal: true });
       setHubs(Array.isArray(res) ? res : (res.data || []));
     } catch { setError(true); }
     finally { setLoading(false); }

@@ -25,7 +25,7 @@ export default function StopsPage() {
   async function fetchStops() {
     setLoading(true); setError(false);
     try {
-      const res = await stopsApi.list({ limit: 500 });
+      const res = await stopsApi.list({ limit: 200 });
       setStops(Array.isArray(res) ? res : (res.data || []));
     } catch { setError(true); }
     finally { setLoading(false); }
@@ -50,7 +50,7 @@ export default function StopsPage() {
     setShowRoutes(stop);
     try {
       // Get all routes and find those that have this stop
-      const res = await routesApi.list({ limit: 500 });
+      const res = await routesApi.list({ limit: 200 });
       const allRoutes = Array.isArray(res) ? res : (res.data || []);
       // Fetch stops for each route to find matching ones (limited to first 20 routes for performance)
       const matched: any[] = [];
