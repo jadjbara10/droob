@@ -26,7 +26,7 @@ export default function RoutesPage() {
   async function fetchRoutes() {
     setLoading(true); setError(false);
     try {
-      const res = await routesApi.list({ limit: 300 });
+      const res = await routesApi.list({ limit: 500 });
       const list = Array.isArray(res) ? res : (res.data || []);
       setRoutes(list);
       // Calculate stats

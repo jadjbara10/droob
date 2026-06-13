@@ -104,7 +104,7 @@ export async function routesRoutes(app: FastifyInstance) {
         };
         result = await db.select(cols).from(routes)
           .where(conditions.length > 0 ? and(...conditions) : undefined)
-          .limit(Math.min(query.limit, query.maxLimit || 200))
+          .limit(Math.min(query.limit, query.maxLimit || 500))
           .offset(query.offset).orderBy(routes.code);
       }
 
