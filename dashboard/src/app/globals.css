@@ -550,14 +550,20 @@ body {
   color: var(--text-primary);
   font-family: 'Tajawal', sans-serif;
   font-size: 13px;
+  text-align: right;
   transition: border-color 0.15s ease;
 }
 
-.form-input::placeholder { color: var(--text-muted); }
+.form-input::placeholder { color: var(--text-muted); text-align: right; }
 .form-input:focus {
   outline: none;
   border-color: var(--border-active);
   box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.form-input[dir="ltr"] {
+  text-align: left;
+  direction: ltr;
 }
 
 .form-label {
@@ -566,23 +572,24 @@ body {
   font-weight: 500;
   color: var(--text-secondary);
   margin-bottom: 6px;
+  text-align: right;
 }
 
 .form-select {
   appearance: none;
   width: 100%;
-  padding: 10px 14px;
-  padding-left: 32px;
+  padding: 10px 32px 10px 14px;
   background: var(--surface-2);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   color: var(--text-primary);
-  font-family: sans-serif;
+  font-family: 'Tajawal', sans-serif;
   font-size: 13px;
+  text-align: right;
   cursor: pointer;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238899BB' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
-  background-position: left 10px center;
+  background-position: right 10px center;
 }
 
 /* ─── Error & Empty States ──────────────────────────────────────────────── */

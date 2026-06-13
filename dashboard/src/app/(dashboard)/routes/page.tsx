@@ -204,7 +204,7 @@ export default function RoutesPage() {
               <div style={{ marginBottom: 16 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
                   <label className="form-label" style={{ margin: 0 }}>
-                    <MapPin size={14} style={{ verticalAlign: "middle", marginLeft: 4 }} /> ارسم مسار الخط على الخريطة
+                    <MapPin size={14} style={{ verticalAlign: "middle", marginRight: 4 }} /> ارسم مسار الخط على الخريطة
                   </label>
                   {polyline.length >= 2 && (
                     <button type="button" className="btn btn-sm" onClick={handleSnapRoute}
