@@ -156,6 +156,8 @@ export const routes = pgTable(
     headway_offpeak: integer("headway_offpeak"), // minutes
     first_departure: text("first_departure"), // HH:MM format
     last_departure: text("last_departure"), // HH:MM format
+    direction: text("direction"), // forward | return
+    return_route_id: uuid("return_route_id"), // paired reverse route
     created_at: timestamp("created_at").notNull().defaultNow(),
     updated_at: timestamp("updated_at").notNull().defaultNow(),
   },

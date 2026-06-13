@@ -100,6 +100,7 @@ export async function routesRoutes(app: FastifyInstance) {
           has_friday_schedule: routes.has_friday_schedule, has_ramadan_schedule: routes.has_ramadan_schedule,
           headway_peak: routes.headway_peak, headway_offpeak: routes.headway_offpeak,
           first_departure: routes.first_departure, last_departure: routes.last_departure,
+          direction: routes.direction, return_route_id: routes.return_route_id,
           created_at: routes.created_at, updated_at: routes.updated_at,
         };
         result = await db.select(cols).from(routes)

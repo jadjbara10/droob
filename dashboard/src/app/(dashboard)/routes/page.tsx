@@ -12,8 +12,11 @@ import { formatDateTime, formatFare, modeLabels } from "@/lib/utils";
 
 const MODES = ["city_bus","brt","serveece","intercity"];
 
+type DisplayRoute = { __type: "pair"; fwd: RouteRecord; ret: RouteRecord } | { __type: "single"; route: RouteRecord };
+
 export default function RoutesPage() {
-  const [routes, setRoutes] = useState<RouteRecord[]>([]);
+  const [allRoutes, setAllRoutes] = useState<RouteRecord[]>([]);
+  const [displayRoutes, setDisplayRoutes] = useState<DisplayRoute[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [showForm, setShowForm] = useState(false);
@@ -23,40 +26,96 @@ export default function RoutesPage() {
   const [polyline, setPolyline] = useState<[number, number][]>([]);
   const [returnPolyline, setReturnPolyline] = useState<[number, number][]>([]);
   const [stats, setStats] = useState<{ totalActive: number; totalInactive: number; modeCounts: Record<string, number> } | null>(null);
-  const [offset, setOffset] = useState(0);
-  const [hasMore, setHasMore] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
   const [pairedRoute, setPairedRoute] = useState<RouteRecord | null>(null);
   const [viewDirection, setViewDirection] = useState<"forward" | "return">("forward");
-  const PAGE_SIZE = 500;
+  const [tableDirection, setTableDirection] = useState<Record<string, "forward"|"return">>({});
 
-  async function fetchRoutes(reset = false) {
-    const off = reset ? 0 : offset;
-    if (reset) { setLoading(true); setError(false); setOffset(0); }
-    else setLoadingMore(true);
-    try {
-      const res = await routesApi.list({ limit: PAGE_SIZE, offset: off });
-      const list = Array.isArray(res) ? res : (res.data || []);
-      const total = (res as any).total || list.length;
-      if (reset) {
-        setRoutes(list);
-        setOffset(PAGE_SIZE);
-        setHasMore(list.length >= PAGE_SIZE);
-        // Calculate stats from first page
-        const active = list.filter((r: RouteRecord) => r.is_active).length;
-        const mCounts: Record<string, number> = {};
-        list.forEach((r: RouteRecord) => { mCounts[r.mode] = (mCounts[r.mode] || 0) + 1; });
-        setStats({ totalActive: active, totalInactive: list.length - active, modeCounts: mCounts });
-      } else {
-        setRoutes(prev => [...prev, ...list]);
-        setOffset(off + PAGE_SIZE);
-        setHasMore(list.length >= PAGE_SIZE);
+  // Merge forward+return pairs into single rows
+  function mergePairs(list: RouteRecord[]): DisplayRoute[] {
+    const paired = new Map<string, { fwd?: RouteRecord; ret?: RouteRecord }>();
+    const consumed = new Set<string>();
+
+    for (const r of list) {
+      if (consumed.has(r.id)) continue;
+      if (r.return_route_id) {
+        const key = [r.id, r.return_route_id].sort().join("|");
+        if (!paired.has(key)) paired.set(key, {});
+        const entry = paired.get(key)!;
+        if (r.direction === "return") entry.ret = r;
+        else entry.fwd = r;
+        consumed.add(r.id);
+
+        // Try to find the paired route in the list
+        const mate = list.find(x => x.id === r.return_route_id);
+        if (mate && !consumed.has(mate.id)) {
+          if (mate.direction === "return") entry.ret = mate;
+          else entry.fwd = mate;
+          consumed.add(mate.id);
+        }
       }
-    } catch { setError(true); }
-    finally { setLoading(false); setLoadingMore(false); }
+    }
+
+    const result: DisplayRoute[] = [];
+    for (const [, entry] of paired) {
+      if (entry.fwd && entry.ret) {
+        result.push({ __type: "pair", fwd: entry.fwd, ret: entry.ret });
+      } else if (entry.fwd) {
+        result.push({ __type: "single", route: entry.fwd });
+      } else if (entry.ret) {
+        result.push({ __type: "single", route: entry.ret });
+      }
+    }
+
+    // Add unpaired routes
+    for (const r of list) {
+      if (!consumed.has(r.id)) {
+        result.push({ __type: "single", route: r });
+      }
+    }
+
+    return result;
   }
 
-  useEffect(() => { fetchRoutes(true); }, []);
+  async function fetchAllRoutes() {
+    setLoading(true); setError(false);
+    try {
+      let all: RouteRecord[] = [];
+      let off = 0;
+      const LIMIT = 500;
+      while (true) {
+        const res = await routesApi.list({ limit: LIMIT, offset: off });
+        const list = Array.isArray(res) ? res : (res.data || []);
+        all = [...all, ...list];
+        off += LIMIT;
+        if (list.length < LIMIT) break;
+      }
+      setAllRoutes(all);
+      setDisplayRoutes(mergePairs(all));
+      // Stats from all routes
+      const active = all.filter(r => r.is_active).length;
+      const mCounts: Record<string, number> = {};
+      all.forEach(r => { mCounts[r.mode] = (mCounts[r.mode] || 0) + 1; });
+      setStats({ totalActive: active, totalInactive: all.length - active, modeCounts: mCounts });
+    } catch { setError(true); }
+    finally { setLoading(false); }
+  }
+
+  useEffect(() => { fetchAllRoutes(); }, []);
+
+  function getActiveRoute(dr: DisplayRoute): RouteRecord {
+    if (dr.__type === "single") return dr.route;
+    const dir = tableDirection[dr.fwd.id] || "forward";
+    return dir === "return" ? dr.ret : dr.fwd;
+  }
+
+  function toggleTableDirection(dr: DisplayRoute) {
+    if (dr.__type === "single") return;
+    const key = dr.fwd.id;
+    setTableDirection(prev => ({
+      ...prev,
+      [key]: (prev[key] || "forward") === "forward" ? "return" : "forward"
+    }));
+  }
 
   async function openForm(route?: RouteRecord) {
     if (route) {
@@ -132,7 +191,7 @@ export default function RoutesPage() {
         lastDeparture: route.last_departure || undefined,
         pathGeojson: route.path_geojson || undefined,
       });
-      fetchRoutes(true);
+      fetchAllRoutes();
     } catch (err) { alert((err as Error).message); }
   }
 
@@ -175,39 +234,81 @@ export default function RoutesPage() {
       } else {
         await routesApi.create(data);
       }
-      setShowForm(false); setEditingRoute(null); setPolyline([]); fetchRoutes(true);
+      setShowForm(false); setEditingRoute(null); setPolyline([]); fetchAllRoutes();
     } catch (err) { alert((err as Error).message); }
     finally { setSaving(false); }
   }
 
   async function handleDelete(route: RouteRecord) {
     if (!confirm(`هل أنت متأكد من حذف خط "${route.name_ar}"؟\n\n${route.code} — ${modeLabels[route.mode] || route.mode}`)) return;
-    try { await routesApi.delete(route.id); fetchRoutes(true); }
+    try { await routesApi.delete(route.id); fetchAllRoutes(); }
     catch (err) { alert((err as Error).message); }
   }
 
-  const filteredRoutes = modeFilter === "all" ? routes : routes.filter((r) => r.mode === modeFilter);
+  const filteredRoutes = modeFilter === "all" ? displayRoutes : displayRoutes.filter((dr) => {
+    const r = getActiveRoute(dr);
+    return r.mode === modeFilter;
+  });
 
   const modeColorMap: Record<string, string> = { city_bus: "badge-info", brt: "badge-danger", serveece: "badge-success", intercity: "badge-warn" };
 
   const columns: Column[] = [
-    { key: "code", header: "الرمز", render: (r: any) => (
-      <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-        <span style={{ width: 10, height: 10, borderRadius: "50%", background: r.color || "#3BB0FF", flexShrink: 0 }} />
-        <span className="cell-mono">{r.code}</span>
-      </span>
-    )},
-    { key: "mode", header: "النوع", render: (r: any) => <span className={`badge ${modeColorMap[r.mode] || "badge-info"}`}>{modeLabels[r.mode] || r.mode}</span> },
-    { key: "name_ar", header: "الاسم", render: (r: any) => <span style={{ fontWeight: 500 }}>{r.name_ar}</span> },
-    { key: "fare", header: "الأجرة", render: (r: any) => <span className="cell-mono">{formatFare(r.base_fare)} د.أ</span> },
-    { key: "distance", header: "المسافة", render: (r: any) => <span className="cell-mono">{r.distance ? `${(r.distance / 1000).toFixed(1)} كم` : "—"}</span> },
-    { key: "headway", header: "التكرار", render: (r: any) => <span className="cell-mono">{r.headway_peak ? `${r.headway_peak} ذروة` : "—"} {r.headway_offpeak ? `/ ${r.headway_offpeak}` : ""}</span> },
-    { key: "status", header: "الحالة", render: (r: any) => <span className={`badge ${r.is_active ? "badge-success" : "badge-danger"}`}>{r.is_active ? "نشط" : "معطل"}</span> },
-    { key: "actions", header: "إجراءات", render: (r: any) => (
+    { key: "direction", header: "اتجاه", render: (dr: any) => {
+      if (dr.__type === "pair") {
+        const dir = tableDirection[dr.fwd.id] || "forward";
+        return (
+          <button className="btn btn-xs" onClick={() => toggleTableDirection(dr)}
+            style={{ borderColor: "var(--accent)", color: "var(--accent)", gap: 2, fontSize: 10 }}>
+            <RefreshCw size={10} />
+            {dir === "forward" ? "ذهاب" : "إياب"}
+          </button>
+        );
+      }
+      return <span className="badge badge-info" style={{ fontSize: 10 }}>{dr.route.direction === "return" ? "إياب" : "—"}</span>;
+    }},
+    { key: "code", header: "الرمز", render: (dr: any) => {
+      const r = getActiveRoute(dr);
+      return (
+        <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <span style={{ width: 10, height: 10, borderRadius: "50%", background: r.color || "#3BB0FF", flexShrink: 0 }} />
+          <span className="cell-mono">{r.code}</span>
+        </span>
+      );
+    }},
+    { key: "mode", header: "النوع", render: (dr: any) => {
+      const r = getActiveRoute(dr);
+      return <span className={`badge ${modeColorMap[r.mode] || "badge-info"}`}>{modeLabels[r.mode] || r.mode}</span>;
+    }},
+    { key: "name_ar", header: "الاسم", render: (dr: any) => {
+      const r = getActiveRoute(dr);
+      return (
+        <span style={{ fontWeight: 500 }}>
+          {r.name_ar}
+          {dr.__type === "pair" && <span style={{ fontSize: 10, color: "var(--text-muted)", marginRight: 4 }}>(ذهاب+إياب)</span>}
+        </span>
+      );
+    }},
+    { key: "fare", header: "الأجرة", render: (dr: any) => {
+      const r = getActiveRoute(dr);
+      return <span className="cell-mono">{formatFare(r.base_fare)} د.أ</span>;
+    }},
+    { key: "distance", header: "المسافة", render: (dr: any) => {
+      const r = getActiveRoute(dr);
+      return <span className="cell-mono">{r.distance ? `${(r.distance / 1000).toFixed(1)} كم` : "—"}</span>;
+    }},
+    { key: "headway", header: "التكرار", render: (dr: any) => {
+      const r = getActiveRoute(dr);
+      return <span className="cell-mono">{r.headway_peak ? `${r.headway_peak} ذروة` : "—"} {r.headway_offpeak ? `/ ${r.headway_offpeak}` : ""}</span>;
+    }},
+    { key: "status", header: "الحالة", render: (dr: any) => {
+      const r = getActiveRoute(dr);
+      return <span className={`badge ${r.is_active ? "badge-success" : "badge-danger"}`}>{r.is_active ? "نشط" : "معطل"}</span>;
+    }},
+    { key: "actions", header: "إجراءات", render: (dr: any) => (
       <div style={{ display: "flex", gap: 4 }}>
-        <button className="btn btn-sm" onClick={() => openForm(r)} title="تعديل"><Edit3 size={12} /></button>
-        <button className="btn btn-sm" onClick={() => handleCopyRoute(r)} title="نسخ" style={{ color: "var(--accent-2)", borderColor: "var(--accent-2-soft)" }}><Copy size={12} /></button>
-        <button className="btn btn-danger btn-sm" onClick={() => handleDelete(r)} title="حذف"><Trash2 size={12} /></button>
+        <button className="btn btn-sm" onClick={() => openForm(getActiveRoute(dr))} title="تعديل"><Edit3 size={12} /></button>
+        <button className="btn btn-sm" onClick={() => handleCopyRoute(getActiveRoute(dr))} title="نسخ" style={{ color: "var(--accent-2)", borderColor: "var(--accent-2-soft)" }}><Copy size={12} /></button>
+        <button className="btn btn-danger btn-sm" onClick={() => handleDelete(getActiveRoute(dr))} title="حذف"><Trash2 size={12} /></button>
       </div>
     )},
   ];
@@ -219,7 +320,7 @@ export default function RoutesPage() {
         <div style={{
           display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 12, marginBottom: 16,
         }}>
-          <StatBadge label="إجمالي الخطوط" value={routes.length} color="var(--accent)" />
+          <StatBadge label="إجمالي المسارات" value={allRoutes.length} color="var(--accent)" />
           <StatBadge label="نشط" value={stats.totalActive} color="var(--accent-2)" />
           <StatBadge label="معطل" value={stats.totalInactive} color="var(--danger)" />
           {Object.entries(stats.modeCounts).map(([mode, count]) => (
@@ -228,7 +329,7 @@ export default function RoutesPage() {
         </div>
       )}
 
-      <Panel title="الخطوط والمسارات" subtitle={`${routes.length} خط | ${filteredRoutes.length} معروض${hasMore ? ' (يوجد المزيد)' : ''}`}
+      <Panel title="الخطوط والمسارات" subtitle={`${allRoutes.length} مسار (${displayRoutes.length} صف — ${displayRoutes.filter(d => d.__type === "pair").length} مزدوج) | ${filteredRoutes.length} معروض`}
         headerRight={
           <div style={{ display: "flex", gap: 8 }}>
             <select className="form-select" value={modeFilter} onChange={(e) => setModeFilter(e.target.value)}
@@ -236,7 +337,7 @@ export default function RoutesPage() {
               <option value="all">جميع الأنواع</option>
               {MODES.map((m) => <option key={m} value={m}>{modeLabels[m]}</option>)}
             </select>
-            <button className="btn btn-sm" onClick={() => fetchRoutes(true)}><RefreshCw size={12} /> تحديث</button>
+            <button className="btn btn-sm" onClick={() => fetchAllRoutes()}><RefreshCw size={12} /> تحديث</button>
             <button className="btn btn-primary btn-sm" onClick={() => openForm()}><Plus size={14} /> إضافة خط</button>
           </div>
         }>
@@ -319,19 +420,10 @@ export default function RoutesPage() {
           </div>
         )}
 
-        {error ? <InlineError message="فشل تحميل الخطوط" onRetry={fetchRoutes} />
+        {error ? <InlineError message="فشل تحميل الخطوط" onRetry={fetchAllRoutes} />
           : loading ? <TableSkeleton rows={8} cols={8} />
           : filteredRoutes.length === 0 ? <EmptyState message="لا توجد خطوط" />
-          : <>
-            <DataTable columns={columns} data={filteredRoutes as any[]} searchKeys={["name_ar", "code"]} searchPlaceholder="بحث عن خط..." defaultPageSize={25} />
-            {hasMore && (
-              <div style={{ display: "flex", justifyContent: "center", padding: "16px 0" }}>
-                <button className="btn btn-primary" onClick={() => fetchRoutes(false)} disabled={loadingMore}>
-                  {loadingMore ? "جاري التحميل..." : `تحميل المزيد (${routes.length} من أصل 1,291)`}
-                </button>
-              </div>
-            )}
-          </>
+          : <DataTable columns={columns} data={filteredRoutes as any[]} searchKeys={["name_ar", "code"] as any} searchPlaceholder="بحث عن خط..." defaultPageSize={25} />
         }
       </Panel>
     </div>
