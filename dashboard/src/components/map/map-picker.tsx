@@ -241,29 +241,29 @@ export function MapPicker({
         <div style={{ marginTop: 8, fontSize: 12, color: "var(--text-muted)", display: "flex", alignItems: "center", gap: 6 }}>
           <MousePointer2 size={12} />
           {value
-            ? <span className="mono">ط§ظ„ط¥ط­ط¯ط§ط«ظٹط§طھ: {value.lat.toFixed(5)}, {value.lng.toFixed(5)}</span>
-            : "ط§ظ†ظ‚ط± ط¹ظ„ظ‰ ط§ظ„ط®ط±ظٹط·ط© ظ„طھط­ط¯ظٹط¯ ط§ظ„ظ…ظˆظ‚ط¹"}
+            ? <span><span className="mono">{value.lng.toFixed(5)}, {value.lat.toFixed(5)}</span></span>
+            : "انقر على الخريطة لتحديد الموقع"}
         </div>
       ) : (
         <div style={{ marginTop: 8, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", fontSize: 12 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6, color: "var(--text-secondary)" }}>
             <MousePointer2 size={12} />
             <span style={{ color: "var(--text-muted)" }}>
-              <strong style={{ color: "var(--warn)" }}>ظٹظ…ظٹظ†</strong> ظ„ط¥ط¶ط§ظپط© ظ†ظ‚ط·ط© آ·
-              <strong style={{ color: "var(--accent)" }}> ط§ط³ط­ط¨</strong> ط§ظ„ظ†ظ‚ط§ط· آ·
-              <strong style={{ color: "var(--danger)" }}> ظٹظ…ظٹظ†</strong> ط¹ظ„ظ‰ ظ†ظ‚ط·ط© ظ„ط­ط°ظپظ‡ط§
+              <strong style={{ color: "var(--warn)" }}>يمين</strong> لإضافة نقطة ·
+              <strong style={{ color: "var(--accent)" }}> اسحب</strong> النقاط ·
+              <strong style={{ color: "var(--danger)" }}> يمين</strong> على نقطة لحذفها
             </span>
           </div>
-          <span className="mono" style={{ color: "var(--warn)", fontWeight: 600 }}>
-            {polyline.length} ظ†ظ‚ط·ط©
+          <span style={{ color: "var(--warn)", fontWeight: 600 }}>
+            <span className="mono">{polyline.length}</span> نقطة
           </span>
           {polyline.length > 0 && (
             <>
               <button className="btn btn-xs" onClick={() => onPolylineChange?.(polyline.slice(0, -1))}>
-                <Undo2 size={10} /> طھط±ط§ط¬ط¹
+                <Undo2 size={10} /> تراجع
               </button>
               <button className="btn btn-xs" onClick={() => onPolylineChange?.([])}>
-                <X size={10} /> ظ…ط³ط­ ط§ظ„ظƒظ„
+                <X size={10} /> مسح الكل
               </button>
             </>
           )}
