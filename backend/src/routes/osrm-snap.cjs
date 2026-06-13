@@ -4,7 +4,11 @@
  * Run: node backend/src/routes/osrm-snap.cjs
  */
 const postgres = require('postgres');
-const DATABASE_URL = process.env.DATABASE_URL || 'postgresql://postgres:DyHNJjVhvGySkXgVdgXpaivfxLCOdpru@acela.proxy.rlwy.net:32787/railway';
+const DATABASE_URL = process.env.DATABASE_URL;
+if (!DATABASE_URL) {
+  console.error('FATAL: DATABASE_URL environment variable is required');
+  process.exit(1);
+}
 const OSRM_BASE = 'https://droob-osrm.fly.dev';
 
 /**
