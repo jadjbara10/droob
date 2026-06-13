@@ -68,7 +68,6 @@
       }
     },
     "plugins": [
-      "./plugins/withAndroidLint",
       [
         "expo-location",
         {

@@ -2,7 +2,6 @@
 const nextConfig = {
   reactStrictMode: true,
   images: { unoptimized: true },
-  transpilePackages: ["idb"],
 };
 
 module.exports = nextConfig;
