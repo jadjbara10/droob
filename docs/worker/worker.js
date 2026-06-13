@@ -1,7 +1,7 @@
 import landingHTML from './landing.html';
 import privacyHTML from './privacy.html';
 
-const APK_URL = 'https://github.com/jadjbara10/droob/releases/download/v6.1.0/app-release.apk';
+const APK_URL = 'https://github.com/jadjbara10/droob/releases/download/v6.5.0/droob.apk';
 
 export default {
   async fetch(request) {
