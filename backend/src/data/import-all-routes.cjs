@@ -7,7 +7,11 @@ const path = require("path");
 const crypto = require("crypto");
 const postgres = require("postgres");
 
-const DATABASE_URL = process.env.DATABASE_URL || "postgresql://postgres:DyHNJjVhvGySkXgVdgXpaivfxLCOdpru@acela.proxy.rlwy.net:32787/railway";
+const DATABASE_URL = process.env.DATABASE_URL;
+if (!DATABASE_URL) {
+  console.error("❌ DATABASE_URL environment variable is required");
+  process.exit(1);
+}
 
 // Transport type → mode
 const TYPE_TO_MODE = {

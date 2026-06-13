@@ -13,7 +13,11 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 // Production database (same as .env)
-const DATABASE_URL = process.env.DATABASE_URL || "postgresql://postgres:DyHNJjVhvGySkXgVdgXpaivfxLCOdpru@acela.proxy.rlwy.net:32787/railway";
+const DATABASE_URL = process.env.DATABASE_URL;
+if (!DATABASE_URL) {
+  console.error("❌ DATABASE_URL environment variable is required. Run: DATABASE_URL=\"postgresql://...\" npx tsx backend/src/data/import-to-production.ts");
+  process.exit(1);
+}
 
 // Transport type → mode mapping
 const TYPE_TO_MODE: Record<string, string> = {
