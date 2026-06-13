@@ -192,8 +192,8 @@ export default function RoutesPage() {
         {showForm && (
           <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 20 }}
             onClick={(e) => { if (e.target === e.currentTarget) { setShowForm(false); setEditingRoute(null); setPolyline([]); } }}>
-            <form onSubmit={handleSave}
-              style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius)", padding: 24, width: "100%", maxWidth: 750, maxHeight: "90vh", overflow: "auto" }}>
+            <form onSubmit={handleSave} dir="rtl"
+              style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius)", padding: 24, width: "100%", maxWidth: 750, maxHeight: "90vh", overflow: "auto", direction: "rtl", textAlign: "right" }}>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20 }}>
                 <h3 style={{ fontSize: 16, fontWeight: 600 }}>{editingRoute ? "تعديل خط" : "إضافة خط جديد"}</h3>
                 <button className="btn btn-sm" type="button" onClick={() => { setShowForm(false); setEditingRoute(null); setPolyline([]); }}>
