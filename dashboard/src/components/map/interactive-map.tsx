@@ -212,7 +212,7 @@ export function InteractiveMap({
             }}
           >
             <Popup>
-              <div style={{ fontFamily: "'IBM Plex Sans Arabic', sans-serif", minWidth: 200 }}>
+              <div style={{ fontFamily: "'Tajawal', sans-serif", minWidth: 200 }}>
                 <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 4 }}>
                   {stop.name_ar}
                 </div>

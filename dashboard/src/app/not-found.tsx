@@ -17,7 +17,7 @@ export default function NotFound() {
         justifyContent: "center",
         background: "var(--bg, #0B0F1A)",
         color: "var(--text-primary, #F0F4FF)",
-        fontFamily: "'IBM Plex Sans Arabic', sans-serif",
+        fontFamily: "'Tajawal', sans-serif",
         textAlign: "center",
         padding: 20,
       }}
