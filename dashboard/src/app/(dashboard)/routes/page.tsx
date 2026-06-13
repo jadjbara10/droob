@@ -21,10 +21,13 @@ export default function RoutesPage() {
   const [saving, setSaving] = useState(false);
   const [modeFilter, setModeFilter] = useState("all");
   const [polyline, setPolyline] = useState<[number, number][]>([]);
+  const [returnPolyline, setReturnPolyline] = useState<[number, number][]>([]);
   const [stats, setStats] = useState<{ totalActive: number; totalInactive: number; modeCounts: Record<string, number> } | null>(null);
   const [offset, setOffset] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [pairedRoute, setPairedRoute] = useState<RouteRecord | null>(null);
+  const [viewDirection, setViewDirection] = useState<"forward" | "return">("forward");
   const PAGE_SIZE = 500;
 
   async function fetchRoutes(reset = false) {
@@ -59,6 +62,9 @@ export default function RoutesPage() {
     if (route) {
       setEditingRoute(route);
       setPolyline([]);
+      setReturnPolyline([]);
+      setPairedRoute(null);
+      setViewDirection(route.direction === "return" ? "return" : "forward");
       try {
         const full = await routesApi.getById(route.id) as any;
         if (full?.path_geojson) {
@@ -68,13 +74,44 @@ export default function RoutesPage() {
           }
         }
         if (full) setEditingRoute({ ...route, ...full });
+
+        // Load paired return/forward route if exists
+        if (full?.return_route_id) {
+          try {
+            const paired = await routesApi.getById(full.return_route_id) as any;
+            if (paired) {
+              setPairedRoute(paired);
+              if (paired.path_geojson) {
+                const pgj = typeof paired.path_geojson === "string" ? JSON.parse(paired.path_geojson) : paired.path_geojson;
+                if (pgj.type === "LineString" && Array.isArray(pgj.coordinates)) {
+                  setReturnPolyline(pgj.coordinates.map((c: number[]) => [c[1], c[0]] as [number, number]));
+                }
+              }
+            }
+          } catch { /* no paired route */ }
+        }
       } catch { /* keep editing without path */ }
       setShowForm(true);
     } else {
       setEditingRoute(null);
       setPolyline([]);
+      setReturnPolyline([]);
+      setPairedRoute(null);
+      setViewDirection("forward");
       setShowForm(true);
     }
+  }
+
+  async function switchDirection() {
+    if (!pairedRoute || !editingRoute) return;
+    // Swap current route with paired route
+    const prev = editingRoute;
+    setEditingRoute({ ...pairedRoute, direction: pairedRoute.direction === "return" ? "return" : "forward" });
+    setPairedRoute({ ...prev, direction: prev.direction === "return" ? "return" : "forward" });
+    setViewDirection(v => v === "forward" ? "return" : "forward");
+    // Swap polylines
+    setPolyline(returnPolyline);
+    setReturnPolyline(polyline);
   }
 
   async function handleCopyRoute(route: RouteRecord) {
@@ -210,8 +247,19 @@ export default function RoutesPage() {
             <form onSubmit={handleSave} dir="rtl"
               style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: "var(--radius)", padding: 24, width: "100%", maxWidth: 750, maxHeight: "90vh", overflow: "auto", direction: "rtl", textAlign: "right" }}>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 20 }}>
-                <h3 style={{ fontSize: 16, fontWeight: 600 }}>{editingRoute ? "تعديل خط" : "إضافة خط جديد"}</h3>
-                <button className="btn btn-sm" type="button" onClick={() => { setShowForm(false); setEditingRoute(null); setPolyline([]); }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <h3 style={{ fontSize: 16, fontWeight: 600 }}>{editingRoute ? "تعديل خط" : "إضافة خط جديد"}</h3>
+                  {pairedRoute && (
+                    <button type="button" className="btn btn-sm" onClick={switchDirection}
+                      style={{ borderColor: "var(--accent)", color: "var(--accent)", fontSize: 11, gap: 4 }}>
+                      <RefreshCw size={12} />
+                      {viewDirection === "forward" ? "عرض الإياب" : "عرض الذهاب"}
+                    </button>
+                  )}
+                  {viewDirection === "forward" && <span className="badge badge-success" style={{ fontSize: 10 }}>ذهاب</span>}
+                  {viewDirection === "return" && <span className="badge badge-info" style={{ fontSize: 10 }}>إياب</span>}
+                </div>
+                <button className="btn btn-sm" type="button" onClick={() => { setShowForm(false); setEditingRoute(null); setPolyline([]); setReturnPolyline([]); setPairedRoute(null); }}>
                   <X size={16} />
                 </button>
               </div>
@@ -228,7 +276,13 @@ export default function RoutesPage() {
                     </button>
                   )}
                 </div>
-                <MapPicker mode="polyline" polyline={polyline} onPolylineChange={setPolyline} height={280} />
+                <MapPicker mode="polyline" polyline={polyline} returnPolyline={returnPolyline} onPolylineChange={setPolyline} height={280} />
+                {returnPolyline.length > 0 && (
+                  <div style={{ marginTop: 6, fontSize: 11, color: "var(--text-muted)", display: "flex", alignItems: "center", gap: 12 }}>
+                    <span><span style={{ display: "inline-block", width: 10, height: 3, background: "var(--accent)", borderRadius: 2, marginRight: 4 }} /> ذهاب</span>
+                    <span><span style={{ display: "inline-block", width: 10, height: 3, background: "var(--warn)", borderRadius: 2, marginRight: 4 }} /> إياب</span>
+                  </div>
+                )}
               </div>
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
@@ -256,7 +310,7 @@ export default function RoutesPage() {
                 </div>
               </div>
               <div style={{ display: "flex", gap: 8, marginTop: 20, justifyContent: "flex-end" }}>
-                <button className="btn" type="button" onClick={() => { setShowForm(false); setEditingRoute(null); setPolyline([]); }}>إلغاء</button>
+                <button className="btn" type="button" onClick={() => { setShowForm(false); setEditingRoute(null); setPolyline([]); setReturnPolyline([]); setPairedRoute(null); }}>إلغاء</button>
                 <button className="btn btn-primary" type="submit" disabled={saving}>
                   {saving ? "جاري الحفظ..." : editingRoute ? "تحديث" : "إضافة"}
                 </button>

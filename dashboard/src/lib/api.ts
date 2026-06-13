@@ -383,6 +383,8 @@ export interface RouteRecord {
   base_fare: string;
   fare_min: string | null;
   fare_max: string | null;
+  direction: string | null;
+  return_route_id: string | null;
   is_active: boolean;
   headway_peak: number | null;
   headway_offpeak: number | null;

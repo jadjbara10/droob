@@ -57,6 +57,7 @@ interface MapPickerProps {
   mode: "point" | "polyline";
   value?: { lat: number; lng: number } | null;
   polyline?: [number, number][];
+  returnPolyline?: [number, number][];
   onChange?: (latlng: { lat: number; lng: number }) => void;
   onPolylineChange?: (points: [number, number][]) => void;
   height?: number;
@@ -150,7 +151,7 @@ function FlyToMarker({ lat, lng }: { lat: number; lng: number }) {
 // â”€â”€â”€ Main Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export function MapPicker({
-  mode, value, polyline = [], onChange, onPolylineChange,
+  mode, value, polyline = [], returnPolyline = [], onChange, onPolylineChange,
   height = 300, existingStops = [],
 }: MapPickerProps) {
   const [mounted, setMounted] = useState(false);
@@ -213,12 +214,21 @@ export function MapPicker({
             <Marker position={[value.lat, value.lng]} icon={pickIcon} />
           )}
 
-          {/* Polyline */}
+          {/* Forward Polyline */}
           {mode === "polyline" && polyline.length >= 2 && (
             <Polyline
               positions={polyline}
               pathOptions={{
-                color: "#FF8C42", weight: 3, opacity: 0.8,
+                color: "#3BB0FF", weight: 4, opacity: 0.9,
+              }}
+            />
+          )}
+          {/* Return Polyline */}
+          {mode === "polyline" && returnPolyline.length >= 2 && (
+            <Polyline
+              positions={returnPolyline}
+              pathOptions={{
+                color: "#FF8C42", weight: 3, opacity: 0.7, dashArray: "10 5",
               }}
             />
           )}
