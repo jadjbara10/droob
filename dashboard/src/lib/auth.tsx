@@ -52,18 +52,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const refreshAuth = useCallback(async () => {
     try {
-      const token = getAuthToken();
-      if (!token) {
-        setUser(null);
-        setIsLoading(false);
-        return;
+      // Try to refresh via httpOnly cookie first (no in-memory token needed)
+      let profile;
+      try {
+        profile = await authApi.getProfile();
+      } catch {
+        // If refresh cookie fails, try in-memory token
+        const token = getAuthToken();
+        if (token) {
+          setAuthToken(token);
+          profile = await authApi.getProfile();
+        } else {
+          setUser(null);
+          setIsLoading(false);
+          return;
+        }
       }
-      setAuthToken(token);
-      const profile = await authApi.getProfile();
-      if (!isAllowedRole(profile.role)) {
+      if (!profile || !isAllowedRole(profile.role)) {
         clearAuthToken();
         setUser(null);
-        setError("صلاحيات غير كافية. هذا القسم مخصص للمشرفين والمحررين فقط.");
+        if (profile) setError("صلاحيات غير كافية. هذا القسم مخصص للمشرفين والمحررين فقط.");
         setIsLoading(false);
         return;
       }

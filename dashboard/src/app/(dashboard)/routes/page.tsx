@@ -22,23 +22,38 @@ export default function RoutesPage() {
   const [modeFilter, setModeFilter] = useState("all");
   const [polyline, setPolyline] = useState<[number, number][]>([]);
   const [stats, setStats] = useState<{ totalActive: number; totalInactive: number; modeCounts: Record<string, number> } | null>(null);
+  const [offset, setOffset] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const PAGE_SIZE = 500;
 
-  async function fetchRoutes() {
-    setLoading(true); setError(false);
+  async function fetchRoutes(reset = false) {
+    const off = reset ? 0 : offset;
+    if (reset) { setLoading(true); setError(false); setOffset(0); }
+    else setLoadingMore(true);
     try {
-      const res = await routesApi.list({ limit: 500 });
+      const res = await routesApi.list({ limit: PAGE_SIZE, offset: off });
       const list = Array.isArray(res) ? res : (res.data || []);
-      setRoutes(list);
-      // Calculate stats
-      const active = list.filter((r: RouteRecord) => r.is_active).length;
-      const mCounts: Record<string, number> = {};
-      list.forEach((r: RouteRecord) => { mCounts[r.mode] = (mCounts[r.mode] || 0) + 1; });
-      setStats({ totalActive: active, totalInactive: list.length - active, modeCounts: mCounts });
+      const total = (res as any).total || list.length;
+      if (reset) {
+        setRoutes(list);
+        setOffset(PAGE_SIZE);
+        setHasMore(list.length >= PAGE_SIZE);
+        // Calculate stats from first page
+        const active = list.filter((r: RouteRecord) => r.is_active).length;
+        const mCounts: Record<string, number> = {};
+        list.forEach((r: RouteRecord) => { mCounts[r.mode] = (mCounts[r.mode] || 0) + 1; });
+        setStats({ totalActive: active, totalInactive: list.length - active, modeCounts: mCounts });
+      } else {
+        setRoutes(prev => [...prev, ...list]);
+        setOffset(off + PAGE_SIZE);
+        setHasMore(list.length >= PAGE_SIZE);
+      }
     } catch { setError(true); }
-    finally { setLoading(false); }
+    finally { setLoading(false); setLoadingMore(false); }
   }
 
-  useEffect(() => { fetchRoutes(); }, []);
+  useEffect(() => { fetchRoutes(true); }, []);
 
   async function openForm(route?: RouteRecord) {
     if (route) {
@@ -80,7 +95,7 @@ export default function RoutesPage() {
         lastDeparture: route.last_departure || undefined,
         pathGeojson: route.path_geojson || undefined,
       });
-      fetchRoutes();
+      fetchRoutes(true);
     } catch (err) { alert((err as Error).message); }
   }
 
@@ -123,14 +138,14 @@ export default function RoutesPage() {
       } else {
         await routesApi.create(data);
       }
-      setShowForm(false); setEditingRoute(null); setPolyline([]); fetchRoutes();
+      setShowForm(false); setEditingRoute(null); setPolyline([]); fetchRoutes(true);
     } catch (err) { alert((err as Error).message); }
     finally { setSaving(false); }
   }
 
   async function handleDelete(route: RouteRecord) {
     if (!confirm(`هل أنت متأكد من حذف خط "${route.name_ar}"؟\n\n${route.code} — ${modeLabels[route.mode] || route.mode}`)) return;
-    try { await routesApi.delete(route.id); fetchRoutes(); }
+    try { await routesApi.delete(route.id); fetchRoutes(true); }
     catch (err) { alert((err as Error).message); }
   }
 
@@ -176,7 +191,7 @@ export default function RoutesPage() {
         </div>
       )}
 
-      <Panel title="الخطوط والمسارات" subtitle={`${routes.length} خط | ${filteredRoutes.length} معروض`}
+      <Panel title="الخطوط والمسارات" subtitle={`${routes.length} خط | ${filteredRoutes.length} معروض${hasMore ? ' (يوجد المزيد)' : ''}`}
         headerRight={
           <div style={{ display: "flex", gap: 8 }}>
             <select className="form-select" value={modeFilter} onChange={(e) => setModeFilter(e.target.value)}
@@ -184,7 +199,7 @@ export default function RoutesPage() {
               <option value="all">جميع الأنواع</option>
               {MODES.map((m) => <option key={m} value={m}>{modeLabels[m]}</option>)}
             </select>
-            <button className="btn btn-sm" onClick={fetchRoutes}><RefreshCw size={12} /> تحديث</button>
+            <button className="btn btn-sm" onClick={() => fetchRoutes(true)}><RefreshCw size={12} /> تحديث</button>
             <button className="btn btn-primary btn-sm" onClick={() => openForm()}><Plus size={14} /> إضافة خط</button>
           </div>
         }>
@@ -253,7 +268,16 @@ export default function RoutesPage() {
         {error ? <InlineError message="فشل تحميل الخطوط" onRetry={fetchRoutes} />
           : loading ? <TableSkeleton rows={8} cols={8} />
           : filteredRoutes.length === 0 ? <EmptyState message="لا توجد خطوط" />
-          : <DataTable columns={columns} data={filteredRoutes as any[]} searchKeys={["name_ar", "code"]} searchPlaceholder="بحث عن خط..." defaultPageSize={25} />
+          : <>
+            <DataTable columns={columns} data={filteredRoutes as any[]} searchKeys={["name_ar", "code"]} searchPlaceholder="بحث عن خط..." defaultPageSize={25} />
+            {hasMore && (
+              <div style={{ display: "flex", justifyContent: "center", padding: "16px 0" }}>
+                <button className="btn btn-primary" onClick={() => fetchRoutes(false)} disabled={loadingMore}>
+                  {loadingMore ? "جاري التحميل..." : `تحميل المزيد (${routes.length} من أصل 1,291)`}
+                </button>
+              </div>
+            )}
+          </>
         }
       </Panel>
     </div>
